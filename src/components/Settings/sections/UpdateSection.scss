@@ -1,0 +1,38 @@
+@use '../shared/variables' as vars;
+
+.check-update-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: vars.$bg-control;
+  color: vars.$text-primary;
+  border: 1px solid vars.$border-default;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: vars.$bg-hover;
+    border-color: vars.$border-strong;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  &.up-to-date {
+    color: vars.$color-primary;
+    border-color: vars.$color-primary;
+  }
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

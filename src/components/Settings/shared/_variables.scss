@@ -1,0 +1,205 @@
+// ============================================================
+// Settings Design Tokens
+// ============================================================
+// Single source of truth for all Settings UI styling.
+// Import with @use 'path/to/variables' as vars;
+//
+// Neutrals are CSS custom properties so the extension light theme can
+// override them without rewriting every rule. Brand / status colors stay
+// as hex so rgba($color-primary, …) keeps working.
+// ============================================================
+
+// --- Color Palette -------------------------------------------
+
+// Brand
+$color-primary:       #3D1C56;
+$color-primary-hover: #4E246E;
+
+// Status
+$color-success: #3D1C56;
+$color-warning: #ffc107;
+$color-error:   #ff4444;
+$color-info:    #4285f4;
+$color-recommended: #f59e0b;
+
+// Status backgrounds (for StatusMessage-style containers)
+$color-success-bg:     rgba($color-success, 0.1);
+$color-success-border: rgba($color-success, 0.3);
+$color-warning-bg:     rgba($color-warning, 0.1);
+$color-warning-border: rgba($color-warning, 0.3);
+$color-error-bg:       rgba($color-error, 0.1);
+$color-error-border:   rgba($color-error, 0.3);
+$color-info-bg:        rgba($color-info, 0.1);
+$color-info-border:    rgba($color-info, 0.3);
+
+// --- Text ----------------------------------------------------
+
+$text-primary:    var(--settings-text-primary, #ffffff);
+$text-secondary:  var(--settings-text-secondary, #cccccc);
+$text-muted:      var(--settings-text-muted, #888888);
+$text-disabled:   var(--settings-text-disabled, #555555);
+$text-on-primary: var(--settings-text-on-primary, #ffffff);
+
+// --- Backgrounds ---------------------------------------------
+
+$bg-page:     var(--settings-bg-page, #1a1a1a);     // deepest layer (page / panel bg)
+$bg-surface:  var(--settings-bg-surface, #252525);  // cards, sections, nested panels
+$bg-control:  var(--settings-bg-control, #333333);  // inputs, buttons, device options
+$bg-hover:    var(--settings-bg-hover, #3a3a3a);    // hover & expanded states
+$bg-elevated: var(--settings-bg-elevated, #444444); // raised elements, disabled btn bg
+
+// --- Borders -------------------------------------------------
+
+$border-default: var(--settings-border-default, #444444);
+$border-subtle:  var(--settings-border-subtle, #333333);
+$border-strong:  var(--settings-border-strong, #555555);
+
+// --- Overlays ------------------------------------------------
+
+$hover-overlay:        var(--settings-hover-overlay, rgba(255, 255, 255, 0.05));
+$hover-overlay-strong: var(--settings-hover-overlay-strong, rgba(255, 255, 255, 0.1));
+$inset-bg:             var(--settings-inset-bg, rgba(0, 0, 0, 0.2));
+$chip-bg:              var(--settings-chip-bg, rgba(255, 255, 255, 0.08));
+
+// Native <select> chevron — encoded SVG so it can flip with the theme.
+$select-chevron-dark: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+$select-chevron-light: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2320212A%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+$select-chevron: var(--settings-select-chevron);
+
+// --- Typography ----------------------------------------------
+
+$font-title:   14px;
+$font-body:    13px;
+$font-caption: 12px;
+
+$weight-normal:   400;
+$weight-medium:   500;
+$weight-semibold: 600;
+
+// --- Spacing (4px grid) --------------------------------------
+
+$space-1:  4px;
+$space-2:  8px;
+$space-3:  12px;
+$space-4:  16px;
+$space-5:  20px;
+$space-6:  24px;
+
+// --- Radii ---------------------------------------------------
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+// --- Transitions ---------------------------------------------
+
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease;
+
+// --- Interactive States --------------------------------------
+
+$disabled-opacity: 0.5;
+
+$focus-ring-color:  $color-primary;
+$focus-ring-width:  2px;
+$focus-ring-offset: 2px;
+
+// --- Slider --------------------------------------------------
+
+$slider-track-height: 4px;
+$slider-track-bg:     $bg-elevated;
+$slider-track-radius: 2px;
+$slider-thumb-size:   16px;
+$slider-thumb-bg:     $color-primary;
+
+// --- Toggle --------------------------------------------------
+
+$toggle-width:    40px;
+$toggle-height:   20px;
+$toggle-thumb:    16px;
+$toggle-bg-off:   $text-disabled;
+$toggle-bg-on:    $color-primary;
+
+// --- Convenience Mixins --------------------------------------
+
+@mixin disabled-state {
+  opacity: $disabled-opacity;
+  cursor: not-allowed;
+}
+
+@mixin focus-ring {
+  outline: $focus-ring-width solid $focus-ring-color;
+  outline-offset: $focus-ring-offset;
+}
+
+// Matches the extension interpreter surface (MainPanel / MainLayout).
+@mixin light-theme {
+  --settings-text-primary: #20212a;
+  --settings-text-secondary: #4a4d5c;
+  --settings-text-muted: #6c6f7d;
+  --settings-text-disabled: #9aa0ae;
+  --settings-text-on-primary: #ffffff;
+
+  --settings-bg-page: #f7f8fc;
+  --settings-bg-surface: #ffffff;
+  --settings-bg-control: #ffffff;
+  --settings-bg-hover: #eef0f6;
+  --settings-bg-elevated: #e4e6ef;
+
+  --settings-border-default: #dfe1eb;
+  --settings-border-subtle: #e8eaf2;
+  --settings-border-strong: #c5c8d4;
+
+  --settings-hover-overlay: rgba(32, 33, 42, 0.04);
+  --settings-hover-overlay-strong: rgba(32, 33, 42, 0.08);
+  --settings-inset-bg: rgba(32, 33, 42, 0.05);
+  --settings-chip-bg: rgba(32, 33, 42, 0.06);
+  --settings-select-chevron: #{$select-chevron-light};
+
+  color-scheme: light;
+}
+
+// --- Selection state (mutually-exclusive sets) ---------------
+// Purple marks the selected item. Form is fixed per control archetype:
+//   tabs        → underline
+//   segmented   → fill
+//   focus       → outline (focus-ring above; :focus-visible only)
+@mixin state-selected-underline {
+  color: $color-primary;
+  border-bottom: 2px solid $color-primary;
+}
+
+@mixin state-selected-fill {
+  background: $color-primary;
+  color: $text-on-primary;
+}
+
+@mixin control-base {
+  background: $bg-control;
+  border: 1px solid $border-default;
+  border-radius: $radius-sm;
+  color: $text-primary;
+  font-size: $font-body;
+  transition: border-color $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+  }
+
+  &:disabled {
+    @include disabled-state;
+  }
+}
+
+@mixin status-box($color, $bg, $border) {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 10px;
+  background: $bg;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  font-size: $font-caption;
+  color: $color;
+}

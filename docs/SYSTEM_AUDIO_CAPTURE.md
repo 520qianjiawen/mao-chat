@@ -1,0 +1,436 @@
+# System Audio Capture - Participant Translation Feature
+
+This document describes the system audio capture feature that enables real-time translation of other meeting participants' audio.
+
+## Overview
+
+The participant translation feature allows Sokuji to capture and translate audio from other meeting participants in video conferencing environments. It uses a **dual-client architecture** where:
+
+- **Speaker Client**: Translates the user's microphone input (source language → target language)
+- **Participant Client**: Translates other participants' audio (target language → source language)
+
+This enables bidirectional real-time translation in meetings without audio feedback loops.
+
+## Platform Support
+
+| Platform | Capture Method | Implementation |
+|----------|---------------|----------------|
+| **Electron (Linux)** | System loopback audio via PipeWire/PulseAudio | `LinuxLoopbackRecorder.ts` |
+| **Electron (Windows)** | System loopback audio via electron-audio-loopback | `LoopbackRecorder.ts` |
+| **Electron (macOS)** | System loopback audio via electron-audio-loopback | `LoopbackRecorder.ts` |
+| **Chrome Extension** | Chrome `tabCapture` API | `TabAudioRecorder.ts` |
+
+> **Note**: Electron system audio capture supports all major platforms: Linux (PipeWire/PulseAudio), Windows, and macOS. Windows and macOS use the `electron-audio-loopback` library which provides native loopback audio capture via `getDisplayMedia()` with the `audio: 'loopback'` parameter.
+
+## Platform Comparison
+
+### Feature Matrix
+
+| Aspect | Linux (Electron) | Windows (Electron) | macOS (Electron) | Browser Extension |
+|--------|------------------|-------------------|------------------|-------------------|
+| **Capture Method** | PulseAudio/PipeWire Monitor | electron-audio-loopback | electron-audio-loopback | chrome.tabCapture |
+| **Recorder Class** | `LinuxLoopbackRecorder` | `LoopbackRecorder` | `LoopbackRecorder` | `TabAudioRecorder` |
+| **Permission Required** | None | None | Screen Recording | Tab Capture |
+| **Capture Scope** | Selected audio sink | All system audio | All system audio | Current tab only |
+| **Device Selection** | Multiple sinks available | Single "System Audio" | Single "System Audio" | Output device only |
+| **Refresh Button** | Yes (multiple sources) | No | No | Yes (output devices) |
+| **Audio Passthrough** | No (already playing) | No (already playing) | No (already playing) | Yes (tab is muted) |
+| **User Interaction** | Device dropdown | Permission prompt | Permission prompt | Output device dropdown |
+
+### UI Interaction Comparison
+
+Each platform provides a different user experience when enabling participant audio capture:
+
+#### Linux Electron
+
+- **Device Selection**: Shows a dropdown with available PulseAudio/PipeWire monitor sources
+- **User Workflow**: User selects which audio output device to capture from the list
+- **Refresh Button**: Available to update the source list when new audio devices are connected
+- **Permissions**: No permission prompts needed - monitor sources are always accessible
+- **Audio Behavior**: No passthrough needed since audio is already playing on system speakers
+
+#### Windows/macOS Electron
+
+- **Device Selection**: Shows a single "System Audio" option (no choice between sources)
+- **User Workflow**: First enable triggers the system's screen picker dialog (platform requirement)
+- **Permissions**:
+  - Windows: No special permissions needed
+  - macOS: Requires Screen Recording permission in System Preferences > Security & Privacy > Privacy > Screen Recording
+- **Refresh Button**: Not displayed since only one source is available
+- **Audio Behavior**: No passthrough needed since audio is already playing on system speakers
+
+#### Browser Extension
+
+- **Device Selection**: Shows dropdown of output devices (speakers/headphones)
+- **User Workflow**: Tab capture starts automatically when enabled; user selects output device for passthrough
+- **Purpose of Device Selection**: Controls where the captured audio is played back (passthrough routing)
+- **Refresh Button**: Available to update the output device list
+- **Audio Behavior**: Tab audio is muted by Chrome when captured; passthrough restores audio to selected speaker
+
+### Implementation Comparison
+
+The underlying technical implementation varies significantly across platforms:
+
+#### Linux (`LinuxLoopbackRecorder`)
+
+```
+Audio Flow: System Audio → PulseAudio/PipeWire Monitor → getUserMedia() → AudioWorklet → AI Client
+```
+
+- **API Used**: Standard `getUserMedia()` with monitor device ID from `enumerateDevices()`
+- **Dependencies**: No extra libraries needed - uses native PulseAudio/PipeWire monitor functionality
+- **Audio Processing**: Disabled (echoCancellation, noiseSuppression, autoGainControl all false)
+- **Passthrough**: Not needed - audio already plays on system speakers
+- **Device Discovery**: `enumerateDevices()` returns monitor sources as input devices
+
+#### Windows/macOS (`LoopbackRecorder`)
+
+```
+Audio Flow: System Audio → electron-audio-loopback → getDisplayMedia() → AudioWorklet → AI Client
+```
+
+- **API Used**: `getDisplayMedia()` with loopback audio configuration
+- **Dependencies**: `electron-audio-loopback` library initialized in main process
+- **Main Process Setup**:
+  ```javascript
+  const { initMain } = require('electron-audio-loopback');
+  initMain(); // Sets up setDisplayMediaRequestHandler
+  ```
+- **Video Track Handling**: Video track is acquired (required by API) but immediately stopped and discarded
+- **Passthrough**: Not needed - audio already plays on system speakers
+- **Permission Flow**: Screen picker dialog appears on first capture (Electron auto-selects first screen)
+
+#### Browser Extension (`TabAudioRecorder`)
+
+```
+Audio Flow: Tab Audio → chrome.tabCapture → getUserMedia() → AudioWorklet → AI Client
+                                                         ↘ AudioContext.destination (passthrough)
+```
+
+- **API Used**: Chrome `tabCapture` API via background script, then `getUserMedia()` with stream ID
+- **Background Script Communication**:
+  ```javascript
+  // background.js
+  chrome.tabCapture.getMediaStreamId({ targetTabId }, (streamId) => { ... });
+  ```
+- **Tab Muting**: Chrome automatically mutes the tab when captured (user would otherwise hear nothing)
+- **Passthrough Implementation**:
+  ```javascript
+  this.mediaStreamSource.connect(this.audioContext.destination); // Restores audio
+  ```
+- **Output Device Selection**: Supports `setSinkId()` to route passthrough to specific speaker
+- **Device Discovery**: `enumerateDevices()` returns output devices for passthrough routing
+
+## Architecture
+
+### Dual-Client Design
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Sokuji Application                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────────┐      ┌──────────────────────┐        │
+│  │    Speaker Client    │      │  Participant Client  │        │
+│  │  (Primary AI Client) │      │ (Secondary AI Client)│        │
+│  ├──────────────────────┤      ├──────────────────────┤        │
+│  │ Source: Microphone   │      │ Source: System/Tab   │        │
+│  │ Lang: Source→Target  │      │ Lang: Target→Source  │        │
+│  │ Output: Audio (TTS)  │      │ Output: Text only    │        │
+│  │ VAD: User setting    │      │ VAD: Semantic VAD    │        │
+│  └──────────────────────┘      └──────────────────────┘        │
+│           │                              │                      │
+│           ▼                              ▼                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Combined Conversation Display                │  │
+│  │         (Items tagged by source: speaker/participant)     │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Audio Flow
+
+#### Extension (Tab Capture)
+
+```
+Browser Tab Audio
+       │
+       ▼
+┌─────────────────┐
+│ Background.js   │ ─── chrome.tabCapture.getMediaStreamId()
+└────────┬────────┘
+         │ streamId
+         ▼
+┌─────────────────┐
+│ TabAudioRecorder│ ─── getUserMedia({ chromeMediaSource: 'tab' })
+├─────────────────┤
+│ • AudioWorklet  │ ─── Processes PCM audio chunks
+│ • Passthrough   │ ─── Restores audio to user (tab is muted by API)
+└────────┬────────┘
+         │ PCM Int16 @ 24kHz
+         ▼
+┌─────────────────┐
+│ Participant     │
+│ AI Client       │ ─── Transcription + Translation (text only)
+└─────────────────┘
+```
+
+#### Electron (System Audio - Linux)
+
+```
+System Audio Output (PipeWire/PulseAudio Monitor)
+       │
+       ▼
+┌───────────────────────┐
+│ LinuxLoopbackRecorder │ ─── Captures loopback device
+├───────────────────────┤
+│ • No echo cancel      │ ─── Audio already processed
+│ • No noise suppress   │
+│ • AudioWorklet        │ ─── Processes PCM audio chunks
+└─────────┬─────────────┘
+          │ PCM Int16 @ 24kHz
+          ▼
+┌─────────────────┐
+│ Participant     │
+│ AI Client       │ ─── Transcription + Translation (text only)
+└─────────────────┘
+```
+
+#### Electron (System Audio - Windows/macOS)
+
+```
+System Audio Output (electron-audio-loopback)
+       │
+       ▼
+┌───────────────────────┐
+│ LoopbackRecorder      │ ─── getDisplayMedia() with loopback audio
+├───────────────────────┤     (via setDisplayMediaRequestHandler)
+│ • No echo cancel      │ ─── Audio already processed
+│ • No noise suppress   │
+│ • Auto source select  │ ─── electron-audio-loopback auto-selects first screen
+│ • AudioWorklet        │ ─── Processes PCM audio chunks
+└─────────┬─────────────┘
+          │ PCM Int16 @ 24kHz
+          ▼
+┌─────────────────┐
+│ Participant     │
+│ AI Client       │ ─── Transcription + Translation (text only)
+└─────────────────┘
+```
+
+> **Note for macOS**: Screen recording permission is required. When first enabling Participant Audio, the system will prompt for permission. On macOS, users must grant Screen Recording permission in System Preferences > Security & Privacy > Privacy > Screen Recording.
+
+## Participant Client Configuration
+
+The participant client is configured differently from the speaker client:
+
+### Configuration Differences
+
+| Setting | Speaker Client | Participant Client |
+|---------|---------------|-------------------|
+| **Language Direction** | `sourceLanguage → targetLanguage` | `targetLanguage → sourceLanguage` (swapped) |
+| **Audio Output** | Enabled (TTS playback) | **Disabled** (`textOnly: true`) |
+| **Turn Detection** | User's setting (Normal/Semantic/Disabled) | **Always `semantic_vad`** |
+| **VAD Eagerness** | User's setting | **Fixed: `high`** |
+| **Response Interruption** | Based on user setting | **Disabled** (`interruptResponse: false`) |
+
+### Code Example
+
+```typescript
+// MainPanel.tsx - Participant session config creation
+const swappedSystemInstructions = getProcessedSystemInstructions(true); // true = swap languages
+
+const participantSessionConfig = {
+  ...createSessionConfig(swappedSystemInstructions),
+  textOnly: true,  // No audio output - text transcription only
+  turnDetection: {
+    type: 'semantic_vad' as const,
+    createResponse: true,
+    interruptResponse: false,
+    eagerness: 'high',
+  }
+};
+
+await participantClient.connect(participantSessionConfig);
+```
+
+### Language Swapping
+
+The `getProcessedSystemInstructions(swapLanguages)` function in `settingsStore.ts` handles language swapping:
+
+```typescript
+// settingsStore.ts
+getProcessedSystemInstructions: (swapLanguages = false) => {
+  // ...
+  const effectiveSource = swapLanguages ? targetLangName : sourceLangName;
+  const effectiveTarget = swapLanguages ? sourceLangName : targetLangName;
+
+  return templateSystemInstructions
+    .replace(/\{\{SOURCE_LANGUAGE\}\}/g, effectiveSource)
+    .replace(/\{\{TARGET_LANGUAGE\}\}/g, effectiveTarget);
+}
+```
+
+This ensures that when the user speaks English (source) to be translated to Japanese (target), the participant client will translate Japanese (participant's language) to English (displayed to user).
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/modern-audio/TabAudioRecorder.ts` | Chrome extension tab audio capture using `tabCapture` API |
+| `src/lib/modern-audio/LinuxLoopbackRecorder.ts` | Electron system loopback audio capture on Linux (PulseAudio/PipeWire) |
+| `src/lib/modern-audio/LoopbackRecorder.ts` | Electron system loopback audio capture on Windows/macOS (electron-audio-loopback) |
+| `src/lib/modern-audio/ModernBrowserAudioService.ts` | Audio service with `startTabAudioRecording()` and `startSystemAudioRecording()` methods |
+| `src/components/MainPanel/MainPanel.tsx` | Dual-client session management and conversation display |
+| `extension/background/background.js` | Background script for coordinating `chrome.tabCapture` API calls |
+| `src/stores/audioStore.ts` | Audio device state including `participantAudioOutputDevice` |
+| `src/stores/logStore.ts` | Dual-client logging with `ClientId` type (`'speaker' | 'participant'`) |
+| `src/stores/settingsStore.ts` | `getProcessedSystemInstructions()` with language swap support |
+| `electron/macos-audio-utils.js` | macOS audio utilities including system audio capture support |
+| `electron/windows-audio-utils.js` | Windows audio utilities including system audio capture support |
+
+## Implementation Details
+
+### Tab Audio Capture (Extension)
+
+The `TabAudioRecorder` class handles tab audio capture:
+
+1. **Stream ID Acquisition**: Communicates with `background.js` to get a `streamId` via `chrome.tabCapture.getMediaStreamId()`
+
+2. **Media Stream Creation**: Uses the stream ID with `getUserMedia()`:
+   ```typescript
+   navigator.mediaDevices.getUserMedia({
+     audio: {
+       mandatory: {
+         chromeMediaSource: 'tab',
+         chromeMediaSourceId: streamId
+       }
+     }
+   });
+   ```
+
+3. **Audio Passthrough**: Chrome's `tabCapture` API mutes the captured tab. The recorder restores audio by connecting the source directly to the audio context destination:
+   ```typescript
+   this.mediaStreamSource.connect(this.audioContext.destination);
+   ```
+
+4. **Audio Processing**: Uses AudioWorklet (with ScriptProcessor fallback) to process audio chunks and send them to the AI client.
+
+### System Audio Capture (Electron)
+
+#### Linux (`LinuxLoopbackRecorder`)
+
+1. **Device Selection**: Uses PipeWire/PulseAudio monitor sources (virtual microphone)
+
+2. **No Processing**: Disables all audio processing since the audio is already processed:
+   ```javascript
+   echoCancellation: false,
+   noiseSuppression: false,
+   autoGainControl: false,
+   ```
+
+3. **Silent Output**: Uses a gain node with zero volume to keep audio processing active without audible output
+
+#### Windows/macOS (`LoopbackRecorder`)
+
+1. **electron-audio-loopback Integration**: Main process initializes the library before app is ready:
+   ```javascript
+   const { initMain } = require('electron-audio-loopback');
+   initMain();
+   ```
+
+2. **Screen Capture API**: Uses `getDisplayMedia()` with loopback audio provided by `setDisplayMediaRequestHandler`:
+   ```typescript
+   const stream = await navigator.mediaDevices.getDisplayMedia({
+     video: true,  // Required by API, video track is discarded
+     audio: true   // Gets loopback audio
+   });
+   ```
+
+3. **Video Track Discard**: The video track is immediately stopped and removed (only audio is needed)
+
+4. **No External Software**: Uses native Electron/Chrome APIs via electron-audio-loopback
+
+5. **User Interaction**: Screen picker dialog appears when starting capture (platform requirement)
+
+### Session Management
+
+In `MainPanel.tsx`, the session lifecycle manages both clients:
+
+#### Session Start (`connectConversation`)
+
+1. Create and connect the speaker client (lines 624-741)
+2. If system audio capture enabled:
+   - Create participant client (lines 743-830 for Electron, 834-912 for Extension)
+   - Configure with swapped languages and text-only mode
+   - Start recording from system/tab audio source
+
+#### Session End (`disconnectConversation`)
+
+1. Stop system/tab audio recording
+2. Disconnect both clients
+3. Clear streaming tracks
+4. Reset conversation items
+
+### Conversation Display
+
+Speaker and participant items are combined for display:
+
+```typescript
+// MainPanel.tsx
+const combinedItems = useMemo(() => {
+  const speakerItems = items.map(item => ({ ...item, source: 'speaker' }));
+  const participantItems = systemAudioItems.map(item => ({ ...item, source: 'participant' }));
+
+  return [...speakerItems, ...participantItems].sort((a, b) =>
+    (a.createdAt || 0) - (b.createdAt || 0)
+  );
+}, [items, systemAudioItems]);
+```
+
+Items are visually distinguished in the UI with different labels ("You" vs "Participant").
+
+## UI Components
+
+### AudioPanel / SimpleConfigPanel
+
+- Toggle to enable/disable system audio capture
+- Output device selector (Extension only) for participant audio playback
+- Mutual exclusivity warning when both speaker and participant audio sources overlap
+
+### LogsPanel
+
+- Separate tabs for "Speaker" and "Participant" client logs
+- Each log entry tagged with `clientId: 'speaker' | 'participant'`
+
+## Mutual Exclusivity
+
+The feature includes safeguards to prevent audio feedback:
+
+- If the user enables system audio capture with the same device as their speaker output, a warning modal appears
+- The UI prevents selecting conflicting device combinations
+
+## Related Commits
+
+| Commit | Description |
+|--------|-------------|
+| `2a824b2` | Initial system audio capture for participant translation |
+| `9742f60` | Add mutual exclusivity between Speaker and Participant Audio |
+| `5bd1ec6` | Add i18n translations for mutual exclusivity modal |
+| `4daf9ba` | Enhance with logs, conversation display, and text-only mode |
+| `4af71c4` | Add tab audio capture for Chrome extension |
+| `60bd7b4` | Improve tab capture and simplify AudioPanel UI |
+| `98ae9b3` | Fix i18n text and clear participant conversation on session end |
+| `3e14439` | Improve language selector labels for clarity |
+
+## Limitations
+
+1. **Platform Requirements**: System audio capture requires:
+   - Linux: PipeWire or PulseAudio installed and running
+   - macOS: Screen Recording permission must be granted in System Preferences
+   - Windows: No special requirements
+2. **No Per-Application Audio Routing**: Cannot capture audio from specific applications only (captures all system audio)
+3. **Extension Permissions**: Chrome extension requires `tabCapture` permission
+4. **No Audio Output**: Participant translations are text-only to prevent feedback
+5. **Same Provider**: Both speaker and participant clients use the same AI provider and model

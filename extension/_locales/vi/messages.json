@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - Phiên Dịch Họp AI"
+  },
+  "extensionDescription": {
+    "message": "Dịch giọng nói tức thì bằng AI cho tất cả cuộc họp video. Phá vỡ rào cản ngôn ngữ với dịch giọng nói thời gian thực."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Các Trang Web Được Hỗ Trợ"
+  },
+  "openSokuji": {
+    "message": "Mở MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Cửa Hàng Web Chrome"
+  },
+  "edgeAddons": {
+    "message": "Tiện ích bổ sung Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat có sẵn trên $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Nhấp vào \"Mở MAO Chat\" bên dưới để bắt đầu dịch thời gian thực."
+  },
+  "quickStart": {
+    "message": "Bắt Đầu Nhanh:"
+  },
+  "quickStartInstructions": {
+    "message": "Cấu hình khóa API OpenAI của bạn → Chọn \"MAO Chat Virtual Microphone\" làm microphone → Bắt đầu nói!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Để sử dụng MAO Chat, vui lòng chọn <strong>\"MAO Chat Virtual Microphone\"</strong> trong cài đặt micrô của bạn."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Để sử dụng MAO Chat, vui lòng chọn <strong>\"MAO Chat Virtual Microphone\"</strong> trong cài đặt micrô và <strong>tắt tính năng giảm tiếng ồn</strong> để có hiệu suất tốt hơn."
+  },
+  "gotIt": {
+    "message": "Đã hiểu"
+  },
+  "remindLater": {
+    "message": "Nhắc nhở sau"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Để sử dụng MAO Chat, vui lòng chọn \"MAO Chat Virtual Microphone\" trong cài đặt micrô của bạn."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "Để sử dụng MAO Chat, vui lòng chọn <strong>\"MAO Chat Virtual Microphone\"</strong> trong cài đặt micrô của bạn và <strong>tắt Khử tiếng ồn</strong> trong cài đặt âm thanh của Discord để có hiệu suất tốt hơn."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "Để sử dụng MAO Chat trong Slack Huddles, vui lòng <strong>bắt đầu một Huddle</strong>, sau đó chọn <strong>\"MAO Chat Virtual Microphone\"</strong> trong cài đặt Video và Mic của bạn, và <strong>tắt Triệt tiêu tiếng ồn</strong> trong tùy chọn Âm thanh và Video để có hiệu suất tốt hơn."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat cho Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Nếu bạn không thấy danh sách thiết bị âm thanh đầy đủ trong cài đặt Teams:<br><strong>1)</strong> Tạm thời tắt tiện ích MAO Chat và làm mới trang<br><strong>2)</strong> Cho phép Teams truy cập micro và camera của bạn khi được nhắc<br><strong>3)</strong> Bật lại tiện ích MAO Chat và làm mới trang lần nữa<br><strong>4)</strong> Cho phép MAO Chat truy cập micro của bạn khi được nhắc. Bây giờ bạn sẽ thấy cả thiết bị thực và <strong>\"MAO Chat Virtual Microphone\"</strong> trong cài đặt của mình."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Để sử dụng MAO Chat trong Jitsi Meet, hãy mở <strong>Settings > Devices</strong> và chọn <strong>\"MAO Chat Virtual Microphone\"</strong> làm micrô của bạn. Sau đó mở <strong>Advanced audio settings</strong> và <strong>tắt Khử tiếng ồn, Khử tiếng vọng và Tự động điều chỉnh độ khuếch đại</strong> để có âm thanh dịch rõ ràng."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat chưa có sẵn trên $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Dịch trong bất kỳ ứng dụng nào"
+  },
+  "desktopCtaBody": {
+    "message": "Micrô ảo toàn hệ thống cho OBS, YouTube, Twitch và mọi ứng dụng desktop. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Tải xuống ứng dụng máy tính để bàn"
+  },
+  "browserSitesHeading": {
+    "message": "Thích dùng trình duyệt? MAO Chat hoạt động trên những trang này — nhấp để mở:"
+  },
+  "requestSiteLink": {
+    "message": "Yêu cầu thêm trang web"
+  },
+  "learnMore": {
+    "message": "Tìm hiểu thêm →"
+  },
+  "detectFailHeadline": {
+    "message": "Không thể phát hiện tab này"
+  },
+  "detectFailBody": {
+    "message": "Làm mới trang và mở lại MAO Chat."
+  }
+}

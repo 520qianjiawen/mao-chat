@@ -1,0 +1,46 @@
+# Embedded Apple-Silicon runtime for the MAO Chat macOS application.
+# Models are intentionally absent: the application downloads them on demand.
+numpy==2.1.3
+websockets==13.1
+huggingface_hub>=1.0,<2
+psutil>=6,<8
+zstandard==0.23.0
+sherpa-onnx==1.13.6
+# Natural streaming TTS for macOS.  These are inference runtimes only; the
+# model weights (MOSS, Qwen3-TTS, GPT-SoVITS, …) remain optional in-app downloads.
+onnxruntime==1.29.0
+sentencepiece==0.2.1
+# Audio I/O + resample used by the full TTS adapter roster (Qwen3/CosyVoice/
+# OmniVoice/GPT-SoVITS voice load paths).
+soundfile>=0.13
+soxr>=0.5
+# GGUF ASR runtime used by Cohere Transcribe, Qwen3-ASR, Fun-ASR,
+# SenseVoice, Whisper and the other catalog models.  This is only the native
+# inference engine; model weights stay out of the app and download on demand.
+transcribe-cpp==0.1.3
+# Opus-MT pair translators (CTranslate2 int8). Weights download on demand.
+ctranslate2==4.8.1
+# Official hexgrad Kokoro-82M (en/zh/ja): same stack as HF Space / Docker.
+# Weights stay download-on-demand (~355 MB); this is only the runtime.
+# misaki[en,zh,ja] pulls G2P deps (espeakng-loader, jieba, pypinyin, fugashi…).
+torch>=2.2,<3
+kokoro>=0.9.4
+misaki[en,zh,ja]>=0.9.4
+# transformers 5.x is required for huggingface_hub>=1 (runtime already pins hub 1.x).
+# kokoro only needs AlbertConfig from transformers — compatible with 5.x.
+# tokenizers is used by Qwen2 tokenizer loaders (Qwen3-TTS / CosyVoice3 / OmniVoice).
+transformers>=5.0,<6
+tokenizers>=0.20
+loguru>=0.7
+# GPT-SoVITS v2ProPlus G2P for zh/en (issue #322). Weights still download on demand.
+# Japanese G2P (pyopenjtalk-plus + Sudachi, ~300 MB) is NOT bundled — first JA
+# use installs it into the user extras dir via runtime_extras.ensure_pyopenjtalk.
+jieba==0.42.1
+pypinyin==0.55.0
+g2pM==0.1.2.5
+nltk==3.10.0
+# Apple Silicon MLX TTS lane (Qwen3-TTS + MOSS nano Metal). Weights on demand.
+mlx-audio==0.4.4
+# Note: misaki[ja] still pulls the tiny `unidic` *package*, but the MeCab
+# dictionary data (~800 MB) is downloaded on first Japanese Kokoro use into
+# the user extras dir — packaging must NOT run `python -m unidic download`.

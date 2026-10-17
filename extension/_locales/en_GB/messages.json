@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge Add-ons"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise reduction</strong> for better performance."
+  },
+  "gotIt": {
+    "message": "Got it"
+  },
+  "remindLater": {
+    "message": "Remind me later"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat for Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "If you don't see the complete audio device list in Teams settings:<br><strong>1)</strong> Temporarily disable the MAO Chat extension and refresh the page<br><strong>2)</strong> Allow Teams to access your microphone and camera when prompted<br><strong>3)</strong> Re-enable MAO Chat extension and refresh the page again<br><strong>4)</strong> Allow MAO Chat to access your microphone when prompted.<br>Now you should see both real and <strong>\"MAO Chat Virtual Microphone\"</strong> devices in your settings."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "To use MAO Chat in Jitsi Meet, open <strong>Settings > Devices</strong> and select <strong>\"MAO Chat Virtual Microphone\"</strong> as your microphone. Then open <strong>Advanced audio settings</strong> and <strong>turn off Noise suppression, Echo cancellation, and Automatic gain control</strong> for clear translated audio."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat isn't available on $HOSTNAME$ yet.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Translate in any app"
+  },
+  "desktopCtaBody": {
+    "message": "A system-wide virtual mic for OBS, YouTube, Twitch and any desktop app. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Download desktop app"
+  },
+  "browserSitesHeading": {
+    "message": "Prefer the browser? MAO Chat works on these — click to open:"
+  },
+  "requestSiteLink": {
+    "message": "Request a site"
+  },
+  "learnMore": {
+    "message": "Learn more →"
+  },
+  "detectFailHeadline": {
+    "message": "Couldn't detect this tab"
+  },
+  "detectFailBody": {
+    "message": "Refresh the page and reopen MAO Chat."
+  }
+}

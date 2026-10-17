@@ -1,0 +1,40 @@
+// Flat tinted background matching the project's existing visualization
+// panels (.visualization-canvas style from the pre-refactor advanced footer).
+// No gradient, no in-canvas label — color tint alone identifies the channel.
+.waveform-strip {
+  height: 28px;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &--full {
+    width: auto;
+    min-width: 48px;
+    max-width: 320px;
+    flex: 1 1 auto;
+  }
+  // Half-width strips share the responsive .waveform-input-group width.
+  // `flex: 1` keeps both channels equal after subtracting the wrapper gap.
+  &--half {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  &__label {
+    // Reserved for future tooltip; not rendered inside the canvas to avoid
+    // competing with the waveform bars.
+    display: none;
+  }
+
+  &__canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  &--mic    { background: rgba(0, 153, 255, 0.10); }
+  &--system { background: rgba(245, 158, 11, 0.10); }
+  &--output { background: rgba(61, 28, 86, 0.12); }
+}

@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - Penerjemah Rapat AI"
+  },
+  "extensionDescription": {
+    "message": "Terjemahan ucapan instan bertenaga AI untuk semua rapat video. Hancurkan hambatan bahasa dengan terjemahan suara real-time."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Situs yang Didukung"
+  },
+  "openSokuji": {
+    "message": "Buka MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Add-on Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat tersedia di $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Klik \"Buka MAO Chat\" di bawah untuk memulai terjemahan real-time."
+  },
+  "quickStart": {
+    "message": "Mulai Cepat:"
+  },
+  "quickStartInstructions": {
+    "message": "Konfigurasi kunci API OpenAI Anda → Pilih \"MAO Chat Virtual Microphone\" sebagai mikrofon → Mulai berbicara!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Untuk menggunakan MAO Chat, pilih <strong>\"MAO Chat Virtual Microphone\"</strong> di pengaturan mikrofon Anda."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Untuk menggunakan MAO Chat, silakan pilih <strong>\"MAO Chat Virtual Microphone\"</strong> di pengaturan mikrofon Anda dan <strong>nonaktifkan pengurangan kebisingan</strong> untuk performa yang lebih baik."
+  },
+  "gotIt": {
+    "message": "Mengerti"
+  },
+  "remindLater": {
+    "message": "Ingatkan nanti"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Untuk menggunakan MAO Chat, silakan pilih \"MAO Chat Virtual Microphone\" di pengaturan mikrofon Anda."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "Untuk menggunakan MAO Chat, silakan pilih <strong>\"MAO Chat Virtual Microphone\"</strong> di pengaturan mikrofon Anda dan <strong>nonaktifkan Penekanan kebisingan</strong> di pengaturan suara Discord untuk performa yang lebih baik."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "Untuk menggunakan MAO Chat di Slack Huddles, silakan <strong>mulai Huddle</strong>, lalu pilih <strong>\"MAO Chat Virtual Microphone\"</strong> di pengaturan Video dan Mic Anda, dan <strong>nonaktifkan Penekan Noise</strong> di preferensi Audio dan Video untuk performa yang lebih baik."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat untuk Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Jika Anda tidak melihat daftar perangkat audio lengkap di pengaturan Teams:<br><strong>1)</strong> Nonaktifkan sementara ekstensi MAO Chat dan segarkan halaman<br><strong>2)</strong> Izinkan Teams mengakses mikrofon dan kamera Anda saat diminta<br><strong>3)</strong> Aktifkan kembali ekstensi MAO Chat dan segarkan halaman lagi<br><strong>4)</strong> Izinkan MAO Chat mengakses mikrofon Anda saat diminta. Sekarang Anda seharusnya melihat perangkat nyata dan <strong>\"MAO Chat Virtual Microphone\"</strong> di pengaturan Anda."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Untuk menggunakan MAO Chat di Jitsi Meet, buka <strong>Settings > Devices</strong> dan pilih <strong>\"MAO Chat Virtual Microphone\"</strong> sebagai mikrofon Anda. Kemudian buka <strong>Advanced audio settings</strong> dan <strong>nonaktifkan Noise suppression, Echo cancellation, dan Automatic gain control</strong> untuk audio terjemahan yang jernih."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat belum tersedia di $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Terjemahkan di aplikasi apa pun"
+  },
+  "desktopCtaBody": {
+    "message": "Mikrofon virtual sistem untuk OBS, YouTube, Twitch, dan aplikasi desktop apa pun. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Unduh aplikasi desktop"
+  },
+  "browserSitesHeading": {
+    "message": "Lebih suka browser? MAO Chat bekerja di situs-situs ini — klik untuk membuka:"
+  },
+  "requestSiteLink": {
+    "message": "Minta situs"
+  },
+  "learnMore": {
+    "message": "Pelajari lebih lanjut →"
+  },
+  "detectFailHeadline": {
+    "message": "Tidak dapat mendeteksi tab ini"
+  },
+  "detectFailBody": {
+    "message": "Muat ulang halaman dan buka kembali MAO Chat."
+  }
+}

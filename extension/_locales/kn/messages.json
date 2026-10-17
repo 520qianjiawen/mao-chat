@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge ಆಡ್-ಆನ್‌ಗಳು"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "MAO Chat ಬಳಸಲು, ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ <strong>\"MAO Chat Virtual Microphone\"</strong> ಆಯ್ಕೆ ಮಾಡಿ."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "MAO Chat ಬಳಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ <strong>\"MAO Chat Virtual Microphone\"</strong> ಆಯ್ಕೆಮಾಡಿ ಮತ್ತು ಉತ್ತಮ ಕಾರ್ಯಕ್ಷಮತೆಗಾಗಿ <strong>ಶಬ್ದ ಕಡಿಮೆಗೊಳಿಸುವಿಕೆಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ</strong>."
+  },
+  "gotIt": {
+    "message": "ಅರ್ಥವಾಯಿತು"
+  },
+  "remindLater": {
+    "message": "ನಂತರ ನೆನಪಿಸಿ"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "Microsoft Teams ಗಾಗಿ MAO Chat"
+  },
+  "teamsGuidance": {
+    "message": "Teams ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಸಂಪೂರ್ಣ ಆಡಿಯೊ ಸಾಧನ ಪಟ್ಟಿ ಕಾಣಿಸದಿದ್ದರೆ:<br><strong>1)</strong> MAO Chat ವಿಸ್ತರಣೆಯನ್ನು ತಾತ್ಕಾಲಿಕವಾಗಿ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ ಮತ್ತು ಪುಟವನ್ನು ರಿಫ್ರೆಶ್ ಮಾಡಿ<br><strong>2)</strong> ಕೇಳಿದಾಗ Teams ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಮತ್ತು ಕ್ಯಾಮರಾವನ್ನು ಪ್ರವೇಶಿಸಲು ಅನುಮತಿಸಿ<br><strong>3)</strong> MAO Chat ವಿಸ್ತರಣೆಯನ್ನು ಮತ್ತೆ ಸಕ್ರಿಯಗೊಳಿಸಿ ಮತ್ತು ಪುಟವನ್ನು ಮತ್ತೆ ರಿಫ್ರೆಶ್ ಮಾಡಿ<br><strong>4)</strong> ಕೇಳಿದಾಗ MAO Chat ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶಿಸಲು ಅನುಮತಿಸಿ. ಈಗ ನೀವು ನಿಮ್ಮ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ನಿಜವಾದ ಸಾಧನಗಳು ಮತ್ತು <strong>\"MAO Chat Virtual Microphone\"</strong> ಎರಡನ್ನೂ ನೋಡಬೇಕು."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Jitsi Meet ನಲ್ಲಿ MAO Chat ಬಳಸಲು, <strong>Settings > Devices</strong> ತೆರೆಯಿರಿ ಮತ್ತು ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಆಗಿ <strong>\"MAO Chat Virtual Microphone\"</strong> ಆಯ್ಕೆಮಾಡಿ. ನಂತರ <strong>Advanced audio settings</strong> ತೆರೆಯಿರಿ ಮತ್ತು ಸ್ಪಷ್ಟ ಅನುವಾದಿತ ಆಡಿಯೊಗಾಗಿ <strong>Noise suppression, Echo cancellation ಮತ್ತು Automatic gain control ಅನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ</strong>."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat ಇನ್ನೂ $HOSTNAME$ ನಲ್ಲಿ ಲಭ್ಯವಿಲ್ಲ.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "ಯಾವುದೇ ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಅನುವಾದಿಸಿ"
+  },
+  "desktopCtaBody": {
+    "message": "OBS, YouTube, Twitch ಮತ್ತು ಯಾವುದೇ ಡೆಸ್ಕ್‌ಟಾಪ್ ಅಪ್ಲಿಕೇಶನ್‌ಗಾಗಿ ಸಿಸ್ಟಂ-ವ್ಯಾಪಿ ವರ್ಚುವಲ್ ಮೈಕ್ರೋಫೋನ್. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "ಡೆಸ್ಕ್‌ಟಾಪ್ ಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
+  },
+  "browserSitesHeading": {
+    "message": "ಬ್ರೌಸರ್ ಬಯಸುತ್ತೀರಾ? MAO Chat ಈ ಸೈಟ್‌ಗಳಲ್ಲಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ — ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ:"
+  },
+  "requestSiteLink": {
+    "message": "ತಾಣವನ್ನು ವಿನಂತಿಸಿ"
+  },
+  "learnMore": {
+    "message": "ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ →"
+  },
+  "detectFailHeadline": {
+    "message": "ಈ ಟ್ಯಾಬ್ ಅನ್ನು ಪತ್ತೆ ಮಾಡಲಾಗಲಿಲ್ಲ"
+  },
+  "detectFailBody": {
+    "message": "ಪುಟವನ್ನು ರಿಫ್ರೆಶ್ ಮಾಡಿ ಮತ್ತು MAO Chat ಅನ್ನು ಮತ್ತೆ ತೆರೆಯಿರಿ."
+  }
+}

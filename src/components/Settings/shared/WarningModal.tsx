@@ -1,0 +1,151 @@
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
+import Modal from '../../Modal/Modal';
+import { useTranslation } from 'react-i18next';
+import { WarningType } from './hooks';
+
+interface WarningModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  type: WarningType | null;
+  /**
+   * Extra sentence appended to the message. Used to point out that a denied
+   * permission has a working alternative, rather than leaving the user with a
+   * dead end.
+   */
+  note?: string | null;
+}
+
+const WarningModal: React.FC<WarningModalProps> = ({ isOpen, onClose, type, note }) => {
+  const { t } = useTranslation();
+
+  // macOS lists the process under the name of the bundle it launched. A
+  // packaged build is "MAO Chat", but `npm run electron:dev` runs Electron's
+  // own bundle, so telling a developer to look for "MAO Chat" sends them
+  // hunting for an entry that is not there.
+  const [tccName, setTccName] = useState<string>('MAO Chat');
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const pending = window.electron?.invoke?.('get-tcc-display-name');
+    if (!pending?.then) return;
+    pending
+      .then((r: { name?: string }) => { if (!cancelled && r?.name) setTccName(r.name); })
+      .catch(() => { /* keep the packaged-build default */ });
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
+  if (!type) return null;
+
+  const getWarningContent = (): {
+    title: string;
+    titleText: string;
+    paragraphs: string[];
+    privacyPane?: 'screen-recording' | 'audio-capture';
+  } | null => {
+    switch (type) {
+      case 'virtual-mic':
+        return {
+          title: t('audioPanel.virtualMicrophoneNotice'),
+          titleText: t('audioPanel.virtualMicWarningTitle'),
+          paragraphs: [
+            t('audioPanel.virtualMicWarningText1'),
+            t('audioPanel.virtualMicWarningText2')
+          ]
+        };
+      case 'virtual-speaker':
+        return {
+          title: t('audioPanel.virtualSpeakerNotice'),
+          titleText: t('audioPanel.virtualSpeakerWarningTitle'),
+          paragraphs: [
+            t('audioPanel.virtualSpeakerWarningText1'),
+            t('audioPanel.virtualSpeakerWarningText2'),
+            t('audioPanel.virtualSpeakerWarningText3'),
+            t('audioPanel.virtualSpeakerWarningText4')
+          ]
+        };
+      case 'mutual-exclusivity-speaker':
+        return {
+          title: t('audioPanel.mutualExclusivityNotice', 'Audio Conflict'),
+          titleText: t('audioPanel.mutualExclusivitySpeakerTitle', 'Cannot enable Speaker'),
+          paragraphs: [
+            t('audioPanel.mutualExclusivitySpeakerText', 'Please turn off Participant Audio before enabling Speaker.')
+          ]
+        };
+      case 'mutual-exclusivity-participant':
+        return {
+          title: t('audioPanel.mutualExclusivityNotice', 'Audio Conflict'),
+          titleText: t('audioPanel.mutualExclusivityParticipantTitle', 'Cannot enable Participant Audio'),
+          paragraphs: [
+            t('audioPanel.mutualExclusivityParticipantText', 'Please turn off Speaker before enabling Participant Audio.')
+          ]
+        };
+      case 'screen-recording-denied':
+        return {
+          title: t('audioPanel.screenRecordingDeniedNotice', 'Permission Required'),
+          titleText: t('audioPanel.screenRecordingDeniedTitle', 'Screen Recording Permission Denied'),
+          paragraphs: [
+            t('audioPanel.screenRecordingDeniedText1', 'Participant Audio requires Screen Recording permission to capture system audio.'),
+            t('audioPanel.screenRecordingDeniedText2Named', 'Open System Settings > Privacy & Security > Screen Recording and enable "{{app}}".', { app: tccName }),
+            t('audioPanel.screenRecordingDeniedText3', 'After enabling the permission, please restart the app.')
+          ],
+          privacyPane: 'screen-recording' as const,
+        };
+      case 'audio-capture-denied':
+        return {
+          title: t('audioPanel.audioCaptureDeniedNotice', 'Permission Required'),
+          titleText: t('audioPanel.audioCaptureDeniedTitle', 'System Audio Recording Permission Needed'),
+          paragraphs: [
+            t('audioPanel.audioCaptureDeniedText1', 'Capturing one application needs the "System Audio Recording Only" permission. Without it macOS delivers silence instead of an error, so the session runs but nothing is translated.'),
+            t('audioPanel.audioCaptureDeniedText2Named', 'Open System Settings > Privacy & Security > System Audio Recording Only and enable "{{app}}".', { app: tccName }),
+            t('audioPanel.audioCaptureDeniedText3Named', '"{{app}}" only appears in that list after it has tried to capture once, which it just did. Enabling the switch is not enough: fully quit the app (Cmd+Q) and open it again so macOS applies the grant.', { app: tccName })
+          ],
+          privacyPane: 'audio-capture' as const,
+        };
+      default:
+        return null;
+    }
+  };
+
+  const content = getWarningContent();
+  if (!content) return null;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={content.title}
+    >
+      <div className="warning-modal-content">
+        <div className="warning-icon">
+          <AlertTriangle size={24} color="#f0ad4e" />
+        </div>
+        <p>
+          <strong>{content.titleText}</strong>
+        </p>
+        {content.paragraphs.map((text, index) => (
+          <p key={index}>{text}</p>
+        ))}
+        {note && <p className="warning-note">{note}</p>}
+        {content.privacyPane && (
+          <button
+            className="open-settings-button"
+            onClick={() => {
+              window.electron?.invoke('open-privacy-settings', content.privacyPane);
+            }}
+          >
+            {t('audioPanel.openSystemSettings', 'Open System Settings')}
+          </button>
+        )}
+        <button
+          className="understand-button"
+          onClick={onClose}
+        >
+          {t('audioPanel.iUnderstand')}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+export default WarningModal;

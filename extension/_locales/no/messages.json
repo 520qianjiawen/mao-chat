@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI-møteoversetter"
+  },
+  "extensionDescription": {
+    "message": "AI-drevet øyeblikkelig taleoversettelse for alle videomøter. Bryt språkbarrierer med sanntids stemmeoversettelse."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Støttede Nettsteder"
+  },
+  "openSokuji": {
+    "message": "Åpne MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Nettbutikk"
+  },
+  "edgeAddons": {
+    "message": "Edge-tillegg"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat er tilgjengelig på $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Klikk \"Åpne MAO Chat\" nedenfor for å starte sanntidsoversettelse."
+  },
+  "quickStart": {
+    "message": "Hurtigstart:"
+  },
+  "quickStartInstructions": {
+    "message": "Konfigurer din API-nøkkel (OpenAI eller Gemini) → Velg \"MAO Chat Virtual Microphone\" som mikrofon → Begynn å snakke!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "For å bruke MAO Chat, velg <strong>\"MAO Chat Virtual Microphone\"</strong> i mikrofoninnstillingene dine."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "For å bruke MAO Chat, vennligst velg <strong>\"MAO Chat Virtual Microphone\"</strong> i mikrofoninnstillingene dine og <strong>deaktiver støyreduksjon</strong> for bedre ytelse."
+  },
+  "gotIt": {
+    "message": "Forstått"
+  },
+  "remindLater": {
+    "message": "Påminn senere"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat for Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Hvis du ikke ser den fullstendige lydenhetslis ten i Teams-innstillingene:<br><strong>1)</strong> Deaktiver MAO Chat-utvidelsen midlertidig og oppdater siden<br><strong>2)</strong> Tillat Teams å få tilgang til mikrofonen og kameraet ditt når du blir bedt om det<br><strong>3)</strong> Aktiver MAO Chat-utvidelsen på nytt og oppdater siden igjen<br><strong>4)</strong> Tillat MAO Chat å få tilgang til mikrofonen din når du blir bedt om det. Nå skal du se både virkelige enheter og <strong>\"MAO Chat Virtual Microphone\"</strong> i innstillingene dine."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "For å bruke MAO Chat i Jitsi Meet, åpne <strong>Settings > Devices</strong> og velg <strong>\"MAO Chat Virtual Microphone\"</strong> som mikrofon. Åpne deretter <strong>Advanced audio settings</strong> og <strong>slå av Støyreduksjon, Ekkokansellering og Automatisk forsterkningskontroll</strong> for tydelig oversatt lyd."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat er ikke tilgjengelig på $HOSTNAME$ ennå.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Oversett i en hvilken som helst app"
+  },
+  "desktopCtaBody": {
+    "message": "En systemomfattende virtuell mikrofon for OBS, YouTube, Twitch og alle skrivebordsapper. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Last ned skrivebordsappen"
+  },
+  "browserSitesHeading": {
+    "message": "Foretrekker du nettleseren? MAO Chat fungerer på disse sidene — klikk for å åpne:"
+  },
+  "requestSiteLink": {
+    "message": "Be om et nettsted"
+  },
+  "learnMore": {
+    "message": "Lær mer →"
+  },
+  "detectFailHeadline": {
+    "message": "Kunne ikke oppdage denne fanen"
+  },
+  "detectFailBody": {
+    "message": "Oppdater siden og åpne MAO Chat på nytt."
+  }
+}

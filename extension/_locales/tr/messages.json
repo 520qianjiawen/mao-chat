@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Toplantı Çevirmeni"
+  },
+  "extensionDescription": {
+    "message": "Tüm video toplantıları için AI destekli anlık konuşma çevirisi. Gerçek zamanlı ses çevirisi ile dil engellerini aşın."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Desteklenen Siteler"
+  },
+  "openSokuji": {
+    "message": "MAO Chat'yi Aç"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Mağazası"
+  },
+  "edgeAddons": {
+    "message": "Edge Eklentileri"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat $SITE_NAME$ üzerinde kullanılabilir!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Gerçek zamanlı çeviriyi başlatmak için aşağıdaki \"MAO Chat'yi Aç\" düğmesine tıklayın."
+  },
+  "quickStart": {
+    "message": "Hızlı Başlangıç:"
+  },
+  "quickStartInstructions": {
+    "message": "API anahtarınızı yapılandırın (OpenAI veya Gemini) → Mikrofon olarak \"MAO Chat Virtual Microphone\"i seçin → Konuşmaya başlayın!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "MAO Chat'yi kullanmak için mikrofon ayarlarınızda <strong>\"MAO Chat Virtual Microphone\"</strong> seçin."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "MAO Chat'yi kullanmak için mikrofon ayarlarınızda <strong>\"MAO Chat Virtual Microphone\"</strong> seçin ve daha iyi performans için <strong>gürültü azaltmayı devre dışı bırakın</strong>."
+  },
+  "gotIt": {
+    "message": "Anladım"
+  },
+  "remindLater": {
+    "message": "Daha sonra hatırlat"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "MAO Chat'yi kullanmak için mikrofon ayarlarınızda \"MAO Chat Virtual Microphone\"u seçin."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "MAO Chat'yi kullanmak için mikrofon ayarlarınızda <strong>\"MAO Chat Virtual Microphone\"</strong>u seçin ve daha iyi performans için Discord'un ses ayarlarında <strong>Gürültü Bastırma'yı devre dışı bırakın</strong>."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "Slack Huddles'da MAO Chat kullanmak için lütfen <strong>bir Huddle başlatın</strong>, ardından Video ve Mikrofon ayarlarınızda <strong>\"MAO Chat Virtual Microphone\"</strong> seçin ve daha iyi performans için Audio ve Video tercihlerinde <strong>Gürültü Bastırma'yı devre dışı bırakın</strong>."
+  },
+  "teamsTitle": {
+    "message": "Microsoft Teams için MAO Chat"
+  },
+  "teamsGuidance": {
+    "message": "Teams ayarlarında tam ses cihazı listesini görmüyorsanız:<br><strong>1)</strong> MAO Chat uzantısını geçici olarak devre dışı bırakın ve sayfayı yenileyin<br><strong>2)</strong> İstendiğinde Teams'in mikrofonunuza ve kameranıza erişmesine izin verin<br><strong>3)</strong> MAO Chat uzantısını tekrar etkinleştirin ve sayfayı tekrar yenileyin<br><strong>4)</strong> İstendiğinde MAO Chat'nin mikrofonunuza erişmesine izin verin. Artık ayarlarınızda hem gerçek cihazları hem de <strong>\"MAO Chat Virtual Microphone\"</strong> sanal cihazı görmelisiniz."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Jitsi Meet'te MAO Chat kullanmak için <strong>Settings > Devices</strong> bölümünü açın ve mikrofonunuz olarak <strong>\"MAO Chat Virtual Microphone\"</strong> seçin. Ardından <strong>Advanced audio settings</strong> bölümünü açın ve net çevrilmiş ses için <strong>Gürültü Bastırma, Yankı Giderme ve Otomatik Kazanç Kontrolü'nü devre dışı bırakın</strong>."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat henüz $HOSTNAME$ üzerinde mevcut değil.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Her uygulamada çeviri yapın"
+  },
+  "desktopCtaBody": {
+    "message": "OBS, YouTube, Twitch ve her masaüstü uygulaması için sistem genelinde çalışan sanal mikrofon. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Masaüstü uygulamasını indir"
+  },
+  "browserSitesHeading": {
+    "message": "Tarayıcıyı mı tercih ediyorsunuz? MAO Chat bu sitelerde çalışır — açmak için tıklayın:"
+  },
+  "requestSiteLink": {
+    "message": "Site talep et"
+  },
+  "learnMore": {
+    "message": "Daha fazla bilgi →"
+  },
+  "detectFailHeadline": {
+    "message": "Bu sekme tespit edilemedi"
+  },
+  "detectFailBody": {
+    "message": "Sayfayı yenileyin ve MAO Chat'yi yeniden açın."
+  }
+}

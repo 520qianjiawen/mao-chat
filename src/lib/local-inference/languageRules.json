@@ -1,0 +1,221 @@
+{
+  "defaultLanguage": "en",
+  "languages": {
+    "en": {
+      "aliases": ["eng", "english"],
+      "script": "latin",
+      "unit": "words",
+      "glue": "space",
+      "commitPunctuation": "if-long",
+      "shortHoldRequires": "none",
+      "hardIncomplete": [
+        "and", "but", "or", "because", "if", "when", "while", "although", "though",
+        "which", "who", "whose", "whom", "where", "whether",
+        "to", "of", "for", "with", "in", "on", "at", "by", "from", "into", "onto",
+        "including", "versus", "via", "per", "than", "quote",
+        "the", "a", "an",
+        "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had",
+        "will", "would", "can", "could", "should", "shall", "may", "might", "must",
+        "my", "your", "his", "her", "its", "our", "their",
+        "this", "that", "these", "those",
+        "is going to", "are going to", "going to",
+        "has been", "have been", "had been",
+        "will be", "would be", "could be", "should be",
+        "such as", "according to", "along with"
+      ],
+      "softIncomplete": ["so", "as", "well"],
+      "completeEndings": [],
+      "greetings": [],
+      "conjunctions": [],
+      "fillers": ["you know", "i mean", "kind of", "sort of", "okay", "ok", "well"],
+      "fillerTokens": ["uh", "um", "er", "ah", "hmm", "huh", "mm", "mmm", "yeah", "yep", "yup", "okay", "ok"],
+      "strongPauseWords": [
+        "although", "because", "but", "however", "meanwhile", "moreover",
+        "nevertheless", "nonetheless", "otherwise", "therefore", "though",
+        "whereas", "yet"
+      ],
+      "meeting": {
+        "softSilenceMs": 700,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2400,
+        "minCommitDelayMs": 0,
+        "min": 6,
+        "max": 25,
+        "preferredMaxDurationMs": 9000,
+        "forceDurationMs": 11000
+      },
+      "video": {
+        "softSilenceMs": 650,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2200,
+        "minCommitDelayMs": 650,
+        "min": 6,
+        "max": 25,
+        "preferredMin": 12,
+        "preferredMaxDurationMs": 7500,
+        "forceDurationMs": 10000
+      }
+    },
+    "de": {
+      "extends": "en",
+      "aliases": ["deu", "ger", "german"],
+      "hardIncomplete": ["und", "aber", "oder", "weil", "wenn", "von", "mit", "für", "auf", "aus", "bei", "im", "am"]
+    },
+    "fr": {
+      "extends": "en",
+      "aliases": ["fra", "fre", "french"],
+      "hardIncomplete": ["et", "mais", "ou", "de", "du", "des", "en", "un", "une", "le", "la", "les"]
+    },
+    "es": {
+      "extends": "en",
+      "aliases": ["spa", "spanish"],
+      "hardIncomplete": ["y", "e", "pero", "o", "de", "del", "en", "a", "el", "la", "los", "las", "un", "una", "con", "por", "para"]
+    },
+    "it": {
+      "extends": "en",
+      "aliases": ["ita", "italian"],
+      "hardIncomplete": ["e", "ma", "o", "di", "da", "del", "della", "dei", "a", "in", "con", "per", "un", "una", "il", "la"]
+    },
+    "pt": {
+      "extends": "en",
+      "aliases": ["por", "portuguese"],
+      "hardIncomplete": ["e", "mas", "ou", "de", "do", "da", "dos", "das", "em", "por", "para", "com", "um", "uma", "o", "a"]
+    },
+    "ja": {
+      "aliases": ["jp", "jpn", "japanese"],
+      "script": "kana",
+      "unit": "characters",
+      "glue": "none",
+      "commitPunctuation": "never",
+      "shortHoldRequires": "complete-ending",
+      "hardIncomplete": [
+        "けれど", "けど", "ので", "から", "たり", "つつ", "ながら",
+        "て", "で", "まで", "より", "は", "が", "を", "に", "と"
+      ],
+      "softIncomplete": ["の", "も"],
+      "completeEndings": [
+        "と考えています", "ということです", "と思っています", "と思います",
+        "ませんでした", "ですよね", "でしょうか", "わけです",
+        "でしょう", "でした", "ません", "ました",
+        "ますか", "ですか", "だった", "ください", "である",
+        "です", "ます",
+        "だ", "よ", "ね"
+      ],
+      "completeEndingMinStem": { "だ": 2, "よ": 1, "ね": 1 },
+      "greetings": [
+        "こんにちは", "こんばんは", "おはよう", "おはようございます",
+        "ありがとう", "ありがとうございます", "すみません", "ごめんなさい",
+        "はじめまして", "よろしくお願いします", "よろしく"
+      ],
+      "conjunctions": [
+        "そして", "しかし", "だから", "なので", "つまり", "そのため",
+        "ですが", "けれども", "でも", "けど", "また"
+      ],
+      "fillers": ["えっと", "ええと", "えー", "あのー", "あの", "その", "まあ", "なんか", "うん", "はい"],
+      "meeting": {
+        "softSilenceMs": 700,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2400,
+        "minCommitDelayMs": 0,
+        "min": 15,
+        "max": 50,
+        "preferredMin": 22,
+        "preferredMaxDurationMs": 9000,
+        "forceDurationMs": 11000
+      },
+      "video": {
+        "softSilenceMs": 700,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2000,
+        "minCommitDelayMs": 800,
+        "min": 15,
+        "max": 45,
+        "preferredMin": 22,
+        "preferredMaxDurationMs": 7000,
+        "forceDurationMs": 10000
+      }
+    },
+    "zh": {
+      "aliases": ["cn", "cmn", "yue", "chinese"],
+      "script": "han",
+      "unit": "characters",
+      "glue": "none",
+      "commitPunctuation": "if-complete",
+      "shortHoldRequires": "punctuation",
+      "hardIncomplete": [
+        "的话", "因为", "所以", "但是", "然后", "而且", "如果", "虽然", "以及",
+        "和", "与", "但", "而"
+      ],
+      "softIncomplete": ["的"],
+      "completeEndings": [],
+      "greetings": [],
+      "conjunctions": [],
+      "fillers": ["那个", "就是", "就是说", "然后呢", "好的"],
+      "meeting": {
+        "softSilenceMs": 700,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2400,
+        "minCommitDelayMs": 0,
+        "min": 10,
+        "max": 48,
+        "preferredMin": 18,
+        "preferredMaxDurationMs": 9000,
+        "forceDurationMs": 11000
+      },
+      "video": {
+        "softSilenceMs": 500,
+        "hardSilenceMs": 1000,
+        "shortHoldMs": 1800,
+        "minCommitDelayMs": 0,
+        "min": 8,
+        "max": 42,
+        "preferredMin": 16,
+        "preferredMaxDurationMs": 7000,
+        "forceDurationMs": 9000
+      }
+    },
+    "ko": {
+      "aliases": ["kr", "kor", "korean"],
+      "script": "hangul",
+      "unit": "characters",
+      "glue": "none",
+      "commitPunctuation": "never",
+      "shortHoldRequires": "complete-ending",
+      "hardIncomplete": [
+        "지만", "는데", "니까", "어서", "에서", "으로",
+        "고", "은", "는", "이", "가", "을", "를", "에", "로"
+      ],
+      "softIncomplete": [],
+      "completeEndings": [
+        "습니다", "합니다", "입니다", "어요", "아요", "해요", "예요", "이에요",
+        "네요", "세요", "죠", "니다"
+      ],
+      "greetings": ["안녕하세요", "감사합니다", "고맙습니다", "안녕", "네", "아니요"],
+      "conjunctions": ["그리고", "하지만", "그런데", "그래서", "그러나"],
+      "fillers": ["음", "어", "그", "뭐"],
+      "meeting": {
+        "softSilenceMs": 700,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2400,
+        "minCommitDelayMs": 0,
+        "min": 15,
+        "max": 50,
+        "preferredMin": 22,
+        "preferredMaxDurationMs": 9000,
+        "forceDurationMs": 11000
+      },
+      "video": {
+        "softSilenceMs": 600,
+        "hardSilenceMs": 1200,
+        "shortHoldMs": 2000,
+        "minCommitDelayMs": 0,
+        "min": 12,
+        "max": 45,
+        "preferredMin": 20,
+        "preferredMaxDurationMs": 7000,
+        "forceDurationMs": 10000
+      }
+    }
+  }
+}

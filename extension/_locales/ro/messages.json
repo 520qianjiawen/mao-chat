@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Suplimente Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Pentru a folosi MAO Chat, selectați <strong>\"MAO Chat Virtual Microphone\"</strong> în setările microfonului dvs."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Pentru a utiliza MAO Chat, vă rugăm să selectați <strong>\"MAO Chat Virtual Microphone\"</strong> în setările microfonului și să <strong>dezactivați reducerea zgomotului</strong> pentru performanțe mai bune."
+  },
+  "gotIt": {
+    "message": "Am înțeles"
+  },
+  "remindLater": {
+    "message": "Amintește-mi mai târziu"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat pentru Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Dacă nu vedeți lista completă de dispozitive audio în setările Teams:<br><strong>1)</strong> Dezactivați temporar extensia MAO Chat și reîmprospătați pagina<br><strong>2)</strong> Permiteți Teams să acceseze microfonul și camera dvs. când vi se solicită<br><strong>3)</strong> Reactivați extensia MAO Chat și reîmprospătați din nou pagina<br><strong>4)</strong> Permiteți MAO Chat să acceseze microfonul dvs. când vi se solicită. Acum ar trebui să vedeți atât dispozitivele reale, cât și <strong>\"MAO Chat Virtual Microphone\"</strong> în setările dvs."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Pentru a folosi MAO Chat în Jitsi Meet, deschideți <strong>Settings > Devices</strong> și selectați <strong>\"MAO Chat Virtual Microphone\"</strong> ca microfon. Apoi deschideți <strong>Advanced audio settings</strong> și <strong>dezactivați Reducerea zgomotului, Anularea ecoului și Controlul automat al volumului</strong> pentru un audio tradus clar."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat nu este încă disponibil pe $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Traduceți în orice aplicație"
+  },
+  "desktopCtaBody": {
+    "message": "Un microfon virtual la nivel de sistem pentru OBS, YouTube, Twitch și orice aplicație desktop. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Descărcați aplicația desktop"
+  },
+  "browserSitesHeading": {
+    "message": "Preferați browserul? MAO Chat funcționează pe aceste site-uri — faceți clic pentru a deschide:"
+  },
+  "requestSiteLink": {
+    "message": "Solicitați un site"
+  },
+  "learnMore": {
+    "message": "Aflați mai multe →"
+  },
+  "detectFailHeadline": {
+    "message": "Nu s-a putut detecta această filă"
+  },
+  "detectFailBody": {
+    "message": "Reîncărcați pagina și redeschideți MAO Chat."
+  }
+}

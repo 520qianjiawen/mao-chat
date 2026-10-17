@@ -1,0 +1,195 @@
+.conversation-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+
+  &.grouped {
+    padding-top: 0;
+    margin-top: -1px;
+  }
+
+  &.with-header {
+    margin-top: 6px;
+  }
+}
+
+.row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.row-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.avatar-speaker {
+    background: #3D1C56;
+    color: #fff;
+  }
+
+  &.avatar-participant {
+    background: #f39c12;
+    color: #1a1a1a;
+  }
+}
+
+.row-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: #9aa0a6;
+}
+
+.row-name-text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.row-time {
+  font-size: 0.65rem;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 6px 3px 30px; // indent so the line aligns under the name
+  // Comfortable reading measure for mixed CJK / Latin.
+  line-height: 1.58;
+  letter-spacing: 0.01em;
+  font-size: var(--conversation-font-size, 14px);
+  border-radius: 6px;
+  transition: background-color 0.15s ease, border-radius 0.15s ease;
+
+  .conversation-row.grouped & {
+    padding-left: 30px;
+  }
+
+  &.playing {
+    background: color-mix(in srgb, var(--conversation-translation-color, #3D1C56) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--conversation-translation-color, #3D1C56) 22%, transparent);
+  }
+}
+
+.lang-badge {
+  flex-shrink: 0;
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.3;
+  transform: translateY(-0.05em);
+
+  &.src {
+    background: rgba(154, 160, 166, 0.12);
+    color: #9aa0a6;
+    border: 1px solid rgba(154, 160, 166, 0.28);
+  }
+
+  &.tr {
+    &.source-speaker {
+      background: rgba(61, 28, 86, 0.12);
+      color: #3D1C56;
+      border: 1px solid rgba(61, 28, 86, 0.28);
+    }
+
+    &.source-participant {
+      background: rgba(243, 156, 18, 0.16);
+      color: #f39c12;
+      border: 1px solid rgba(243, 156, 18, 0.38);
+    }
+  }
+}
+
+.row-text {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  flex: 1;
+  min-width: 0;
+
+  // Source is secondary reading track; translation is primary.
+  &.src {
+    color: var(--conversation-source-color, #6c6f7d);
+    font-style: normal;
+    font-weight: 400;
+    opacity: 0.92;
+  }
+
+  &.tr {
+    color: var(--conversation-translation-color, #20212a);
+    font-weight: 500;
+  }
+}
+
+.row-play-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-left: 4px;
+  background: rgba(32, 33, 42, 0.06);
+  border: none;
+  border-radius: 3px;
+  color: #5b6070;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(32, 33, 42, 0.1);
+    color: #20212a;
+  }
+
+  &.playing {
+    background: rgba(61, 28, 86, 0.45);
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.row-role-dot {
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+
+  &.source-speaker {
+    background: #3D1C56;
+  }
+
+  &.source-participant {
+    background: #f39c12;
+  }
+}
+
+.conversation-row.compact {
+  .row-body {
+    position: relative;
+    padding-left: 16px;
+  }
+}

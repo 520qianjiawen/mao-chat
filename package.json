@@ -1,0 +1,250 @@
+{
+  "name": "mao-chat",
+  "productName": "MAO Chat",
+  "version": "1.0.29",
+  "sidecarVersion": "0.1.13",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "homepage": "./",
+  "description": "MAO Chat — macOS system-audio live captions and translation",
+  "author": {
+    "name": "MAO Chat"
+  },
+  "build": {
+    "appId": "com.maochat.livecaptions",
+    "productName": "MAO Chat",
+    "asar": true,
+    "electronLanguages": [
+      "en",
+      "en-US"
+    ],
+    "directories": {
+      "output": "out/make-linux"
+    },
+    "files": [
+      "package.json",
+      "assets/**/*",
+      "dist-electron/**/*",
+      "!dist-electron/**/*.map",
+      "build/**/*",
+      "!build/**/*.map",
+      "!build/assets/test-tone*.mp3",
+      "!node_modules/**/*.map",
+      "!build/wasm/**",
+      "build/wasm/sherpa-onnx-asr/**",
+      "build/wasm/sherpa-onnx-asr-stream/**",
+      "build/wasm/sherpa-onnx-tts/**",
+      "build/wasm/ort/**",
+      "build/wasm/vad/**",
+      "build/wasm/piper-plus/**",
+      "build/wasm/gtcrn/**"
+    ],
+    "extraResources": [
+      "assets",
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": [
+          "**/*",
+          "!sidecar-runtime/**"
+        ]
+      },
+      {
+        "from": "resources/sidecar-runtime",
+        "to": "sidecar-runtime"
+      }
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "AudioVideo",
+      "icon": "assets/icon.png",
+      "executableName": "mao-chat"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "pkg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.icns",
+      "identity": null
+    },
+    "pkg": {
+      "scripts": "../pkg-scripts",
+      "installLocation": "/Applications",
+      "isRelocatable": false,
+      "isVersionChecked": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "artifactName": "${name}_${version}_${arch}.${ext}"
+    },
+    "afterPack": "./scripts/electron-builder-fuses.js"
+  },
+  "dependencies": {
+    "electron-audio-loopback": "^1.0.6",
+    "electron-conf": "^1.3.0",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.8.3",
+    "fzstd": "^0.1.1",
+    "tar-stream": "^3.2.0"
+  },
+  "overrides": {
+    "form-data": "^4.0.6",
+    "axios": "^1.9.0",
+    "onnxruntime-node": "npm:empty-npm-package@1.0.0",
+    "fast-uri": "^3.1.4",
+    "js-yaml@3": "^3.15.0",
+    "js-yaml@4": "^4.3.0",
+    "brace-expansion@1": "^1.1.16",
+    "brace-expansion@2": "^2.1.2",
+    "brace-expansion@5": "^5.0.7",
+    "undici": "^6.27.0",
+    "@electron/rebuild": "^4.2.0",
+    "tar@7": "^7.5.21"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-flatpak": "^7.11.1",
+    "@electron-forge/maker-pkg": "^7.11.1",
+    "@electron-forge/maker-snap": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron/fuses": "^2.0.0",
+    "@electron/rebuild": "^4.2.0",
+    "@floating-ui/react": "^0.27.15",
+    "@google/genai": "^1.46.0",
+    "@huggingface/transformers": "^4.2.0",
+    "@ricky0123/vad-web": "^0.0.30",
+    "@sapphi-red/web-noise-suppressor": "^0.3.5",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^24",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.1.4",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "better-auth": "^1.6.13",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "40.8.5",
+    "electron-builder": "^26.15.3",
+    "fake-indexeddb": "^6.2.5",
+    "i18next": "^25.2.1",
+    "i18next-browser-languagedetector": "^8.1.0",
+    "idb": "^8.0.3",
+    "jsdom": "^24.0.0",
+    "livekit-client": "2.18.7",
+    "lucide-react": "^0.515.0",
+    "mpg123-decoder": "^1.0.3",
+    "onnxruntime-web": "1.26.0-dev.20260416-b7804b056c",
+    "openai": "^6.29.0",
+    "openai-realtime-api": "1.0.8",
+    "posthog-js-lite": "^4.1.0",
+    "protobufjs": "^8.6.5",
+    "protobufjs-cli": "^2.6.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^15.5.2",
+    "react-icons": "^5.6.0",
+    "react-joyride": "^3.2.0",
+    "react-router-dom": "^7.18.1",
+    "sass": "^1.101.6",
+    "tsx": "^4.23.1",
+    "typescript": "^5.8.3",
+    "uuid": "^11.1.0",
+    "vite": "^8.1.5",
+    "vite-plugin-electron": "^1.1.0",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "vitest": "^4.0.18",
+    "web-vitals": "^2.1.4",
+    "ws": "^8.19.0",
+    "zustand": "^5.0.8"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "build:audio-host": "node scripts/build-audio-host.js",
+    "build:ocr": "node scripts/build-ocr.js",
+    "electron:dev": "vite",
+    "electron:build": "npm run build && npm run make",
+    "electron:start": "electron .",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make",
+    "prepare:mac-runtime": "python3 scripts/sync-macos-live-caption-runtime.py",
+    "make:pkg": "npm run prepare:mac-runtime && npm run build:audio-host && npm run build:ocr && npm run build && electron-builder --mac pkg --publish never -c.directories.output=out && rm -rf out/mac-arm64",
+    "make:mac": "npm run prepare:mac-runtime && npm run build:audio-host && npm run build:ocr && npm run build && electron-builder --mac pkg --publish never -c.directories.output=out && rm -rf out/mac-arm64",
+    "postinstall": "electron-rebuild && bash scripts/copy-ort-wasm.sh",
+    "eval": "tsx evals/runner/index.ts",
+    "eval:validate": "tsx evals/runner/index.ts validate",
+    "eval:list": "tsx evals/runner/index.ts list",
+    "extension:build": "cd extension && npx vite build && bash ../scripts/export-extension.sh",
+    "extension:dev": "cd extension && npx vite build --watch --mode development",
+    "sidecar:setup": "bash sidecar/setup.sh"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "env": {
+      "es2020": true,
+      "browser": true,
+      "node": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2020
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "config": {
+    "forge": "./forge.config.js"
+  }
+}

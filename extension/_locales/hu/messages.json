@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Találkozófordító"
+  },
+  "extensionDescription": {
+    "message": "AI-alapú azonnali beszédfordítás minden videótalálkozóhoz. Törje át a nyelvi akadályokat valós idejű hangfordítással."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Támogatott Oldalak"
+  },
+  "openSokuji": {
+    "message": "MAO Chat Megnyitása"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Webáruház"
+  },
+  "edgeAddons": {
+    "message": "Edge bővítmények"
+  },
+  "sokujiAvailable": {
+    "message": "✓ A MAO Chat elérhető a(z) $SITE_NAME$ oldalon!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Kattintson a \"MAO Chat Megnyitása\" gombra alább a valós idejű fordítás elindításához."
+  },
+  "quickStart": {
+    "message": "Gyors Kezdés:"
+  },
+  "quickStartInstructions": {
+    "message": "Konfigurálja API kulcsát (OpenAI vagy Gemini) → Válassza a \"MAO Chat Virtual Microphone\"-et mikrofonként → Kezdjen el beszélni!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "A MAO Chat használatához válassza ki a <strong>\"MAO Chat Virtual Microphone\"</strong> opciót a mikrofon beállításaiban."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "A MAO Chat használatához kérjük válassza ki a <strong>\"MAO Chat Virtual Microphone\"</strong> opciót a mikrofon beállításokban és <strong>kapcsolja ki a zajcsökkentést</strong> a jobb teljesítmény érdekében."
+  },
+  "gotIt": {
+    "message": "Értem"
+  },
+  "remindLater": {
+    "message": "Emlékeztessen később"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat a Microsoft Teamshez"
+  },
+  "teamsGuidance": {
+    "message": "Ha nem látja a teljes hangeszközlistát a Teams beállításaiban:<br><strong>1)</strong> Ideiglenesen tiltsa le a MAO Chat bővítményt és frissítse az oldalt<br><strong>2)</strong> Engedélyezze a Teams számára a mikrofon és a kamera elérését, amikor a rendszer kéri<br><strong>3)</strong> Engedélyezze újra a MAO Chat bővítményt és frissítse újra az oldalt<br><strong>4)</strong> Engedélyezze a MAO Chat számára a mikrofon elérését, amikor a rendszer kéri. Most már látnia kell mind a valódi eszközöket, mind a <strong>\"MAO Chat Virtual Microphone\"</strong> virtuális eszközt a beállításaiban."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "A MAO Chat Jitsi Meetben való használatához nyissa meg a <strong>Settings > Devices</strong> menüt, és válassza ki a <strong>\"MAO Chat Virtual Microphone\"</strong> opciót mikrofonként. Ezután nyissa meg az <strong>Advanced audio settings</strong> beállításokat, és <strong>kapcsolja ki a zajcsökkentést, a visszhangszűrést és az automatikus erősítésszabályozást</strong> a tiszta lefordított hang érdekében."
+  },
+  "unsupportedHeadline": {
+    "message": "A MAO Chat még nem érhető el a(z) $HOSTNAME$ oldalon.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Fordítson bármely alkalmazásban"
+  },
+  "desktopCtaBody": {
+    "message": "Rendszerszintű virtuális mikrofon OBS-hez, YouTube-hoz, Twitch-hez és bármely asztali alkalmazáshoz. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Töltse le az asztali alkalmazást"
+  },
+  "browserSitesHeading": {
+    "message": "A böngészőt részesíti előnyben? A MAO Chat működik ezeken az oldalakon — kattintson a megnyitáshoz:"
+  },
+  "requestSiteLink": {
+    "message": "Oldal kérése"
+  },
+  "learnMore": {
+    "message": "Tudjon meg többet →"
+  },
+  "detectFailHeadline": {
+    "message": "Ez a lap nem volt észlelhető"
+  },
+  "detectFailBody": {
+    "message": "Frissítse az oldalt, majd nyissa meg újra a MAO Chat-t."
+  }
+}

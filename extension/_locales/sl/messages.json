@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Dodatki za Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Za uporabo MAO Chatja izberite <strong>\"MAO Chat Virtual Microphone\"</strong> v nastavitvah mikrofona."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Za uporabo MAO Chat prosimo izberite <strong>\"MAO Chat Virtual Microphone\"</strong> v nastavitvah mikrofona in <strong>onemogočite zmanjševanje hrupa</strong> za boljšo zmogljivost."
+  },
+  "gotIt": {
+    "message": "Razumem"
+  },
+  "remindLater": {
+    "message": "Spomni me kasneje"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat za Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Če ne vidite celotnega seznama zvočnih naprav v nastavitvah Teamsa:<br><strong>1)</strong> Začasno onemogočite razširitev MAO Chat in osvežite stran<br><strong>2)</strong> Ko boste pozvani, dovolite Teamsu dostop do mikrofona in kamere<br><strong>3)</strong> Ponovno omogočite razširitev MAO Chat in ponovno osvežite stran<br><strong>4)</strong> Ko boste pozvani, dovolite MAO Chatju dostop do mikrofona. Zdaj bi morali videti tako prave naprave kot <strong>\"MAO Chat Virtual Microphone\"</strong> v nastavitvah."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Če želite uporabljati MAO Chat v Jitsi Meet, odprite <strong>Settings > Devices</strong> in izberite <strong>\"MAO Chat Virtual Microphone\"</strong> kot svoj mikrofon. Nato odprite <strong>Advanced audio settings</strong> in <strong>izklopite odpravljanje šuma, odpravljanje odmeva in samodejno nastavljanje ojačanja</strong> za čist preveden zvok."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat na $HOSTNAME$ še ni na voljo.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Prevajajte v kateri koli aplikaciji"
+  },
+  "desktopCtaBody": {
+    "message": "Sistemski virtualni mikrofon za OBS, YouTube, Twitch in katero koli namizno aplikacijo. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Prenesite namizno aplikacijo"
+  },
+  "browserSitesHeading": {
+    "message": "Imate raje brskalnik? MAO Chat deluje na teh straneh — kliknite za odpiranje:"
+  },
+  "requestSiteLink": {
+    "message": "Zahtevajte spletno mesto"
+  },
+  "learnMore": {
+    "message": "Izvedi več →"
+  },
+  "detectFailHeadline": {
+    "message": "Te zavihka ni bilo mogoče zaznati"
+  },
+  "detectFailBody": {
+    "message": "Osvežite stran in znova odprite MAO Chat."
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI-vergadervertaler"
+  },
+  "extensionDescription": {
+    "message": "AI-aangedreven directe spraakvertaling voor alle videovergaderingen. Doorbreek taalbarrières met realtime stemvertaling."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Ondersteunde Sites"
+  },
+  "openSokuji": {
+    "message": "MAO Chat Openen"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge-invoegtoepassingen"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is beschikbaar op $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Klik op \"MAO Chat Openen\" hieronder om realtime vertaling te starten."
+  },
+  "quickStart": {
+    "message": "Snelle Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configureer uw API-sleutel (OpenAI of Gemini) → Selecteer \"MAO Chat Virtual Microphone\" als microfoon → Begin met spreken!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat voor Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Om MAO Chat te gebruiken, selecteer <strong>\"MAO Chat Virtual Microphone\"</strong> in uw microfooninstellingen."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat voor Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Om MAO Chat te gebruiken, selecteer <strong>\"MAO Chat Virtual Microphone\"</strong> in de microfooninstellingen en <strong>schakel ruisonderdrukking uit</strong> voor betere prestaties."
+  },
+  "gotIt": {
+    "message": "Begrepen"
+  },
+  "remindLater": {
+    "message": "Later herinneren"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Om MAO Chat te gebruiken, selecteer \"MAO Chat Virtual Microphone\" in uw microfooninstellingen."
+  },
+  "discordTitle": {
+    "message": "MAO Chat voor Discord"
+  },
+  "discordGuidance": {
+    "message": "Om MAO Chat te gebruiken, selecteer <strong>\"MAO Chat Virtual Microphone\"</strong> in uw microfooninstellingen en <strong>schakel Ruisonderdrukking uit</strong> in de Discord-spraakinstellingen voor betere prestaties."
+  },
+  "slackTitle": {
+    "message": "MAO Chat voor Slack"
+  },
+  "slackGuidance": {
+    "message": "Om MAO Chat in Slack Huddles te gebruiken, <strong>start een Huddle</strong>, selecteer dan <strong>\"MAO Chat Virtual Microphone\"</strong> in je video- en microfooninstellingen, en <strong>schakel ruisonderdrukking uit</strong> in audio- en videovoorkeuren voor betere prestaties."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat voor Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Als u de volledige lijst met audioapparaten niet ziet in de Teams-instellingen:<br><strong>1)</strong> Schakel de MAO Chat-extensie tijdelijk uit en vernieuw de pagina<br><strong>2)</strong> Sta Teams toegang tot uw microfoon en camera toe wanneer daarom wordt gevraagd<br><strong>3)</strong> Schakel de MAO Chat-extensie opnieuw in en vernieuw de pagina opnieuw<br><strong>4)</strong> Sta MAO Chat toegang tot uw microfoon toe wanneer daarom wordt gevraagd. Nu zou u zowel echte apparaten als <strong>\"MAO Chat Virtual Microphone\"</strong> in uw instellingen moeten zien."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat voor Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Om MAO Chat in Jitsi Meet te gebruiken, open <strong>Settings > Devices</strong> en selecteer <strong>\"MAO Chat Virtual Microphone\"</strong> als uw microfoon. Open vervolgens <strong>Advanced audio settings</strong> en <strong>schakel Ruisonderdrukking, Echo-onderdrukking en Automatische versterkingsregeling uit</strong> voor heldere vertaalde audio."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat is nog niet beschikbaar op $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Vertaal in elke app"
+  },
+  "desktopCtaBody": {
+    "message": "Een systeembrede virtuele microfoon voor OBS, YouTube, Twitch en elke desktop-app. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Desktop-app downloaden"
+  },
+  "browserSitesHeading": {
+    "message": "Liever de browser? MAO Chat werkt op deze sites — klik om te openen:"
+  },
+  "requestSiteLink": {
+    "message": "Vraag een site aan"
+  },
+  "learnMore": {
+    "message": "Meer informatie →"
+  },
+  "detectFailHeadline": {
+    "message": "Dit tabblad kon niet worden gedetecteerd"
+  },
+  "detectFailBody": {
+    "message": "Ververs de pagina en open MAO Chat opnieuw."
+  }
+}

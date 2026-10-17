@@ -1,0 +1,558 @@
+/**
+ * ASR Worker — Classic Web Worker (not ES module) for sherpa-onnx WASM.
+ *
+ * Uses importScripts() to load Emscripten glue code + sherpa-onnx JS API wrappers.
+ * Handles VAD + OfflineRecognizer for non-streaming speech recognition.
+ *
+ * Protocol:
+ *   Main → Worker:
+ *     { type: 'init', fileUrls, asrEngine, vadConfig?, runtimeBaseUrl, dataPackageMetadata }
+ *     { type: 'audio', samples: Int16Array, sampleRate: number }
+ *     { type: 'flush' }
+ *     { type: 'dispose' }
+ *
+ *   Worker → Main:
+ *     { type: 'ready', loadTimeMs: number }
+ *     { type: 'status', message: string }
+ *     { type: 'speech_start' }
+ *     { type: 'result', text, startSample, durationMs, recognitionTimeMs }
+ *     { type: 'error', error: string }
+ *     { type: 'disposed' }
+ */
+
+// sherpa-onnx expects 16kHz audio
+var EXPECTED_SAMPLE_RATE = 16000;
+
+// State
+var vad = null;
+var buffer = null;
+var recognizer = null;
+var isReady = false;
+var isSpeaking = false;
+var skipQuietSegments = false;
+
+function rmsEnergy(samples) {
+  if (!samples || !samples.length) return 0;
+  var sum = 0;
+  for (var i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+  return Math.sqrt(sum / samples.length);
+}
+
+function isQuietSegment(samples) {
+  return rmsEnergy(samples) < 0.018;
+}
+
+function cleanOfflineAsrText(raw) {
+  var cleaned = String(raw || '')
+    .replace(/<\|[^|]*\|>/g, ' ')
+    .replace(/\[(?:music|applause|laughter|silence|inaudible)\]/gi, ' ')
+    .replace(/([\u3000-\u9fff\uF900-\uFAFF\uFF66-\uFF9D])\s+(?=[\u3000-\u9fff\uF900-\uFAFF\uFF66-\uFF9D])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return '';
+  if (/^[。．.、，,！!？?…ー～〜・\s]+$/.test(cleaned)) return '';
+  if (skipQuietSegments && /^(啊+|嗯+|呃+|额+|唔+|えー+|えっと|あの+|うん+|はい+|哦+|喔+|哇+)$/.test(cleaned)) return '';
+  var lower = cleaned.toLowerCase();
+  if (
+    lower === 'ご視聴ありがとうございました'
+    || lower === 'ご視聴ありがとう'
+    || lower === 'thank you'
+    || lower === 'thanks for watching'
+    || lower === 'music'
+  ) return '';
+  return cleaned;
+}
+
+// ─── Audio Conversion ────────────────────────────────────────────────────────
+
+/**
+ * Downsample Int16Array to Float32Array at target sample rate.
+ * Combines format conversion (Int16 → Float32 normalized) and resampling.
+ */
+function downsampleInt16ToFloat32(input, inputSampleRate, outputSampleRate) {
+  if (inputSampleRate === outputSampleRate) {
+    var output = new Float32Array(input.length);
+    for (var i = 0; i < input.length; i++) {
+      output[i] = input[i] / 32768;
+    }
+    return output;
+  }
+
+  var ratio = inputSampleRate / outputSampleRate;
+  var outputLength = Math.floor(input.length / ratio);
+  var output = new Float32Array(outputLength);
+
+  for (var i = 0; i < outputLength; i++) {
+    var srcIndex = i * ratio;
+    var srcIndexFloor = Math.floor(srcIndex);
+    var srcIndexCeil = Math.min(srcIndexFloor + 1, input.length - 1);
+    var frac = srcIndex - srcIndexFloor;
+    var sample = input[srcIndexFloor] * (1 - frac) + input[srcIndexCeil] * frac;
+    output[i] = sample / 32768;
+  }
+
+  return output;
+}
+
+// ─── Per-Engine Config Builders ──────────────────────────────────────────────
+// Each builder returns the modelConfig fields specific to its engine type.
+// The engine type is passed explicitly from the manifest via AsrEngine.ts,
+// matching the TTS worker pattern (no filesystem probing).
+
+function buildSenseVoiceConfig(language) {
+  return {
+    senseVoice: {
+      model: './sense-voice.onnx',
+      // Empty language is not auto-detect in sherpa-onnx — Japanese then
+      // decodes as empty. Always pass a real token.
+      language: language || 'auto',
+      useInverseTextNormalization: 1,
+    },
+  };
+}
+
+function buildWhisperConfig() {
+  return {
+    whisper: { encoder: './whisper-encoder.onnx', decoder: './whisper-decoder.onnx' },
+  };
+}
+
+function buildTransducerConfig() {
+  return {
+    transducer: {
+      encoder: './transducer-encoder.onnx',
+      decoder: './transducer-decoder.onnx',
+      joiner: './transducer-joiner.onnx',
+    },
+    modelType: 'transducer',
+  };
+}
+
+function buildNemoTransducerConfig() {
+  return {
+    transducer: {
+      encoder: './nemo-transducer-encoder.onnx',
+      decoder: './nemo-transducer-decoder.onnx',
+      joiner: './nemo-transducer-joiner.onnx',
+    },
+    modelType: 'nemo_transducer',
+  };
+}
+
+function buildParaformerConfig() {
+  return {
+    paraformer: { model: './paraformer.onnx' },
+  };
+}
+
+function buildTelespeechConfig() {
+  return {
+    teleSpeechCtc: './telespeech.onnx',
+  };
+}
+
+function buildMoonshineConfig() {
+  return {
+    moonshine: {
+      preprocessor: './moonshine-preprocessor.onnx',
+      encoder: './moonshine-encoder.onnx',
+      uncachedDecoder: './moonshine-uncached-decoder.onnx',
+      cachedDecoder: './moonshine-cached-decoder.onnx',
+    },
+  };
+}
+
+function buildMoonshineV2Config() {
+  return {
+    moonshine: {
+      encoder: './moonshine-encoder.ort',
+      mergedDecoder: './moonshine-merged-decoder.ort',
+    },
+  };
+}
+
+function buildDolphinConfig() {
+  return {
+    dolphin: { model: './dolphin.onnx' },
+  };
+}
+
+function buildZipformerCtcConfig() {
+  return {
+    zipformerCtc: { model: './zipformer-ctc.onnx' },
+  };
+}
+
+function buildNemoCtcConfig() {
+  return {
+    nemoCtc: { model: './nemo-ctc.onnx' },
+  };
+}
+
+function buildCanaryConfig() {
+  return {
+    canary: { encoder: './canary-encoder.onnx', decoder: './canary-decoder.onnx' },
+  };
+}
+
+function buildWenetCtcConfig() {
+  return {
+    wenetCtc: { model: './wenet-ctc.onnx' },
+  };
+}
+
+function buildOmnilingualConfig() {
+  return {
+    omnilingual: { model: './omnilingual.onnx' },
+  };
+}
+
+/**
+ * Build OfflineRecognizer config for the given engine type.
+ * Engine type comes from modelManifest.ts asrEngine field.
+ */
+function buildAsrConfig(engine, language) {
+  var base = { modelConfig: { debug: 1, tokens: './tokens.txt' } };
+  var engineConfig;
+
+  switch (engine) {
+    case 'sensevoice':       engineConfig = buildSenseVoiceConfig(language); break;
+    case 'whisper':          engineConfig = buildWhisperConfig(); break;
+    case 'transducer':       engineConfig = buildTransducerConfig(); break;
+    case 'nemo-transducer':  engineConfig = buildNemoTransducerConfig(); break;
+    case 'paraformer':       engineConfig = buildParaformerConfig(); break;
+    case 'telespeech':       engineConfig = buildTelespeechConfig(); break;
+    case 'moonshine':        engineConfig = buildMoonshineConfig(); break;
+    case 'moonshine-v2':     engineConfig = buildMoonshineV2Config(); break;
+    case 'dolphin':          engineConfig = buildDolphinConfig(); break;
+    case 'zipformer-ctc':    engineConfig = buildZipformerCtcConfig(); break;
+    case 'nemo-ctc':         engineConfig = buildNemoCtcConfig(); break;
+    case 'canary':           engineConfig = buildCanaryConfig(); break;
+    case 'wenet-ctc':        engineConfig = buildWenetCtcConfig(); break;
+    case 'omnilingual':      engineConfig = buildOmnilingualConfig(); break;
+    default:
+      throw new Error('Unknown ASR engine: ' + engine);
+  }
+
+  // Merge engine-specific fields into modelConfig
+  for (var key in engineConfig) {
+    base.modelConfig[key] = engineConfig[key];
+  }
+
+  return base;
+}
+
+// ─── Emscripten Module Setup ─────────────────────────────────────────────────
+
+/**
+ * Initialize the WASM module and sherpa-onnx objects.
+ * Called when main thread sends { type: 'init' }.
+ */
+function handleInit(msg) {
+  var fileUrls = msg.fileUrls;
+  var asrEngine = msg.asrEngine;
+  var language = msg.language;
+  var vadConfig = msg.vadConfig;
+  skipQuietSegments = !!msg.skipQuietSegments;
+  var runtimeBaseUrl = msg.runtimeBaseUrl;
+  var dataPackageMetadata = msg.dataPackageMetadata;
+
+  if (!fileUrls) {
+    postMessage({ type: 'error', error: 'fileUrls is required — model must be downloaded first' });
+    return;
+  }
+  if (!asrEngine) {
+    postMessage({ type: 'error', error: 'asrEngine is required — model manifest must specify engine type' });
+    return;
+  }
+  if (!runtimeBaseUrl) {
+    postMessage({ type: 'error', error: 'runtimeBaseUrl is required — bundled ASR runtime path missing' });
+    return;
+  }
+  if (!dataPackageMetadata) {
+    postMessage({ type: 'error', error: 'dataPackageMetadata is required — model metadata missing' });
+    return;
+  }
+
+  var startTime = performance.now();
+
+  postMessage({ type: 'status', message: 'Loading WASM module...' });
+
+  // Configure the Emscripten Module object before loading the glue code.
+  // Must be set BEFORE importScripts loads the Emscripten JS.
+  Module = {};
+
+  // Inject the data package metadata so the patched glue JS uses it
+  // instead of the hardcoded loadPackage({...}) that was stripped out.
+  Module._dataPackageMetadata = dataPackageMetadata;
+
+  // locateFile resolves .data to IndexedDB blob URL, .wasm to bundled path.
+  Module.locateFile = function(path) {
+    // .data file comes from IndexedDB (model-specific, downloaded from CDN)
+    if (fileUrls[path]) {
+      return fileUrls[path];
+    }
+    // .wasm file is bundled with the app
+    return runtimeBaseUrl + '/' + path;
+  };
+
+  Module.setStatus = function(status) {
+    postMessage({ type: 'status', message: status });
+  };
+
+  Module.onRuntimeInitialized = function() {
+    try {
+      postMessage({ type: 'status', message: 'Creating VAD...' });
+
+      // createVad is defined in sherpa-onnx-vad.js, uses Silero VAD model
+      // pre-loaded into the virtual filesystem via the .data file
+      if (vadConfig) {
+        // Honor caller-provided caps. Extension caption mode passes a short
+        // maxSpeechDuration (~7s) so offline models like moonshine-ja still
+        // emit readable cues during continuous speech instead of waiting the
+        // default 20s hard cap (which looks like "not recognizing").
+        var customVadConfig = {
+          sileroVad: {
+            model: './silero_vad.onnx',
+            threshold: vadConfig.threshold || 0.50,
+            minSilenceDuration: vadConfig.minSilenceDuration || 0.50,
+            minSpeechDuration: vadConfig.minSpeechDuration || 0.25,
+            maxSpeechDuration: vadConfig.maxSpeechDuration || 20,
+            windowSize: 512,
+          },
+          sampleRate: 16000,
+          numThreads: 1,
+          provider: 'cpu',
+          debug: 1,
+          bufferSizeInSeconds: 30,
+        };
+        vad = createVad(Module, customVadConfig);
+      } else {
+        vad = createVad(Module);
+      }
+
+      // Circular buffer: 30 seconds of audio at 16kHz
+      buffer = new CircularBuffer(30 * EXPECTED_SAMPLE_RATE, Module);
+
+      postMessage({ type: 'status', message: 'Creating recognizer (' + asrEngine + ')...' });
+
+      // Build engine-specific config and create OfflineRecognizer
+      recognizer = new OfflineRecognizer(buildAsrConfig(asrEngine, language), Module);
+
+      isReady = true;
+      var elapsed = Math.round(performance.now() - startTime);
+      postMessage({ type: 'ready', loadTimeMs: elapsed });
+    } catch (e) {
+      postMessage({ type: 'error', error: 'Init failed: ' + (e.message || e) });
+    }
+  };
+
+  // Load bundled Emscripten glue code + sherpa-onnx JS API wrappers.
+  // The glue JS is patched to use Module._dataPackageMetadata instead of
+  // hardcoded loadPackage({...}) metadata.
+  // After importScripts, these globals become available:
+  //   - Module (enhanced by Emscripten glue)
+  //   - CircularBuffer, Vad, createVad (from sherpa-onnx-vad.js)
+  //   - OfflineRecognizer, OfflineStream (from sherpa-onnx-asr.js)
+  try {
+    importScripts(
+      runtimeBaseUrl + '/sherpa-onnx-wasm-main-vad-asr.js',
+      runtimeBaseUrl + '/sherpa-onnx-vad.js',
+      runtimeBaseUrl + '/sherpa-onnx-asr.js'
+    );
+  } catch (e) {
+    postMessage({
+      type: 'error',
+      error: 'Failed to load WASM scripts: ' + (e.message || e)
+    });
+  }
+}
+
+// ─── Audio Processing ────────────────────────────────────────────────────────
+
+/**
+ * Process incoming audio chunk through VAD → ASR pipeline.
+ * Audio flows: circular buffer → VAD windowing → speech segment detection → ASR
+ */
+function handleAudio(msg) {
+  if (!isReady || !vad || !buffer || !recognizer) {
+    return; // Silently drop if not initialized
+  }
+
+  try {
+    // Convert incoming audio to Float32 @ 16kHz
+    var samples = downsampleInt16ToFloat32(msg.samples, msg.sampleRate, EXPECTED_SAMPLE_RATE);
+
+    // Push into circular buffer
+    buffer.push(samples);
+
+    // Get VAD window size (typically 512 samples for Silero VAD at 16kHz)
+    var windowSize = vad.config.sileroVad.windowSize || 512;
+
+    // Feed all available windows to VAD
+    while (buffer.size() >= windowSize) {
+      var segment = buffer.get(buffer.head(), windowSize);
+      buffer.pop(windowSize);
+      vad.acceptWaveform(segment);
+
+      // Detect speech start transition via VAD state
+      if (!isSpeaking && vad.isDetected()) {
+        isSpeaking = true;
+        postMessage({ type: 'speech_start' });
+      }
+    }
+
+    // Process completed speech segments through ASR
+    while (!vad.isEmpty()) {
+      var speechSegment = vad.front();
+      var speechSamples = speechSegment.samples;
+      var startSample = speechSegment.start;
+
+      var recognitionStart = performance.now();
+      var durationMs = Math.round((speechSamples.length / EXPECTED_SAMPLE_RATE) * 1000);
+      if (skipQuietSegments && (isQuietSegment(speechSamples) || durationMs < 220)) {
+        vad.pop();
+        isSpeaking = false;
+        continue;
+      }
+
+      // Create a stream, feed the speech segment, decode
+      var stream = recognizer.createStream();
+      stream.acceptWaveform(EXPECTED_SAMPLE_RATE, speechSamples);
+      recognizer.decode(stream);
+      var result = recognizer.getResult(stream);
+      stream.free();
+
+      var recognitionTimeMs = Math.round(performance.now() - recognitionStart);
+
+      var text = cleanOfflineAsrText(result.text || '');
+      if (text) {
+        postMessage({
+          type: 'result',
+          text: text,
+          startSample: startSample,
+          durationMs: durationMs,
+          recognitionTimeMs: recognitionTimeMs,
+        });
+      } else {
+        // Help diagnose "model loaded but nothing shows": VAD cut a segment but
+        // the offline decoder returned empty text (too short / too quiet / wrong lang).
+        postMessage({
+          type: 'status',
+          message: 'ASR empty result (' + durationMs + 'ms speech, ' + recognitionTimeMs + 'ms decode)',
+        });
+      }
+
+      vad.pop();
+      isSpeaking = false;
+    }
+  } catch (e) {
+    isSpeaking = false;
+    postMessage({ type: 'error', error: 'ASR processing error: ' + (e.message || e) });
+    // Drain remaining VAD segments to prevent stale state
+    try { while (!vad.isEmpty()) { vad.pop(); } } catch (_) {}
+  }
+}
+
+// ─── Flush (PTT release) ─────────────────────────────────────────────────────
+
+/**
+ * Force VAD to emit any pending speech segment and run it through ASR.
+ * Called on PTT release so the user doesn't have to press again to get results.
+ */
+function handleFlush() {
+  if (!isReady || !vad || !recognizer) return;
+
+  try {
+    // Force VAD to emit any pending speech segment
+    vad.flush();
+
+    // Process any segments that were flushed
+    while (!vad.isEmpty()) {
+      var speechSegment = vad.front();
+      var speechSamples = speechSegment.samples;
+      var startSample = speechSegment.start;
+
+      var recognitionStart = performance.now();
+      var durationMs = Math.round((speechSamples.length / EXPECTED_SAMPLE_RATE) * 1000);
+      if (skipQuietSegments && (isQuietSegment(speechSamples) || durationMs < 220)) {
+        vad.pop();
+        isSpeaking = false;
+        continue;
+      }
+
+      var stream = recognizer.createStream();
+      stream.acceptWaveform(EXPECTED_SAMPLE_RATE, speechSamples);
+      recognizer.decode(stream);
+      var result = recognizer.getResult(stream);
+      stream.free();
+
+      var recognitionTimeMs = Math.round(performance.now() - recognitionStart);
+      var text = cleanOfflineAsrText(result.text || '');
+
+      if (text) {
+        postMessage({
+          type: 'result',
+          text: text,
+          startSample: startSample,
+          durationMs: durationMs,
+          recognitionTimeMs: recognitionTimeMs,
+        });
+      } else {
+        postMessage({
+          type: 'status',
+          message: 'ASR empty result after flush (' + durationMs + 'ms speech, ' + recognitionTimeMs + 'ms decode)',
+        });
+      }
+
+      vad.pop();
+      isSpeaking = false;
+    }
+  } catch (e) {
+    isSpeaking = false;
+    postMessage({ type: 'error', error: 'ASR flush error: ' + (e.message || e) });
+    try { while (!vad.isEmpty()) { vad.pop(); } } catch (_) {}
+  }
+}
+
+// ─── Dispose ─────────────────────────────────────────────────────────────────
+
+function handleDispose() {
+  if (recognizer) {
+    recognizer.free();
+    recognizer = null;
+  }
+  if (vad) {
+    vad.free();
+    vad = null;
+  }
+  if (buffer) {
+    buffer.free();
+    buffer = null;
+  }
+  isReady = false;
+  skipQuietSegments = false;
+  postMessage({ type: 'disposed' });
+}
+
+// ─── Message Handler ─────────────────────────────────────────────────────────
+
+self.onmessage = function(event) {
+  var msg = event.data;
+  switch (msg.type) {
+    case 'init':
+      handleInit(msg);
+      break;
+    case 'audio':
+      handleAudio(msg);
+      break;
+    case 'flush':
+      handleFlush();
+      break;
+    case 'dispose':
+      handleDispose();
+      break;
+    default:
+      postMessage({ type: 'error', error: 'Unknown message type: ' + msg.type });
+  }
+};

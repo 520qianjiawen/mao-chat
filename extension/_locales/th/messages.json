@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI แปลภาษาประชุม"
+  },
+  "extensionDescription": {
+    "message": "การแปลเสียงพูดทันทีด้วย AI สำหรับการประชุมวิดีโอทั้งหมด ทำลายอุปสรรคทางภาษาด้วยการแปลเสียงแบบเรียลไทม์"
+  },
+  "popupTitle": {
+    "message": "MAO Chat - เว็บไซต์ที่รองรับ"
+  },
+  "openSokuji": {
+    "message": "เปิด MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "ส่วนเสริม Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat พร้อมใช้งานบน $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "คลิก \"เปิด MAO Chat\" ด้านล่างเพื่อเริ่มการแปลแบบเรียลไทม์"
+  },
+  "quickStart": {
+    "message": "เริ่มต้นอย่างรวดเร็ว:"
+  },
+  "quickStartInstructions": {
+    "message": "กำหนดค่า API key (OpenAI or Gemini) ของคุณ → เลือก \"MAO Chat Virtual Microphone\" เป็นไมโครโฟน → เริ่มพูด!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "หากต้องการใช้ MAO Chat โปรดเลือก <strong>\"MAO Chat Virtual Microphone\"</strong> ในการตั้งค่าไมโครโฟนของคุณ"
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "หากต้องการใช้ MAO Chat โปรดเลือก <strong>\"MAO Chat Virtual Microphone\"</strong> ในการตั้งค่าไมโครโฟนและ<strong>ปิดการลดเสียงรบกวน</strong>เพื่อประสิทธิภาพที่ดีกว่า"
+  },
+  "gotIt": {
+    "message": "เข้าใจแล้ว"
+  },
+  "remindLater": {
+    "message": "เตือนภายหลัง"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "หากต้องการใช้ MAO Chat โปรดเลือก \"MAO Chat Virtual Microphone\" ในการตั้งค่าไมโครโฟน"
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "หากต้องการใช้ MAO Chat โปรดเลือก <strong>\"MAO Chat Virtual Microphone\"</strong> ในการตั้งค่าไมโครโฟน และ<strong>ปิดการลดเสียงรบกวน</strong>ในการตั้งค่าเสียงของ Discord เพื่อประสิทธิภาพที่ดีขึ้น"
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "หากต้องการใช้ MAO Chat ใน Slack Huddles โปรด<strong>เริ่ม Huddle</strong> จากนั้นเลือก <strong>\"MAO Chat Virtual Microphone\"</strong> ในการตั้งค่าวิดีโอและไมโครโฟน และ<strong>ปิดการปราบปรามเสียงรบกวน</strong>ในการตั้งค่าเสียงและวิดีโอเพื่อประสิทธิภาพที่ดีขึ้น"
+  },
+  "teamsTitle": {
+    "message": "MAO Chat สำหรับ Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "หากคุณไม่เห็นรายการอุปกรณ์เสียงทั้งหมดในการตั้งค่า Teams:<br><strong>1)</strong> ปิดใช้งานส่วนขยาย MAO Chat ชั่วคราวและรีเฟรชหน้า<br><strong>2)</strong> อนุญาตให้ Teams เข้าถึงไมโครโฟนและกล้องของคุณเมื่อได้รับแจ้ง<br><strong>3)</strong> เปิดใช้งานส่วนขยาย MAO Chat อีกครั้งและรีเฟรชหน้าอีกครั้ง<br><strong>4)</strong> อนุญาตให้ MAO Chat เข้าถึงไมโครโฟนของคุณเมื่อได้รับแจ้ง ตอนนี้คุณควรเห็นทั้งอุปกรณ์จริงและ <strong>\"MAO Chat Virtual Microphone\"</strong> ในการตั้งค่าของคุณ"
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "หากต้องการใช้ MAO Chat ใน Jitsi Meet ให้เปิด <strong>Settings > Devices</strong> และเลือก <strong>\"MAO Chat Virtual Microphone\"</strong> เป็นไมโครโฟนของคุณ จากนั้นเปิด <strong>Advanced audio settings</strong> และ<strong>ปิดการลดเสียงรบกวน การตัดเสียงสะท้อน และการปรับเกนอัตโนมัติ</strong>เพื่อเสียงแปลที่ชัดเจน"
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat ยังไม่พร้อมใช้งานบน $HOSTNAME$",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "แปลภาษาในแอปใดก็ได้"
+  },
+  "desktopCtaBody": {
+    "message": "ไมโครโฟนเสมือนระดับระบบสำหรับ OBS, YouTube, Twitch และทุกแอปเดสก์ท็อป Windows · macOS · Linux"
+  },
+  "desktopCtaButton": {
+    "message": "ดาวน์โหลดแอปเดสก์ท็อป"
+  },
+  "browserSitesHeading": {
+    "message": "ชอบใช้เบราว์เซอร์? MAO Chat รองรับเว็บไซต์เหล่านี้ — คลิกเพื่อเปิด:"
+  },
+  "requestSiteLink": {
+    "message": "ขอเพิ่มเว็บไซต์"
+  },
+  "learnMore": {
+    "message": "เรียนรู้เพิ่มเติม →"
+  },
+  "detectFailHeadline": {
+    "message": "ไม่สามารถตรวจจับแท็บนี้ได้"
+  },
+  "detectFailBody": {
+    "message": "รีเฟรชหน้าเว็บและเปิด MAO Chat ใหม่อีกครั้ง"
+  }
+}

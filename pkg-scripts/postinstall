@@ -1,0 +1,88 @@
+#!/bin/sh
+
+# MAO Chat PKG Installer - Postinstall Script
+# Installs the virtual audio driver into Core Audio HAL plugins.
+
+echo "MAO Chat postinstall: Starting installation..."
+
+APP_PATH=""
+# Support current product name and the legacy Sokuji branding. Keep the paths
+# quoted because the current application name contains a space.
+if [ -d "/Applications/MAO Chat.app" ]; then
+    APP_PATH="/Applications/MAO Chat.app"
+elif [ -d "/Applications/Sokuji.app" ]; then
+    APP_PATH="/Applications/Sokuji.app"
+fi
+
+if [ -n "$APP_PATH" ]; then
+    echo "MAO Chat postinstall: Setting app permissions on $APP_PATH..."
+    chmod -R 755 "$APP_PATH" 2>/dev/null || true
+fi
+
+# Install the virtual audio driver from the app bundle
+# electron-builder packs extraResources under Contents/Resources/
+DRIVER_SOURCE=""
+if [ -n "$APP_PATH" ]; then
+    for rel in \
+        "Contents/Resources/resources/drivers/SokujiVirtualAudio.driver" \
+        "Contents/Resources/drivers/SokujiVirtualAudio.driver"
+    do
+        if [ -d "$APP_PATH/$rel" ]; then
+            DRIVER_SOURCE="$APP_PATH/$rel"
+            break
+        fi
+    done
+fi
+
+DRIVER_DEST="/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver"
+
+# Ensure HAL plugins directory exists
+HAL_DIR="/Library/Audio/Plug-Ins/HAL"
+if [ ! -d "$HAL_DIR" ]; then
+    echo "MAO Chat postinstall: Creating HAL plugins directory..."
+    mkdir -p "$HAL_DIR"
+    if [ $? -ne 0 ]; then
+        echo "MAO Chat postinstall: ERROR - Failed to create HAL plugins directory"
+        exit 1
+    fi
+    chown root:wheel "$HAL_DIR"
+    chmod 755 "$HAL_DIR"
+fi
+
+if [ -d "$DRIVER_SOURCE" ]; then
+    echo "MAO Chat postinstall: Installing virtual audio driver from $DRIVER_SOURCE..."
+
+    # Remove old driver if it exists
+    if [ -d "$DRIVER_DEST" ]; then
+        echo "MAO Chat postinstall: Removing old driver..."
+        rm -rf "$DRIVER_DEST"
+    fi
+
+    # Copy the driver to the HAL plugins directory
+    echo "MAO Chat postinstall: Copying driver to $DRIVER_DEST..."
+    cp -R "$DRIVER_SOURCE" "$DRIVER_DEST"
+
+    # Set correct permissions on the driver
+    echo "MAO Chat postinstall: Setting driver permissions..."
+    chown -R root:wheel "$DRIVER_DEST"
+    chmod -R 755 "$DRIVER_DEST"
+
+    # Mark installed so the app can detect the driver more reliably
+    touch /Library/Audio/Plug-Ins/HAL/.sokuji_installed 2>/dev/null || true
+    chown root:wheel /Library/Audio/Plug-Ins/HAL/.sokuji_installed 2>/dev/null || true
+
+    # Restart CoreAudio to load the driver
+    echo "MAO Chat postinstall: Restarting CoreAudio to load driver..."
+    # Try multiple methods to ensure CoreAudio restarts regardless of permission level
+    killall coreaudiod 2>/dev/null || \
+    launchctl kickstart -k system/com.apple.audio.coreaudiod 2>/dev/null || \
+    launchctl kill SIGTERM system/com.apple.audio.coreaudiod 2>/dev/null || true
+
+    echo "MAO Chat postinstall: Virtual audio driver installed successfully"
+else
+    echo "MAO Chat postinstall: Warning - Virtual audio driver not found in app bundle"
+    echo "MAO Chat postinstall: App path was: ${APP_PATH:-none}"
+fi
+
+echo "MAO Chat postinstall: Installation completed"
+exit 0

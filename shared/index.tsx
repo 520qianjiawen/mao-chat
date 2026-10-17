@@ -1,0 +1,190 @@
+import { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
+import App from '../src/App';
+import QuickTranslateWindow from '../src/components/QuickTranslate/QuickTranslateWindow';
+import PostHog from 'posthog-js-lite';
+import { ANALYTICS_CONFIG, isDevelopment, getPlatform, getEnvironment, isAnalyticsEnabled } from '../src/config/analytics';
+import { setupErrorTracking } from '../src/lib/errorTracking';
+import { AppProviders } from '../src/components/AppProviders';
+
+// Re-export PostHog context from its dedicated side-effect-free module.
+// Keeping the named exports here preserves backward compatibility with
+// existing call sites (e.g. `src/lib/analytics.ts`) that import them
+// from `shared/index`.
+export { PostHogProvider, usePostHog } from '../src/contexts/PostHogContext';
+
+
+// Dynamically import styles based on environment
+const loadStyles = async () => {
+  const startTime = performance.now();
+  try {
+    // Try to import main project styles (Vite environment)
+    await import('../src/styles/scrollbar.scss' as any);
+    await import('../src/index.scss' as any);
+    const endTime = performance.now();
+    console.log(`[Sokuji] Styles loaded (Vite) in ${Math.round(endTime - startTime)}ms`);
+  } catch (e) {
+    // If failed, try to import extension environment styles
+    try {
+      await import('../src/App.scss' as any);
+      const endTime = performance.now();
+      console.log(`[Sokuji] Styles loaded (Extension) in ${Math.round(endTime - startTime)}ms`);
+    } catch (e2) {
+      console.warn('[Sokuji] Could not load styles:', e2);
+    }
+  }
+};
+
+// Dynamically get package.json (handle different environment paths)
+const getPackageInfo = async () => {
+  try {
+    const packageInfo = await import('../package.json');
+    return packageInfo.default || packageInfo;
+  } catch (e) {
+    // If unable to get package.json, return default value
+    return { version: '0.4.2' };
+  }
+};
+
+const initializePostHog = async (): Promise<PostHog | null> => {
+  // Skip initialization if no key configured (fork projects without PostHog)
+  if (!isAnalyticsEnabled()) {
+    console.info('[Sokuji] PostHog analytics disabled (VITE_POSTHOG_KEY not set)');
+    return null;
+  }
+
+  const packageInfo = await getPackageInfo();
+
+  const options = {
+    host: ANALYTICS_CONFIG.POSTHOG_HOST,
+    debug: isDevelopment(),
+    // debug: false,
+    // posthog-js-lite specific options
+    persistence: 'localStorage' as 'localStorage',
+    // Enable SPA navigation tracking
+    captureHistoryEvents: true,
+    defaultOptIn: true,
+    autocapture: true,
+    disableCompression: isDevelopment(),
+    // // Disable batching - send events immediately
+    flushAt: 1,        // Send immediately after 1 event (no batching)
+    flushInterval: 2000   // Don't wait for time interval
+  };
+
+  // Initialize PostHog with posthog-js-lite
+  const posthog = new PostHog(ANALYTICS_CONFIG.POSTHOG_KEY, options);
+  
+  // Set Super Properties that will be included with every event
+  await posthog.register({
+    app_version: packageInfo.version,
+    environment: getEnvironment(),
+    platform: getPlatform(),
+    user_agent: navigator.userAgent,
+  });
+  
+  // In development, opt out by default
+  if (isDevelopment()) {
+    // posthog.optOut();
+    // console.debug('[Sokuji] PostHog initialized in development mode - capturing is opt-out by default');
+    // console.debug('[Sokuji] Call posthog.optIn() to enable tracking in development');
+  }
+  
+  // Sync distinct_id to background script in extension environment
+  if (getPlatform() === 'extension') {
+    // Import and call sync function - no delay needed with proper async handling
+    import('../src/lib/analytics').then(({ syncDistinctIdToBackground }) => {
+      // Use microtask queue instead of setTimeout for immediate execution after current stack
+      Promise.resolve().then(() => {
+        syncDistinctIdToBackground(posthog);
+      });
+    }).catch(error => {
+      console.warn('[Sokuji] [PostHog] Could not sync distinct_id to background script:', error.message);
+    });
+  }
+  
+  return posthog;
+};
+
+const UnifiedApp = () => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [posthogClient, setPosthogClient] = useState<PostHog | null>(null);
+  const errorTrackingCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Track initialization start time
+      const startTime = performance.now();
+      
+      // Run critical initialization tasks in parallel
+      await Promise.all([
+        // Load styles (non-blocking)
+        loadStyles().catch(err => console.warn('[Sokuji] Style loading error:', err)),
+      ]);
+      
+      // Log critical initialization time
+      const endTime = performance.now();
+      console.log(`[Sokuji] Critical initialization completed in ${Math.round(endTime - startTime)}ms`);
+      
+      // Mark as loaded - UI can now render
+      setIsLoaded(true);
+      
+      // Defer PostHog initialization to after UI renders
+      requestIdleCallback(() => {
+        const analyticsStart = performance.now();
+        initializePostHog().then(client => {
+          setPosthogClient(client);
+          if (client) {
+            errorTrackingCleanupRef.current = setupErrorTracking(client);
+          }
+          const analyticsEnd = performance.now();
+          console.log(`[Sokuji] Analytics initialized in ${Math.round(analyticsEnd - analyticsStart)}ms`);
+        }).catch(error => {
+          console.error('[Sokuji] Failed to initialize analytics:', error);
+          // Create a minimal fallback client
+          setPosthogClient(null);
+        });
+      }, { timeout: 1000 }); // Ensure it runs within 1 second
+    };
+
+    initializeApp();
+  }, []);
+
+  // Cleanup error tracking on unmount
+  useEffect(() => {
+    return () => {
+      errorTrackingCleanupRef.current?.();
+    };
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  const isQuickTranslate = typeof window !== 'undefined' && (
+    window.location.search.includes('window=quick-translate') ||
+    window.location.hash.includes('quick-translate')
+  );
+
+  // Render app immediately with PostHogProvider (client can be null during initialization)
+  return (
+    <AppProviders posthogClient={posthogClient}>
+      {isQuickTranslate ? <QuickTranslateWindow /> : <App />}
+    </AppProviders>
+  );
+};
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+root.render(<UnifiedApp />); 

@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge యాడ్-ఆన్‌లు"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "MAO Chat ఉపయోగించడానికి, మీ మైక్రోఫోన్ సెట్టింగ్స్‌లో <strong>\"MAO Chat Virtual Microphone\"</strong> ఎంచుకోండి."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "MAO Chat ను ఉపయోగించడానికి, దయచేసి మీ మైక్రోఫోన్ సెట్టింగ్‌లలో <strong>\"MAO Chat Virtual Microphone\"</strong> ను ఎంచుకోండి మరియు మెరుగైన పనితీరు కోసం <strong>శబ్దం తగ్గింపును నిలిపివేయండి</strong>."
+  },
+  "gotIt": {
+    "message": "అర్థమైంది"
+  },
+  "remindLater": {
+    "message": "తరువాత గుర్తుచేయండి"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "MAO Chat ని ఉపయోగించడానికి, దయచేసి మీ మైక్రోఫోన్ సెట్టింగ్‌లలో \"MAO Chat Virtual Microphone\" ని ఎంచుకోండి."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "MAO Chat ని ఉపయోగించడానికి, దయచేసి మీ మైక్రోఫోన్ సెట్టింగ్‌లలో <strong>\"MAO Chat Virtual Microphone\"</strong> ని ఎంచుకోండి మరియు మెరుగైన పనితీరు కోసం Discord యొక్క వాయిస్ సెట్టింగ్‌లలో <strong>నాయిజ్ సప్రెషన్‌ను నిలిపివేయండి</strong>."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "Microsoft Teams కోసం MAO Chat"
+  },
+  "teamsGuidance": {
+    "message": "Teams సెట్టింగ్‌లలో పూర్తి ఆడియో పరికరాల జాబితా కనిపించకుంటే:<br><strong>1)</strong> MAO Chat ఎక్స్‌టెన్షన్‌ను తాత్కాలికంగా నిలిపివేసి పేజీని రిఫ్రెష్ చేయండి<br><strong>2)</strong> అడిగినప్పుడు Teams మీ మైక్రోఫోన్ మరియు కెమెరాకు యాక్సెస్ అనుమతించండి<br><strong>3)</strong> MAO Chat ఎక్స్‌టెన్షన్‌ను మళ్లీ ప్రారంభించి పేజీని మళ్లీ రిఫ్రెష్ చేయండి<br><strong>4)</strong> అడిగినప్పుడు MAO Chat మీ మైక్రోఫోన్‌కు యాక్సెస్ అనుమతించండి. ఇప్పుడు మీరు మీ సెట్టింగ్‌లలో వాస్తవ పరికరాలు మరియు <strong>\"MAO Chat Virtual Microphone\"</strong> రెండింటినీ చూడగలగాలి."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Jitsi Meet లో MAO Chat ని ఉపయోగించడానికి, <strong>Settings > Devices</strong> ని తెరిచి మీ మైక్రోఫోన్‌గా <strong>\"MAO Chat Virtual Microphone\"</strong> ని ఎంచుకోండి. తర్వాత <strong>Advanced audio settings</strong> ని తెరిచి, స్పష్టమైన అనువదించబడిన ఆడియో కోసం <strong>Noise suppression, Echo cancellation, మరియు Automatic gain control ను నిలిపివేయండి</strong>."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat ఇంకా $HOSTNAME$లో అందుబాటులో లేదు.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "ఏ యాప్‌లోనైనా అనువదించండి"
+  },
+  "desktopCtaBody": {
+    "message": "OBS, YouTube, Twitch మరియు ఏ డెస్క్‌టాప్ యాప్‌కైనా సిస్టమ్-వ్యాప్తంగా పని చేసే వర్చువల్ మైక్రోఫోన్. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "డెస్క్‌టాప్ యాప్ డౌన్‌లోడ్ చేయండి"
+  },
+  "browserSitesHeading": {
+    "message": "బ్రౌజర్ ఇష్టమా? MAO Chat ఈ సైట్‌లలో పని చేస్తుంది — తెరవడానికి క్లిక్ చేయండి:"
+  },
+  "requestSiteLink": {
+    "message": "సైట్ అభ్యర్థించండి"
+  },
+  "learnMore": {
+    "message": "మరింత తెలుసుకోండి →"
+  },
+  "detectFailHeadline": {
+    "message": "ఈ ట్యాబ్‌ను గుర్తించలేకపోయాం"
+  },
+  "detectFailBody": {
+    "message": "పేజీని రిఫ్రెష్ చేసి MAO Chat మళ్ళీ తెరవండి."
+  }
+}

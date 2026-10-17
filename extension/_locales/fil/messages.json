@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "Instant na speech translation na may AI para sa lahat ng video meetings. Sirain ang mga hadlang sa wika gamit ang real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Mga Suportadong Website"
+  },
+  "openSokuji": {
+    "message": "Buksan ang MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Mga Edge Add-on"
+  },
+  "sokujiAvailable": {
+    "message": "✓ Available ang MAO Chat sa $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "I-click ang \"Buksan ang MAO Chat\" sa ibaba para simulan ang real-time translation."
+  },
+  "quickStart": {
+    "message": "Mabilis na Simula:"
+  },
+  "quickStartInstructions": {
+    "message": "I-configure ang inyong API key (OpenAI or Gemini) ← Piliin ang \"MAO Chat Virtual Microphone\" bilang microphone ← Simulang magsalita!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Para gamitin ang MAO Chat, piliin ang <strong>\"MAO Chat Virtual Microphone\"</strong> sa inyong microphone settings."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Upang gamitin ang MAO Chat, mangyaring piliin ang <strong>\"MAO Chat Virtual Microphone\"</strong> sa inyong microphone settings at <strong>i-disable ang Noise reduction</strong> para sa mas magandang performance."
+  },
+  "gotIt": {
+    "message": "Naintindihan"
+  },
+  "remindLater": {
+    "message": "Paalalahanan mamaya"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Upang gamitin ang MAO Chat, pakipili ang \"MAO Chat Virtual Microphone\" sa inyong microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "Upang gamitin ang MAO Chat, pakipili ang <strong>\"MAO Chat Virtual Microphone\"</strong> sa inyong microphone settings at <strong>i-disable ang Noise Suppression</strong> sa voice settings ng Discord para sa mas magandang performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat para sa Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Kung hindi mo nakikita ang kumpletong listahan ng audio device sa mga setting ng Teams:<br><strong>1)</strong> Pansamantalang i-disable ang MAO Chat extension at i-refresh ang page<br><strong>2)</strong> Payagan ang Teams na ma-access ang iyong microphone at camera kapag hiniling<br><strong>3)</strong> I-enable muli ang MAO Chat extension at i-refresh muli ang page<br><strong>4)</strong> Payagan ang MAO Chat na ma-access ang iyong microphone kapag hiniling. Ngayon ay dapat mong makita ang parehong mga tunay na device at <strong>\"MAO Chat Virtual Microphone\"</strong> sa iyong mga setting."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Upang gamitin ang MAO Chat sa Jitsi Meet, buksan ang <strong>Settings > Devices</strong> at piliin ang <strong>\"MAO Chat Virtual Microphone\"</strong> bilang inyong microphone. Pagkatapos ay buksan ang <strong>Advanced audio settings</strong> at <strong>i-disable ang Noise suppression, Echo cancellation, at Automatic gain control</strong> para sa malinaw na isinaling audio."
+  },
+  "unsupportedHeadline": {
+    "message": "Hindi pa available ang MAO Chat sa $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "I-translate sa anumang app"
+  },
+  "desktopCtaBody": {
+    "message": "Isang system-wide na virtual na mikropono para sa OBS, YouTube, Twitch at anumang desktop app. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "I-download ang desktop app"
+  },
+  "browserSitesHeading": {
+    "message": "Mas gusto ang browser? Gumagana ang MAO Chat sa mga site na ito — i-click para buksan:"
+  },
+  "requestSiteLink": {
+    "message": "Humiling ng site"
+  },
+  "learnMore": {
+    "message": "Matuto pa →"
+  },
+  "detectFailHeadline": {
+    "message": "Hindi ma-detect ang tab na ito"
+  },
+  "detectFailBody": {
+    "message": "I-refresh ang pahina at buksan muli ang MAO Chat."
+  }
+}

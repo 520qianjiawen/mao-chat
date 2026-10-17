@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - Tradutor IA de Reuniões"
+  },
+  "extensionDescription": {
+    "message": "Tradução instantânea de fala com IA para todas as videochamadas. Quebre barreiras linguísticas com tradução de voz em tempo real."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Sites Suportados"
+  },
+  "openSokuji": {
+    "message": "Abrir MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Complementos do Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat está disponível no $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Clique em \"Abrir MAO Chat\" abaixo para iniciar a tradução em tempo real."
+  },
+  "quickStart": {
+    "message": "Início Rápido:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure sua chave API OpenAI → Selecione \"MAO Chat Virtual Microphone\" como microfone → Comece a falar!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat para Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Para usar o MAO Chat, selecione <strong>\"MAO Chat Virtual Microphone\"</strong> nas configurações do seu microfone."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat para Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Para usar o MAO Chat, selecione <strong>\"MAO Chat Virtual Microphone\"</strong> nas configurações do microfone e <strong>desative a redução de ruído</strong> para melhor performance."
+  },
+  "gotIt": {
+    "message": "Entendi"
+  },
+  "remindLater": {
+    "message": "Lembrar mais tarde"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Para usar o MAO Chat, selecione \"MAO Chat Virtual Microphone\" nas configurações do seu microfone."
+  },
+  "discordTitle": {
+    "message": "MAO Chat para Discord"
+  },
+  "discordGuidance": {
+    "message": "Para usar o MAO Chat, selecione <strong>\"MAO Chat Virtual Microphone\"</strong> nas configurações do seu microfone e <strong>desative a Supressão de ruído</strong> nas configurações de voz do Discord para melhor desempenho."
+  },
+  "slackTitle": {
+    "message": "MAO Chat para Slack"
+  },
+  "slackGuidance": {
+    "message": "Para usar o MAO Chat no Slack Huddles, <strong>inicie um Huddle</strong>, então selecione <strong>\"MAO Chat Virtual Microphone\"</strong> nas configurações de vídeo e microfone, e <strong>desative a supressão de ruído</strong> nas preferências de áudio e vídeo para melhor desempenho."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat para Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Se você não vir a lista completa de dispositivos de áudio nas configurações do Teams:<br><strong>1)</strong> Desative temporariamente a extensão MAO Chat e atualize a página<br><strong>2)</strong> Permita que o Teams acesse seu microfone e câmera quando solicitado<br><strong>3)</strong> Reative a extensão MAO Chat e atualize a página novamente<br><strong>4)</strong> Permita que o MAO Chat acesse seu microfone quando solicitado. Agora você deve ver tanto dispositivos reais quanto <strong>\"MAO Chat Virtual Microphone\"</strong> em suas configurações."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat para Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Para usar o MAO Chat no Jitsi Meet, abra <strong>Settings > Devices</strong> e selecione <strong>\"MAO Chat Virtual Microphone\"</strong> como seu microfone. Em seguida, abra <strong>Advanced audio settings</strong> e <strong>desative a Supressão de ruído, o Cancelamento de eco e o Controle automático de ganho</strong> para um áudio traduzido nítido."
+  },
+  "unsupportedHeadline": {
+    "message": "O MAO Chat ainda não está disponível em $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Traduza em qualquer aplicativo"
+  },
+  "desktopCtaBody": {
+    "message": "Um microfone virtual em todo o sistema para OBS, YouTube, Twitch e qualquer aplicativo desktop. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Baixar o aplicativo desktop"
+  },
+  "browserSitesHeading": {
+    "message": "Prefere o navegador? O MAO Chat funciona nesses sites — clique para abrir:"
+  },
+  "requestSiteLink": {
+    "message": "Solicitar um site"
+  },
+  "learnMore": {
+    "message": "Saiba mais →"
+  },
+  "detectFailHeadline": {
+    "message": "Não foi possível detectar esta aba"
+  },
+  "detectFailBody": {
+    "message": "Atualize a página e reabra o MAO Chat."
+  }
+}

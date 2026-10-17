@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - ШІ-перекладач зустрічей"
+  },
+  "extensionDescription": {
+    "message": "Миттєвий переклад мовлення з ШІ для всіх відеозустрічей. Подолайте мовні бар'єри за допомогою перекладу голосу в реальному часі."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Підтримувані сайти"
+  },
+  "openSokuji": {
+    "message": "Відкрити MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Інтернет-магазин Chrome"
+  },
+  "edgeAddons": {
+    "message": "Доповнення Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat доступний на $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Натисніть \"Відкрити MAO Chat\" нижче, щоб розпочати переклад у реальному часі."
+  },
+  "quickStart": {
+    "message": "Швидкий старт:"
+  },
+  "quickStartInstructions": {
+    "message": "Налаштуйте ваш API-ключ OpenAI → Виберіть \"MAO Chat Virtual Microphone\" як мікрофон → Почніть говорити!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Щоб використовувати MAO Chat, виберіть <strong>\"MAO Chat Virtual Microphone\"</strong> у налаштуваннях мікрофона."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Щоб використовувати MAO Chat, будь ласка, виберіть <strong>\"MAO Chat Virtual Microphone\"</strong> у налаштуваннях мікрофона та <strong>вимкніть зменшення шуму</strong> для кращої продуктивності."
+  },
+  "gotIt": {
+    "message": "Зрозуміло"
+  },
+  "remindLater": {
+    "message": "Нагадати пізніше"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Щоб використовувати MAO Chat, виберіть \"MAO Chat Virtual Microphone\" у налаштуваннях мікрофона."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "Щоб використовувати MAO Chat, виберіть <strong>\"MAO Chat Virtual Microphone\"</strong> у налаштуваннях мікрофона та <strong>вимкніть Придушення шуму</strong> в голосових налаштуваннях Discord для кращої продуктивності."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "Щоб використовувати MAO Chat в Slack Huddles, будь ласка <strong>розпочніть Huddle</strong>, потім виберіть <strong>\"MAO Chat Virtual Microphone\"</strong> в налаштуваннях Відео та Мікрофон, та <strong>вимкніть Придушення шуму</strong> в налаштуваннях Аудіо та Відео для кращої продуктивності."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat for Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "If you don't see the complete audio device list in Teams settings:<br><strong>1)</strong> Temporarily disable the MAO Chat extension and refresh the page<br><strong>2)</strong> Allow Teams to access your microphone and camera when prompted<br><strong>3)</strong> Re-enable MAO Chat extension and refresh the page again<br><strong>4)</strong> Allow MAO Chat to access your microphone when prompted.<br>Now you should see both real and <strong>\"MAO Chat Virtual Microphone\"</strong> devices in your settings."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Щоб використовувати MAO Chat в Jitsi Meet, відкрийте <strong>Settings > Devices</strong> та виберіть <strong>\"MAO Chat Virtual Microphone\"</strong> як ваш мікрофон. Потім відкрийте <strong>Advanced audio settings</strong> та <strong>вимкніть Придушення шуму, Усунення відлуння та Автоматичне регулювання підсилення</strong> для чіткого перекладеного звуку."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat ще не доступний на $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Перекладайте в будь-якому застосунку"
+  },
+  "desktopCtaBody": {
+    "message": "Системний віртуальний мікрофон для OBS, YouTube, Twitch та будь-якого настільного застосунку. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Завантажити настільний застосунок"
+  },
+  "browserSitesHeading": {
+    "message": "Воліє браузер? MAO Chat працює на цих сайтах — натисніть для відкриття:"
+  },
+  "requestSiteLink": {
+    "message": "Запросити сайт"
+  },
+  "learnMore": {
+    "message": "Дізнатись більше →"
+  },
+  "detectFailHeadline": {
+    "message": "Не вдалося виявити цю вкладку"
+  },
+  "detectFailBody": {
+    "message": "Оновіть сторінку та знову відкрийте MAO Chat."
+  }
+}

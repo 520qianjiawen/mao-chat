@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# MAO Chat PKG Installer - Preinstall Script
+# Prepares the system for virtual audio driver installation
+
+echo "MAO Chat preinstall: Preparing system for installation..."
+
+# Create HAL plugin directory if it doesn't exist
+echo "MAO Chat preinstall: Ensuring HAL plugin directory exists..."
+mkdir -p /Library/Audio/Plug-Ins/HAL
+chown root:wheel /Library/Audio/Plug-Ins/HAL
+chmod 755 /Library/Audio/Plug-Ins/HAL
+
+# Remove any existing virtual audio installation
+if [ -d "/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver" ]; then
+    echo "MAO Chat preinstall: Removing existing virtual audio driver..."
+    rm -rf /Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver
+    echo "MAO Chat preinstall: Old driver removed"
+fi
+
+# Also check for the app in case of reinstallation
+if [ -d "/Applications/MAO Chat.app" ]; then
+    echo "MAO Chat preinstall: Found existing MAO Chat.app, will be replaced..."
+fi
+if [ -d "/Applications/Sokuji.app" ]; then
+    echo "MAO Chat preinstall: Found legacy Sokuji.app..."
+fi
+
+echo "MAO Chat preinstall: System preparation complete"
+exit 0

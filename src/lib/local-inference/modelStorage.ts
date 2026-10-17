@@ -1,0 +1,229 @@
+/**
+ * Model Storage — IndexedDB wrapper for persisting model files as Blobs.
+ *
+ * Database: 'sokuji-models', version 2
+ *   Store 'files':        key = '{modelId}/{filename}' → Blob
+ *   Store 'metadata':     key = modelId → ModelMetadata
+ *   Store 'voice_styles': key = auto-increment id → StoredVoice (Task 17)
+ *
+ * Native voice clips live in their OWN database ('sokuji-native-voices', see
+ * nativeVoiceStorage.ts). Do NOT add stores here by bumping DB_VERSION: the
+ * profile is shared with other branches' builds, and a versioned open below
+ * the existing version throws VersionError (this blanked the Models UI on
+ * main when this DB was briefly at v3).
+ */
+
+import { openDB, type IDBPDatabase } from 'idb';
+import type { ModelStatus } from './modelManifest';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface ModelMetadata {
+  modelId: string;
+  status: ModelStatus;
+  downloadedAt: number | null;
+  totalSizeBytes: number;
+  version: string;
+  /** Which variant was downloaded (e.g. 'q4', 'q4f16'). Undefined for legacy downloads. */
+  variant?: string;
+}
+
+interface SokujiModelsDB {
+  files: {
+    key: string;
+    value: Blob;
+  };
+  metadata: {
+    key: string;
+    value: ModelMetadata;
+  };
+  voice_styles: {
+    // Auto-increment primary key. Voice records are owned by voiceStorage.ts;
+    // schema kept loose here so modelStorage stays agnostic.
+    key: number;
+    value: unknown;
+    indexes: { engine: string };
+  };
+}
+
+// ─── Database ────────────────────────────────────────────────────────────────
+
+const DB_NAME = 'sokuji-models';
+const DB_VERSION = 2;
+
+let dbPromise: Promise<IDBPDatabase<SokujiModelsDB>> | null = null;
+
+/** Object stores this build reads/writes. Used to validate a newer-version DB. */
+const REQUIRED_STORES = ['files', 'metadata', 'voice_styles'] as const;
+
+async function openModelsDb(): Promise<IDBPDatabase<SokujiModelsDB>> {
+  try {
+    return await openDB<SokujiModelsDB>(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion) {
+        if (!db.objectStoreNames.contains('files')) {
+          db.createObjectStore('files');
+        }
+        if (!db.objectStoreNames.contains('metadata')) {
+          db.createObjectStore('metadata');
+        }
+        if (oldVersion < 2) {
+          const store = db.createObjectStore('voice_styles', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          store.createIndex('engine', 'engine', { unique: false });
+        }
+      },
+    });
+  } catch (err) {
+    // The DB may have been upgraded past DB_VERSION by a newer build sharing
+    // this profile (e.g. another branch's Electron dev run — including this
+    // branch's own short-lived v3). IndexedDB forbids a versioned open below
+    // the existing version (VersionError), but newer schemas are supersets of
+    // ours — retry unversioned (opens at the existing version) and verify
+    // every store we need is present.
+    if ((err as DOMException)?.name !== 'VersionError') throw err;
+    const db = await openDB<SokujiModelsDB>(DB_NAME);
+    const missing = REQUIRED_STORES.filter(s => !db.objectStoreNames.contains(s));
+    if (missing.length > 0) {
+      db.close();
+      throw err;
+    }
+    console.warn(
+      `[Sokuji] [ModelStorage] '${DB_NAME}' is at newer version ${db.version} ` +
+      `(this build expects ${DB_VERSION}); opened unversioned since all required stores exist`
+    );
+    return db;
+  }
+}
+
+export function getDb(): Promise<IDBPDatabase<SokujiModelsDB>> {
+  if (!dbPromise) {
+    dbPromise = openModelsDb().catch(err => {
+      // Don't poison the cache: allow later calls (e.g. a Retry button) to
+      // attempt a fresh open instead of replaying this rejection forever.
+      dbPromise = null;
+      throw err;
+    });
+  }
+  return dbPromise;
+}
+
+// ─── File Operations ─────────────────────────────────────────────────────────
+
+function fileKey(modelId: string, filename: string): string {
+  return `${modelId}/${filename}`;
+}
+
+/** Store a single file blob for a model */
+export async function storeFile(modelId: string, filename: string, blob: Blob): Promise<void> {
+  const db = await getDb();
+  await db.put('files', blob, fileKey(modelId, filename));
+}
+
+/** Retrieve a file blob for a model */
+export async function getFile(modelId: string, filename: string): Promise<Blob | undefined> {
+  const db = await getDb();
+  return db.get('files', fileKey(modelId, filename));
+}
+
+/** Check if a specific file exists for a model */
+export async function hasFile(modelId: string, filename: string): Promise<boolean> {
+  const db = await getDb();
+  const blob = await db.get('files', fileKey(modelId, filename));
+  return blob !== undefined;
+}
+
+/**
+ * Check if all listed files exist for a model.
+ * @param filenames - List of filenames that should be present
+ */
+export async function hasAllFiles(modelId: string, filenames: string[]): Promise<boolean> {
+  const db = await getDb();
+  for (const filename of filenames) {
+    const blob = await db.get('files', fileKey(modelId, filename));
+    if (!blob) return false;
+  }
+  return true;
+}
+
+/** Delete all files for a model */
+export async function deleteModelFiles(modelId: string): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction('files', 'readwrite');
+  const store = tx.objectStore('files');
+
+  // Iterate all entries and delete those matching the model prefix
+  let cursor = await store.openCursor();
+  const prefix = `${modelId}/`;
+  while (cursor) {
+    if (typeof cursor.key === 'string' && cursor.key.startsWith(prefix)) {
+      await cursor.delete();
+    }
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+}
+
+// ─── Metadata Operations ─────────────────────────────────────────────────────
+
+/** Get metadata for a model */
+export async function getMetadata(modelId: string): Promise<ModelMetadata | undefined> {
+  const db = await getDb();
+  return db.get('metadata', modelId);
+}
+
+/** Set metadata for a model */
+export async function setMetadata(modelId: string, metadata: ModelMetadata): Promise<void> {
+  const db = await getDb();
+  await db.put('metadata', metadata, modelId);
+}
+
+/** Get metadata for all models */
+export async function getAllMetadata(): Promise<ModelMetadata[]> {
+  const db = await getDb();
+  return db.getAll('metadata');
+}
+
+/** Delete metadata for a model */
+export async function deleteMetadata(modelId: string): Promise<void> {
+  const db = await getDb();
+  await db.delete('metadata', modelId);
+}
+
+// ─── Convenience ─────────────────────────────────────────────────────────────
+
+/** Fully remove a model: files + metadata */
+export async function deleteModel(modelId: string): Promise<void> {
+  await deleteModelFiles(modelId);
+  await deleteMetadata(modelId);
+}
+
+/** Clear all data from all stores */
+export async function clearAll(): Promise<void> {
+  const db = await getDb();
+  // Note: native voice clips ('sokuji-native-voices' DB) are deliberately NOT
+  // cleared — they are user recordings, not re-downloadable model cache.
+  const tx = db.transaction(['files', 'metadata', 'voice_styles'], 'readwrite');
+  await tx.objectStore('files').clear();
+  await tx.objectStore('metadata').clear();
+  await tx.objectStore('voice_styles').clear();
+  await tx.done;
+}
+
+/** Estimate total storage used (sum of all file blob sizes) */
+export async function estimateStorageUsedBytes(): Promise<number> {
+  const db = await getDb();
+  const tx = db.transaction('files', 'readonly');
+  const store = tx.objectStore('files');
+
+  let totalBytes = 0;
+  let cursor = await store.openCursor();
+  while (cursor) {
+    if (cursor.value instanceof Blob) {
+      totalBytes += cursor.value.size;
+    }
+    cursor = await cursor.continue();
+  }
+  return totalBytes;
+}

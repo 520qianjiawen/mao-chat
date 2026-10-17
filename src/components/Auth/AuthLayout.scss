@@ -1,0 +1,64 @@
+.auth-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: #f7f8fc;
+
+  .auth-container {
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+
+    .auth-close-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+
+      // Rectangle design
+      border-radius: 6px;
+
+      // Border styling
+      border: 1.5px solid #444;
+      background: #1a1a1a;
+
+      // Icon color
+      color: #aaa;
+
+      // Smooth transition
+      transition: all 0.2s ease;
+
+      &:hover {
+        // Theme color fill
+        border-color: #3D1C56;
+        background: #3D1C56;
+        color: #fff;
+        box-shadow: none;
+      }
+
+      &:active {
+        background: #240F35;
+        transform: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #3D1C56;
+        outline-offset: 2px;
+      }
+    }
+
+    .auth-content {
+      display: flex;
+      justify-content: center;
+      padding-top: 1rem;
+    }
+  }
+}

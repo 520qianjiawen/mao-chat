@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - KI-Meeting-Übersetzer"
+  },
+  "extensionDescription": {
+    "message": "KI-gestützte Sofort-Sprachübersetzung für alle Videomeetings. Durchbrechen Sie Sprachbarrieren mit Echtzeit-Sprachübersetzung."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Unterstützte Websites"
+  },
+  "openSokuji": {
+    "message": "MAO Chat öffnen"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge-Add-Ons"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat ist auf $SITE_NAME$ verfügbar!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Klicken Sie unten auf \"MAO Chat öffnen\", um die Echtzeit-Übersetzung zu starten."
+  },
+  "quickStart": {
+    "message": "Schnellstart:"
+  },
+  "quickStartInstructions": {
+    "message": "API-Schlüssel konfigurieren (OpenAI oder Gemini) → \"MAO Chat Virtual Microphone\" als Mikrofon auswählen → Sprechen beginnen!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat für Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Um MAO Chat zu verwenden, wählen Sie <strong>\"MAO Chat Virtual Microphone\"</strong> in Ihren Mikrofoneinstellungen aus."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat für Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Um MAO Chat zu verwenden, wählen Sie <strong>\"MAO Chat Virtual Microphone\"</strong> in den Mikrofoneinstellungen und <strong>deaktivieren Sie die Rauschunterdrückung</strong> für bessere Leistung."
+  },
+  "gotIt": {
+    "message": "Verstanden"
+  },
+  "remindLater": {
+    "message": "Später erinnern"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "Um MAO Chat zu verwenden, wählen Sie bitte \"MAO Chat Virtual Microphone\" in Ihren Mikrofoneinstellungen aus."
+  },
+  "discordTitle": {
+    "message": "MAO Chat für Discord"
+  },
+  "discordGuidance": {
+    "message": "Um MAO Chat zu verwenden, wählen Sie bitte <strong>\"MAO Chat Virtual Microphone\"</strong> in Ihren Mikrofoneinstellungen aus und <strong>deaktivieren Sie die Rauschunterdrückung</strong> in den Discord-Spracheinstellungen für bessere Leistung."
+  },
+  "slackTitle": {
+    "message": "MAO Chat für Slack"
+  },
+  "slackGuidance": {
+    "message": "Um MAO Chat in Slack Huddles zu verwenden, <strong>starten Sie bitte einen Huddle</strong>, wählen Sie dann <strong>\"MAO Chat Virtual Microphone\"</strong> in Ihren Video- und Mikrofon-Einstellungen aus und <strong>deaktivieren Sie die Rauschunterdrückung</strong> in den Audio- und Video-Einstellungen für bessere Leistung."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat für Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Wenn Sie die vollständige Audiogeräteliste in den Teams-Einstellungen nicht sehen:<br><strong>1)</strong> Deaktivieren Sie vorübergehend die MAO Chat-Erweiterung und aktualisieren Sie die Seite<br><strong>2)</strong> Erlauben Sie Teams den Zugriff auf Ihr Mikrofon und Ihre Kamera, wenn Sie dazu aufgefordert werden<br><strong>3)</strong> Aktivieren Sie die MAO Chat-Erweiterung erneut und aktualisieren Sie die Seite erneut<br><strong>4)</strong> Erlauben Sie MAO Chat den Zugriff auf Ihr Mikrofon, wenn Sie dazu aufgefordert werden. Jetzt sollten Sie sowohl echte Geräte als auch <strong>\"MAO Chat Virtual Microphone\"</strong> in Ihren Einstellungen sehen."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat für Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Um MAO Chat in Jitsi Meet zu verwenden, öffnen Sie <strong>Settings > Devices</strong> und wählen Sie <strong>\"MAO Chat Virtual Microphone\"</strong> als Mikrofon aus. Öffnen Sie dann <strong>Advanced audio settings</strong> und <strong>deaktivieren Sie Rauschunterdrückung, Echounterdrückung und automatische Verstärkungsregelung</strong> für klaren übersetzten Ton."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat ist auf $HOSTNAME$ noch nicht verfügbar.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "In jeder App übersetzen"
+  },
+  "desktopCtaBody": {
+    "message": "Ein systemweites virtuelles Mikrofon für OBS, YouTube, Twitch und jede Desktop-App. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Desktop-App herunterladen"
+  },
+  "browserSitesHeading": {
+    "message": "Lieber den Browser? MAO Chat funktioniert auf diesen Seiten — zum Öffnen klicken:"
+  },
+  "requestSiteLink": {
+    "message": "Website vorschlagen"
+  },
+  "learnMore": {
+    "message": "Mehr erfahren →"
+  },
+  "detectFailHeadline": {
+    "message": "Dieser Tab konnte nicht erkannt werden"
+  },
+  "detectFailBody": {
+    "message": "Seite neu laden und MAO Chat erneut öffnen."
+  }
+}

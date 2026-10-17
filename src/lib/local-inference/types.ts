@@ -1,0 +1,396 @@
+/**
+ * Shared type definitions for local inference workers and engines.
+ */
+
+// ─── VAD Configuration ──────────────────────────────────────────────────────
+
+/**
+ * VAD config for vad-web FrameProcessor (Silero VAD v5 + @ricky0123/vad-web).
+ * Used by whisper, cohere, granite, and voxtral workers.
+ * All durations in seconds. All fields optional — workers use vad-web defaults.
+ *
+ * NOTE: sherpa-onnx workers use a different VAD engine (C++ Silero via Emscripten)
+ * with different semantics (single threshold with internal hysteresis). They use
+ * SherpaOnnxVadConfig instead.
+ */
+export interface VadWebConfig {
+  /** Positive speech threshold (default 0.3) */
+  threshold?: number;
+  /** Negative threshold to confirm silence — hysteresis gap prevents oscillation (default 0.25) */
+  negativeThreshold?: number;
+  /** Min silence duration in seconds before ending speech segment (default 1.4) */
+  minSilenceDuration?: number;
+  /** Min speech duration in seconds to emit a segment (default 0.4) */
+  minSpeechDuration?: number;
+  /** Pre-speech pad in seconds — audio context prepended before speech start (default 0.8) */
+  preSpeechPadDuration?: number;
+  /** Max speech segment duration in seconds before forced split (default 20) */
+  maxSpeechDuration?: number;
+}
+
+/**
+ * VAD config for sherpa-onnx C++ engine. Different semantics from vad-web:
+ * single threshold with internal hysteresis (threshold - 0.15).
+ */
+export interface SherpaOnnxVadConfig {
+  threshold?: number;
+  minSilenceDuration?: number;
+  minSpeechDuration?: number;
+}
+
+// ─── ASR Worker Messages (Main → Worker) ─────────────────────────────────────
+
+export interface AsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model-specific files (.data only) */
+  fileUrls: Record<string, string>;
+  /** ASR engine type — determines which config builder the worker uses */
+  asrEngine: string;
+  /** SenseVoice language token (`auto` / `ja` / `zh` / …). Ignored by other engines. */
+  language?: string;
+  /** Optional VAD configuration to override defaults */
+  vadConfig?: SherpaOnnxVadConfig;
+  /** YouTube-checkbox ASR only: drop quiet/music segments before decode. */
+  skipQuietSegments?: boolean;
+  /** Base URL for bundled ASR runtime (JS/WASM shared across all models) */
+  runtimeBaseUrl: string;
+  /** Emscripten loadPackage metadata (file offsets/sizes from package-metadata.json) */
+  dataPackageMetadata: Record<string, unknown>;
+}
+
+export interface AsrAudioMessage {
+  type: 'audio';
+  /** Raw audio samples from the recorder (Int16Array @ 24kHz) */
+  samples: Int16Array;
+  /** Sample rate of the incoming audio */
+  sampleRate: number;
+}
+
+export interface AsrDisposeMessage {
+  type: 'dispose';
+}
+
+export interface WhisperAsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model files from IndexedDB */
+  fileUrls: Record<string, string>;
+  /** HuggingFace model ID for Transformers.js pipeline identification */
+  hfModelId: string;
+  /** Source language for Whisper (e.g. 'ja', 'en') or undefined for auto-detect */
+  language?: string;
+  /** VAD configuration overrides (durations in seconds). Defaults match @ricky0123/vad-web. */
+  vadConfig?: VadWebConfig;
+  /** ONNX dtype config for WebGPU models */
+  dtype?: string | Record<string, string>;
+  /** Resolved absolute URL for bundled ORT WASM files */
+  ortWasmBaseUrl?: string;
+  /** Resolved absolute URL for bundled VAD model */
+  vadModelUrl?: string;
+}
+
+export type AsrWorkerInMessage = AsrInitMessage | WhisperAsrInitMessage | VoxtralAsrInitMessage | Voxtral3BAsrInitMessage | CohereTranscribeAsrInitMessage | GraniteSpeechInitMessage | AsrAudioMessage | AsrDisposeMessage;
+
+// ─── ASR Worker Messages (Worker → Main) ─────────────────────────────────────
+
+export interface AsrReadyMessage {
+  type: 'ready';
+  loadTimeMs: number;
+}
+
+export interface AsrStatusMessage {
+  type: 'status';
+  message: string;
+}
+
+export interface AsrResultMessage {
+  type: 'result';
+  text: string;
+  /** Start sample index of the speech segment from VAD */
+  startSample: number;
+  /** Duration of the speech segment in seconds */
+  durationMs: number;
+  /** Time taken for recognition in milliseconds */
+  recognitionTimeMs: number;
+}
+
+export interface AsrErrorMessage {
+  type: 'error';
+  error: string;
+}
+
+export interface AsrDisposedMessage {
+  type: 'disposed';
+}
+
+export interface AsrSpeechStartMessage {
+  type: 'speech_start';
+}
+
+export type AsrWorkerOutMessage =
+  | AsrReadyMessage
+  | AsrStatusMessage
+  | AsrSpeechStartMessage
+  | AsrResultMessage
+  | AsrErrorMessage
+  | AsrDisposedMessage;
+
+// ─── Streaming ASR Worker Messages (Main → Worker) ──────────────────────────
+
+export interface StreamingAsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model-specific files (.data only) */
+  fileUrls: Record<string, string>;
+  /** ASR engine type — for future use when streaming models get explicit config */
+  asrEngine?: string;
+  /** Base URL for bundled streaming ASR runtime (JS/WASM shared across all models) */
+  runtimeBaseUrl: string;
+  /** Emscripten loadPackage metadata (file offsets/sizes from package-metadata.json) */
+  dataPackageMetadata: Record<string, unknown>;
+  /** Readable-caption limits for sherpa streaming models. */
+  captionMaxWords?: number;
+  captionMaxChars?: number;
+  /** Endpoint tuning in seconds for subtitle-oriented streaming. */
+  endpointMinTrailingSilenceSeconds?: number;
+  maxUtteranceDurationSeconds?: number;
+}
+
+export interface VoxtralAsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model files from IndexedDB */
+  fileUrls: Record<string, string>;
+  /** HuggingFace model ID for Transformers.js from_pretrained */
+  hfModelId: string;
+  /** Source language hint (optional, for future use) */
+  language?: string;
+  /** VAD configuration overrides */
+  vadConfig?: VadWebConfig;
+  /** ONNX dtype config — 'q4f16' or 'q4', or per-component mapping */
+  dtype: string | Record<string, string>;
+  /** Resolved absolute URL for bundled VAD model */
+  vadModelUrl: string;
+  /** Resolved absolute URL for bundled ORT WASM files */
+  ortWasmBaseUrl?: string;
+}
+
+export interface CohereTranscribeAsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model files from IndexedDB */
+  fileUrls: Record<string, string>;
+  /** HuggingFace model ID for Transformers.js pipeline identification */
+  hfModelId: string;
+  /** Source language code (e.g. 'ja', 'en') — required, no auto-detect */
+  language?: string;
+  /** ONNX dtype config — 'q4f16' or 'q4', or per-component mapping */
+  dtype: string | Record<string, string>;
+  /** VAD configuration overrides from user settings */
+  vadConfig?: VadWebConfig;
+  /** Resolved absolute URL for bundled VAD model */
+  vadModelUrl: string;
+  /** Resolved absolute URL for bundled ORT WASM files */
+  ortWasmBaseUrl?: string;
+}
+
+export interface Voxtral3BAsrInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for model files from IndexedDB */
+  fileUrls: Record<string, string>;
+  /** HuggingFace model ID for Transformers.js from_pretrained */
+  hfModelId: string;
+  /** Source language hint (e.g. 'ja', 'en-US'). Normalized to ISO 639-1 inside the worker. */
+  language?: string;
+  /** ONNX dtype config — per-component mapping (audio_encoder, embed_tokens, decoder_model_merged) */
+  dtype: string | Record<string, string>;
+  /** VAD configuration overrides from user settings */
+  vadConfig?: VadWebConfig;
+  /** Resolved absolute URL for bundled VAD model */
+  vadModelUrl: string;
+  /** Resolved absolute URL for bundled ORT WASM files */
+  ortWasmBaseUrl?: string;
+}
+
+export interface GraniteSpeechInitMessage {
+  type: 'init';
+  /** Map of filename -> blob URL for model files from IndexedDB */
+  fileUrls: Record<string, string>;
+  /** HuggingFace model ID for Transformers.js from_pretrained */
+  hfModelId: string;
+  /** Source language hint (e.g. 'ja', 'en') */
+  language?: string;
+  /** Optional VAD configuration to override defaults */
+  vadConfig?: VadWebConfig;
+  /** Task: 'transcribe' for ASR, 'translate' for AST (speech translation) */
+  task: 'transcribe' | 'translate';
+  /** Target language for AST (only when task === 'translate') */
+  targetLanguage?: string;
+  /** ONNX dtype config — per-component mapping (audio_encoder, embed_tokens, decoder_model_merged) */
+  dtype: string | Record<string, string>;
+  /** Resolved absolute URL for bundled ORT WASM files */
+  ortWasmBaseUrl?: string;
+  /** Resolved absolute URL for bundled VAD model */
+  vadModelUrl?: string;
+}
+
+// ─── Streaming ASR Worker Messages (Worker → Main) ──────────────────────────
+// Inbound messages reuse StreamingAsrInitMessage, AsrAudioMessage, AsrDisposeMessage.
+
+/** Streaming ASR: partial (interim) result message */
+export interface StreamingAsrPartialMessage {
+  type: 'partial';
+  text: string;
+}
+
+/** Streaming ASR: final result (at endpoint) */
+export interface StreamingAsrResultMessage {
+  type: 'result';
+  text: string;
+  durationMs: number;
+  recognitionTimeMs: number;
+}
+
+export type StreamingAsrWorkerOutMessage =
+  | AsrReadyMessage
+  | AsrStatusMessage
+  | AsrSpeechStartMessage
+  | StreamingAsrPartialMessage
+  | StreamingAsrResultMessage
+  | AsrErrorMessage
+  | AsrDisposedMessage;
+
+// ─── TTS Worker Messages (Main → Worker) ─────────────────────────────────────
+
+export interface TtsInitMessage {
+  type: 'init';
+  /** Model .onnx filename (without path prefix), e.g. 'en_US-libritts_r-medium.onnx' */
+  modelFile: string;
+  /** Map of filename → blob URL for loading model files from IndexedDB */
+  fileUrls: Record<string, string>;
+}
+
+export interface TtsGenerateMessage {
+  type: 'generate';
+  /** Text to synthesize */
+  text: string;
+  /** Speaker ID (0 to numSpeakers-1) */
+  sid: number;
+  /** Speech rate multiplier (default 1.0) */
+  speed: number;
+  /** Language code for multilingual models (e.g. 'ja', 'en') */
+  lang?: string;
+}
+
+export interface TtsDisposeMessage {
+  type: 'dispose';
+}
+
+export type TtsWorkerInMessage = TtsInitMessage | TtsGenerateMessage | TtsDisposeMessage;
+
+// ─── Supertonic 3 worker — separate init shape ───────────────────────────────
+// Supertonic has its own init contract (multi-onnx + voice list) and doesn't
+// fit the legacy `modelFile: string` shape. The worker also responds to
+// `generate` / `dispose` with the standard shapes above.
+
+/** Voice metadata passed from main thread to worker at init time. */
+export interface SupertonicVoiceListEntry {
+  sid: number;
+  name: string;
+  source: 'preset' | 'imported';
+  gender?: 'M' | 'F';
+  /** Blob URL for the voice_style JSON file (revoked by main thread after `ready`). */
+  blobUrl: string;
+}
+
+export interface SupertonicTtsConfig {
+  /** Diffusion iteration count (defaults to 16). */
+  totalStep?: number;
+  /** Sid to fall back to when the requested one isn't loaded. */
+  defaultSid?: number;
+}
+
+export interface SupertonicTtsInitMessage {
+  type: 'init';
+  /** Map of filename → blob URL for the 4 ONNX + tts.json + unicode_indexer.json. */
+  fileUrls: Record<string, string>;
+  /** Preset + imported voices to build tensors for. */
+  voiceList: SupertonicVoiceListEntry[];
+  /** Absolute URL to /wasm/ort/ — used as `ort.env.wasm.wasmPaths`. */
+  ortWasmBaseUrl: string;
+  /** Subset of the manifest's `ttsConfig` field. */
+  ttsConfig: SupertonicTtsConfig;
+}
+
+export type SupertonicTtsWorkerInMessage =
+  | SupertonicTtsInitMessage
+  | TtsGenerateMessage
+  | TtsDisposeMessage;
+
+// ─── TTS Worker Messages (Worker → Main) ─────────────────────────────────────
+
+export interface TtsReadyMessage {
+  type: 'ready';
+  loadTimeMs: number;
+  numSpeakers: number;
+  sampleRate: number;
+  /**
+   * Optional named voice list. When present, the UI renders a labeled
+   * dropdown using these names instead of falling back to "Speaker 0..N-1"
+   * derived from `numSpeakers`. Supertonic populates this; other engines
+   * leave it undefined.
+   */
+  voices?: Array<{
+    sid: number;
+    name: string;
+    source: 'preset' | 'imported';
+    gender?: 'M' | 'F';
+  }>;
+  /** Optional backend hint for UI/debug. Supertonic sets this. */
+  backend?: 'webgpu' | 'wasm';
+}
+
+export interface TtsStatusMessage {
+  type: 'status';
+  message: string;
+}
+
+export interface TtsResultMessage {
+  type: 'result';
+  /** Synthesized audio samples (Float32Array, range [-1.0, 1.0]) */
+  samples: Float32Array;
+  /** Output sample rate */
+  sampleRate: number;
+  /** Time taken for generation in milliseconds */
+  generationTimeMs: number;
+}
+
+export interface TtsErrorMessage {
+  type: 'error';
+  error: string;
+}
+
+export interface TtsDisposedMessage {
+  type: 'disposed';
+}
+
+export interface TtsAudioChunkMessage {
+  type: 'audio-chunk';
+  samples: Float32Array;
+  sampleRate: number;
+}
+
+export interface TtsAudioDoneMessage {
+  type: 'audio-done';
+  generationTimeMs: number;
+}
+
+export interface TtsDecodeReadyMessage {
+  type: 'decode-ready';
+}
+
+export type TtsWorkerOutMessage =
+  | TtsReadyMessage
+  | TtsStatusMessage
+  | TtsResultMessage
+  | TtsErrorMessage
+  | TtsDisposedMessage
+  | TtsAudioChunkMessage
+  | TtsAudioDoneMessage
+  | TtsDecodeReadyMessage;

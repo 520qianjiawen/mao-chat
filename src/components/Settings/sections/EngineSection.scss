@@ -1,0 +1,56 @@
+@use '../shared/variables' as vars;
+
+// Engine (sidecar bundle) card — matches the model-management cards.
+.engine-section {
+  background: vars.$bg-surface;
+  border: 1px solid vars.$border-subtle;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__header { display: flex; align-items: center; gap: 8px; color: vars.$text-primary; }
+  &__title { font-weight: 600; font-size: 13px; flex: 1; }
+  &__version { display: inline-flex; align-items: center; gap: 4px; color: vars.$color-primary; font-size: 12px; }
+
+  &__row {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: vars.$text-secondary;
+    &--muted { color: vars.$text-muted; }
+    &--warn { color: vars.$color-warning; }
+    &--error { color: vars.$color-error; }
+  }
+
+  &__bar { height: 6px; border-radius: 3px; background: vars.$bg-elevated; overflow: hidden; }
+  &__bar-fill {
+    height: 100%; background: vars.$color-primary; transition: width 0.2s ease;
+    &--busy { width: 100%; animation: engine-busy 1.2s linear infinite; }
+  }
+
+  &__action {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+    background: vars.$color-primary; color: vars.$text-on-primary; border: none; border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+    &:hover { background: vars.$color-primary-hover; }
+    &:disabled { opacity: 0.5; cursor: default; }
+    &--secondary { background: vars.$bg-elevated; color: vars.$text-primary; &:hover { background: vars.$bg-hover; } }
+  }
+
+  &__link {
+    display: inline-flex; align-items: center; gap: 4px; background: none; border: none;
+    color: vars.$text-muted; font-size: 12px; cursor: pointer; padding: 0; margin-left: auto;
+    &:hover { color: vars.$color-error; }
+    &:disabled { opacity: 0.5; cursor: default; }
+  }
+
+  // Stands between the engine card and the next settings section — needs its
+  // own bottom breathing room (sections carry no margin-top of their own).
+  &__models-placeholder { font-size: 12px; color: vars.$text-muted; padding: 10px 4px; margin-bottom: 16px; }
+}
+
+@keyframes engine-busy {
+  0% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.35; }
+}

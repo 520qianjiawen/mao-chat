@@ -1,0 +1,165 @@
+// Bilingual subtitle stream — layout inspired by kiss-translator:
+// centered caption paper, dark glass window, origin over translation,
+// text-shadow for legibility over video.
+
+.subtitle-stream {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Helvetica Neue',
+    sans-serif;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  // Enables cqw units on cue windows (kiss uses clamp(1rem, 2cqw, 3rem)).
+  container-type: size;
+  container-name: subtitle;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+  }
+
+  // ── Compact: kiss-style bilingual cue stage ──────────────────────────
+  &.compact {
+    overflow: hidden;
+    justify-content: flex-end;
+    padding: 10px 16px 14px;
+    gap: 0;
+  }
+
+  &__stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+}
+
+// One bilingual cue card (origin + translation stack).
+.subtitle-cue {
+  // The stream already provides the safe horizontal inset. Let captions use
+  // the remaining width so ultrawide subtitle windows do not collapse into a
+  // narrow block in the middle.
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: subtitle-cue-enter 220ms ease-out both;
+
+  &--ahead {
+    opacity: 0.62;
+  }
+}
+
+// The overlay itself is already the caption surface. Keep the cue wrapper
+// visually flat so subtitle mode does not render a card inside another card.
+.subtitle-cue__window {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.25em 0.5em 0.35em;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: #fff;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: none;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+// Origin / translation paragraphs inside the window.
+.subtitle-stream__line {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+
+  // kiss originStyle / translationStyle: clamp responsive size.
+  // We scale from the user-chosen --subtitle-base-size.
+  &--source {
+    color: var(--subtitle-source-color, rgba(255, 255, 255, 0.82));
+    font-weight: 400;
+    font-size: calc(var(--subtitle-base-size, 18px) * 0.92);
+    line-height: 1.4;
+    margin-bottom: 0.18em;
+  }
+
+  &--translation {
+    color: var(--subtitle-translation-color, #ffffff);
+    font-weight: 600;
+    // Primary reading track — slightly larger, like kiss bilingual TR emphasis.
+    font-size: calc(var(--subtitle-base-size, 18px) * 1.08);
+    line-height: 1.4;
+  }
+
+  // Live (in-progress) cue: subtle underline pulse.
+  &.is-live .subtitle-stream__item {
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+}
+
+.subtitle-stream__item {
+  border-radius: 0;
+  padding: 0;
+  transition: opacity 160ms ease;
+}
+
+.subtitle-stream__item--new {
+  animation: subtitle-item-highlight 1.8s ease-out both;
+}
+
+.subtitle-stream__item--live {
+  background: transparent;
+}
+
+.subtitle-stream__item--playing {
+  background: transparent;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+  text-underline-offset: 0.12em;
+}
+
+.subtitle-stream__unplayed {
+  opacity: 0.7;
+}
+
+// Expanded log mode.
+.subtitle-stream.expanded {
+  overflow-y: auto;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 12px 20px 18px;
+  container-type: normal;
+}
+
+@keyframes subtitle-cue-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes subtitle-item-highlight {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+  }
+}

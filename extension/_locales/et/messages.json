@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge Add-ons"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "MAO Chat kasutamiseks valige oma mikrofoni seadetes <strong>\"MAO Chat Virtual Microphone\"</strong>."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "MAO Chat kasutamiseks palun valige oma mikrofoni seadetes <strong>\"MAO Chat Virtual Microphone\"</strong> ja <strong>lülitage välja müra vähendamine</strong> parema jõudluse jaoks."
+  },
+  "gotIt": {
+    "message": "Sain aru"
+  },
+  "remindLater": {
+    "message": "Tuleta hiljem meelde"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat Microsoft Teamsi jaoks"
+  },
+  "teamsGuidance": {
+    "message": "Kui te ei näe Teamsi seadetes täielikku heliseadmete loendit:<br><strong>1)</strong> Keelake MAO Chat laiendus ajutiselt ja värskendage lehte<br><strong>2)</strong> Lubage Teamsil kasutada mikrofoni ja kaamerat, kui palutakse<br><strong>3)</strong> Lubage MAO Chat laiendus uuesti ja värskendage lehte uuesti<br><strong>4)</strong> Lubage MAO Chatl kasutada mikrofoni, kui palutakse. Nüüd peaksite nägema nii tegelikke seadmeid kui ka <strong>\"MAO Chat Virtual Microphone\"</strong> oma seadetes."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "MAO Chat kasutamiseks Jitsi Meetis avage <strong>Settings > Devices</strong> ja valige oma mikrofoniks <strong>\"MAO Chat Virtual Microphone\"</strong>. Seejärel avage <strong>Advanced audio settings</strong> ja <strong>lülitage välja müra vähendamine, kaja summutamine ja automaatne võimenduse reguleerimine</strong> selge tõlgitud heli jaoks."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat pole $HOSTNAME$ veel saadaval.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Tõlgi mis tahes rakenduses"
+  },
+  "desktopCtaBody": {
+    "message": "Süsteemiülene virtuaalne mikrofon OBS-i, YouTube'i, Twitchi ja iga töölauarakenduse jaoks. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Laadi töölauarakendus alla"
+  },
+  "browserSitesHeading": {
+    "message": "Eelistate brauserit? MAO Chat töötab nendel saitidel — klõpsake avamiseks:"
+  },
+  "requestSiteLink": {
+    "message": "Taotle saiti"
+  },
+  "learnMore": {
+    "message": "Lisateave →"
+  },
+  "detectFailHeadline": {
+    "message": "Seda vahekaarti ei õnnestunud tuvastada"
+  },
+  "detectFailBody": {
+    "message": "Värskendage lehte ja avage MAO Chat uuesti."
+  }
+}

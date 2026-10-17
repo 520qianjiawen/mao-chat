@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Complements d'Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Per utilitzar MAO Chat, seleccioneu <strong>\"MAO Chat Virtual Microphone\"</strong> a la configuració del micròfon."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Per utilitzar MAO Chat, si us plau seleccioneu <strong>\"MAO Chat Virtual Microphone\"</strong> a la configuració del micròfon i <strong>desactiveu la reducció de soroll</strong> per a un millor rendiment."
+  },
+  "gotIt": {
+    "message": "Ho entenc"
+  },
+  "remindLater": {
+    "message": "Recordar més tard"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat per a Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Si no veus la llista completa de dispositius d'àudio a la configuració de Teams:<br><strong>1)</strong> Desactiva temporalment l'extensió MAO Chat i actualitza la pàgina<br><strong>2)</strong> Permet que Teams accedeixi al micròfon i la càmera quan se't demani<br><strong>3)</strong> Torna a activar l'extensió MAO Chat i actualitza la pàgina de nou<br><strong>4)</strong> Permet que MAO Chat accedeixi al micròfon quan se't demani. Ara hauries de veure tant els dispositius reals com <strong>\"MAO Chat Virtual Microphone\"</strong> a la teva configuració."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Per utilitzar MAO Chat a Jitsi Meet, obre <strong>Settings > Devices</strong> i selecciona <strong>\"MAO Chat Virtual Microphone\"</strong> com a micròfon. A continuació, obre <strong>Advanced audio settings</strong> i <strong>desactiva la Supressió de soroll, la Cancel·lació d'eco i el Control automàtic de guany</strong> per obtenir un àudio traduït clar."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat encara no és disponible a $HOSTNAME$.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Tradueix en qualsevol aplicació"
+  },
+  "desktopCtaBody": {
+    "message": "Un micròfon virtual a tot el sistema per a OBS, YouTube, Twitch i qualsevol app d'escriptori. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Baixa l'aplicació d'escriptori"
+  },
+  "browserSitesHeading": {
+    "message": "Preferiu el navegador? MAO Chat funciona en aquests llocs — feu clic per obrir:"
+  },
+  "requestSiteLink": {
+    "message": "Sol·licita un lloc"
+  },
+  "learnMore": {
+    "message": "Més informació →"
+  },
+  "detectFailHeadline": {
+    "message": "No s'ha pogut detectar aquesta pestanya"
+  },
+  "detectFailBody": {
+    "message": "Actualitzeu la pàgina i torneu a obrir MAO Chat."
+  }
+}

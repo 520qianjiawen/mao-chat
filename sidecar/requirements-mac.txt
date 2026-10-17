@@ -1,0 +1,15 @@
+# Sidecar bundle SKU: macOS (Apple Silicon) - MLX lane (spec D5/D10).
+# CoreML EP rejected (no Attention/GQA/MatMulNBits kernels); ORT stays CPU.
+-r requirements.txt
+onnxruntime==1.29.0
+sherpa-onnx==1.13.6
+# Apple MLX audio TTS (Qwen3-TTS + MOSS nano) is already pinned as a
+# conditional darwin/arm64 dependency in the shared requirements.txt above
+# (single source of truth) — no separate mlx-audio line needed here.
+# Official hexgrad Kokoro (en/zh/ja) — torch + misaki; weights on demand.
+torch>=2.2,<3
+kokoro>=0.9.4
+misaki[en,zh,ja]>=0.9.4
+# transformers 5.x pairs with huggingface_hub>=1 already used on macOS.
+transformers>=5.0,<6
+loguru>=0.7

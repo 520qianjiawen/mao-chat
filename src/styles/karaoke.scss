@@ -1,0 +1,6 @@
+.karaoke-played {
+  color: var(--karaoke-played-color, #3D1C56);
+  font-weight: 600;
+  text-shadow: none;
+  transition: color 80ms ease-out;
+}

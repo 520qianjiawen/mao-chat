@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - مترجم جلسات AI"
+  },
+  "extensionDescription": {
+    "message": "ترجمه فوری گفتار با هوش مصنوعی برای تمام جلسات ویدیویی. شکستن موانع زبانی با ترجمه صوتی بلادرنگ."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - وب‌سایت‌های پشتیبانی شده"
+  },
+  "openSokuji": {
+    "message": "باز کردن MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "فروشگاه وب کروم"
+  },
+  "edgeAddons": {
+    "message": "افزونه‌های Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat در $SITE_NAME$ در دسترس است!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "روی \"باز کردن MAO Chat\" در زیر کلیک کنید تا ترجمه بلادرنگ را شروع کنید."
+  },
+  "quickStart": {
+    "message": "شروع سریع:"
+  },
+  "quickStartInstructions": {
+    "message": "کلید API OpenAI خود را پیکربندی کنید ← \"MAO Chat Virtual Microphone\" را به عنوان میکروفون انتخاب کنید ← شروع به صحبت کنید!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "برای استفاده از MAO Chat، <strong>\"MAO Chat Virtual Microphone\"</strong> را در تنظیمات میکروفون خود انتخاب کنید."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "برای استفاده از MAO Chat، لطفاً <strong>\"MAO Chat Virtual Microphone\"</strong> را در تنظیمات میکروفون خود انتخاب کنید و برای عملکرد بهتر <strong>کاهش نویز را غیرفعال کنید</strong>."
+  },
+  "gotIt": {
+    "message": "متوجه شدم"
+  },
+  "remindLater": {
+    "message": "بعداً یادآوری کن"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "برای استفاده از MAO Chat، لطفاً \"MAO Chat Virtual Microphone\" را در تنظیمات میکروفون خود انتخاب کنید."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "برای استفاده از MAO Chat، لطفاً <strong>\"MAO Chat Virtual Microphone\"</strong> را در تنظیمات میکروفون خود انتخاب کنید و برای عملکرد بهتر <strong>سرکوب نویز را در تنظیمات صدای Discord غیرفعال کنید</strong>."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat برای Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "اگر فهرست کامل دستگاه‌های صوتی را در تنظیمات Teams نمی‌بینید:<br><strong>1)</strong> افزونه MAO Chat را به طور موقت غیرفعال کنید و صفحه را بارگیری مجدد کنید<br><strong>2)</strong> هنگام درخواست، به Teams اجازه دسترسی به میکروفون و دوربین خود را بدهید<br><strong>3)</strong> افزونه MAO Chat را دوباره فعال کنید و صفحه را مجدداً بارگیری کنید<br><strong>4)</strong> هنگام درخواست، به MAO Chat اجازه دسترسی به میکروفون خود را بدهید. اکنون باید هم دستگاه‌های واقعی و هم <strong>\"MAO Chat Virtual Microphone\"</strong> را در تنظیمات خود ببینید."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "برای استفاده از MAO Chat در Jitsi Meet، <strong>Settings > Devices</strong> را باز کنید و <strong>\"MAO Chat Virtual Microphone\"</strong> را به عنوان میکروفون خود انتخاب کنید. سپس <strong>Advanced audio settings</strong> را باز کنید و برای صدای ترجمه‌شده شفاف، <strong>کاهش نویز، حذف اکو و کنترل خودکار بهره را غیرفعال کنید</strong>."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat هنوز در $HOSTNAME$ در دسترس نیست.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "در هر برنامه‌ای ترجمه کنید"
+  },
+  "desktopCtaBody": {
+    "message": "یک میکروفون مجازی در سطح کل سیستم برای OBS، YouTube، Twitch و هر برنامه دسکتاپ. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "دانلود برنامه دسکتاپ"
+  },
+  "browserSitesHeading": {
+    "message": "مرورگر را ترجیح می‌دهید؟ MAO Chat در این سایت‌ها کار می‌کند — برای باز کردن کلیک کنید:"
+  },
+  "requestSiteLink": {
+    "message": "درخواست سایت"
+  },
+  "learnMore": {
+    "message": "بیشتر بدانید →"
+  },
+  "detectFailHeadline": {
+    "message": "این تب شناسایی نشد"
+  },
+  "detectFailBody": {
+    "message": "صفحه را بازنشانی کنید و MAO Chat را دوباره باز کنید."
+  }
+}

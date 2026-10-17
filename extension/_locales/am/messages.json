@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Meeting Translator"
+  },
+  "extensionDescription": {
+    "message": "AI-powered instant speech translation for all video meetings. Break language barriers with real-time voice translation."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Supported Sites"
+  },
+  "openSokuji": {
+    "message": "Open MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Chrome Web Store"
+  },
+  "edgeAddons": {
+    "message": "Edge ተጨማሪዎች"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat is available on $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Click \"Open MAO Chat\" below to start real-time translation."
+  },
+  "quickStart": {
+    "message": "Quick Start:"
+  },
+  "quickStartInstructions": {
+    "message": "Configure your API key (OpenAI or Gemini) → Select \"MAO Chat Virtual Microphone\" as microphone → Start speaking!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "ሶኩጂ ለመጠቀም፣ በማይክሮፎን ቅንብሮችዎ ውስጥ <strong>\"MAO Chat Virtual Microphone\"</strong> ይምረጡ።"
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "MAO Chat ን ለመጠቀም፣ እባክዎ በማይክሮፎን ቅንብሮችዎ ውስጥ <strong>\"MAO Chat Virtual Microphone\"</strong> ን ይምረጡ እና ለተሻለ አፈጻጸም <strong>ድምፅ መቀነስን ያሰናክሉ</strong>።"
+  },
+  "gotIt": {
+    "message": "ተረድቻለሁ"
+  },
+  "remindLater": {
+    "message": "በኋላ አስታውስ"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "ለMicrosoft Teams MAO Chat"
+  },
+  "teamsGuidance": {
+    "message": "በTeams ቅንብሮች ውስጥ ሙሉውን የድምጽ መሣሪያ ዝርዝር ካላዩ፡<br><strong>1)</strong> የMAO Chat ቅጥያውን ለጊዜው ያሰናክሉ እና ገጹን ያድሱ<br><strong>2)</strong> ሲጠየቁ Teams ማይክሮፎንዎን እና ካሜራዎን እንዲደርስ ይፍቀዱ<br><strong>3)</strong> የMAO Chat ቅጥያውን እንደገና ያነቁ እና ገጹን እንደገና ያድሱ<br><strong>4)</strong> ሲጠየቁ MAO Chat ማይክሮፎንዎን እንዲደርስ ይፍቀዱ። አሁን በቅንብሮችዎ ውስጥ ሁለቱንም እውነተኛ መሣሪያዎችን እና <strong>\"MAO Chat Virtual Microphone\"</strong>ን ማየት ይችላሉ።"
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "ሶኩጂ ን በJitsi Meet ለመጠቀም፣ <strong>Settings > Devices</strong>ን ክፈቱ እና <strong>\"MAO Chat Virtual Microphone\"</strong>ን እንደ ማይክሮፎንዎ ይምረጡ። ከዚያ <strong>Advanced audio settings</strong>ን ክፈቱ እና ለጥሩ የተተረጎመ ድምፅ <strong>ድምፅ መቀነስን፣ ድምፅ ማስተጋባት ቁጥጥርን እና ራስ-ሰር ትርፍ ቁጥጥርን ያሰናክሉ</strong>።"
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat በ$HOSTNAME$ ላይ እስካሁን አይገኝም።",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "በማንኛውም መተግበሪያ ተርጉም"
+  },
+  "desktopCtaBody": {
+    "message": "ለOBS፣ YouTube፣ Twitch እና ማንኛውም ዴስክቶፕ አፕ ስርዓት-ሙሉ ምናባዊ ማይክሮፎን። Windows · macOS · Linux።"
+  },
+  "desktopCtaButton": {
+    "message": "የዴስክቶፕ መተግበሪያ ያውርዱ"
+  },
+  "browserSitesHeading": {
+    "message": "አሳሽ ይመርጣሉ? MAO Chat ከዚህ በታች ባሉ ጣቢያዎች ይሠራል — ለመክፈት ይጫኑ፦"
+  },
+  "requestSiteLink": {
+    "message": "ጣቢያ ይጠይቁ"
+  },
+  "learnMore": {
+    "message": "ተጨማሪ ይወቁ →"
+  },
+  "detectFailHeadline": {
+    "message": "ይህን ትር ማስተዋወቅ አልተቻለም"
+  },
+  "detectFailBody": {
+    "message": "ገጹን ያድሱ እና MAO Chatን እንደገና ይክፈቱ።"
+  }
+}

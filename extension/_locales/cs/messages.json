@@ -1,0 +1,119 @@
+{
+  "extensionName": {
+    "message": "MAO Chat - AI Překladač Schůzek"
+  },
+  "extensionDescription": {
+    "message": "AI-poháněný okamžitý překlad řeči pro všechny videoschůzky. Prolomte jazykové bariéry pomocí překladu hlasu v reálném čase."
+  },
+  "popupTitle": {
+    "message": "MAO Chat - Podporované stránky"
+  },
+  "openSokuji": {
+    "message": "Otevřít MAO Chat"
+  },
+  "chromeWebStore": {
+    "message": "Obchod Chrome"
+  },
+  "edgeAddons": {
+    "message": "Doplňky Edge"
+  },
+  "sokujiAvailable": {
+    "message": "✓ MAO Chat je dostupné na $SITE_NAME$!",
+    "placeholders": {
+      "site_name": {
+        "content": "$1",
+        "example": "Google Meet"
+      }
+    }
+  },
+  "clickToStart": {
+    "message": "Klikněte na \"Otevřít MAO Chat\" níže pro spuštění překladu v reálném čase."
+  },
+  "quickStart": {
+    "message": "Rychlý start:"
+  },
+  "quickStartInstructions": {
+    "message": "Nakonfigurujte svůj API klíč (OpenAI nebo Gemini) → Vyberte \"MAO Chat Virtual Microphone\" jako mikrofon → Začněte mluvit!"
+  },
+  "gatherTownTitle": {
+    "message": "MAO Chat for Gather Town"
+  },
+  "gatherTownGuidance": {
+    "message": "Pro použití MAO Chat vyberte <strong>\"MAO Chat Virtual Microphone\"</strong> v nastavení mikrofonu."
+  },
+  "wherebyTitle": {
+    "message": "MAO Chat for Whereby"
+  },
+  "wherebyGuidance": {
+    "message": "Pro použití MAO Chat prosím vyberte <strong>\"MAO Chat Virtual Microphone\"</strong> v nastavení mikrofonu a <strong>vypněte redukci šumu</strong> pro lepší výkon."
+  },
+  "gotIt": {
+    "message": "Rozumím"
+  },
+  "remindLater": {
+    "message": "Připomenout později"
+  },
+  "defaultTitle": {
+    "message": "MAO Chat"
+  },
+  "defaultGuidance": {
+    "message": "To use MAO Chat, please select \"MAO Chat Virtual Microphone\" in your microphone settings."
+  },
+  "discordTitle": {
+    "message": "MAO Chat for Discord"
+  },
+  "discordGuidance": {
+    "message": "To use MAO Chat, please select <strong>\"MAO Chat Virtual Microphone\"</strong> in your microphone settings and <strong>disable Noise Suppression</strong> in Discord's Voice settings for better performance."
+  },
+  "slackTitle": {
+    "message": "MAO Chat for Slack"
+  },
+  "slackGuidance": {
+    "message": "To use MAO Chat in Slack Huddles, please <strong>start a Huddle</strong>, then select <strong>\"MAO Chat Virtual Microphone\"</strong> in your Video and Mic settings, and <strong>disable Noise Suppression</strong> in Audio & Video preferences for better performance."
+  },
+  "teamsTitle": {
+    "message": "MAO Chat pro Microsoft Teams"
+  },
+  "teamsGuidance": {
+    "message": "Pokud nevidíte úplný seznam zvukových zařízení v nastavení Teams:<br><strong>1)</strong> Dočasně zakažte rozšíření MAO Chat a obnovte stránku<br><strong>2)</strong> Po výzvě povolte Teams přístup k mikrofonu a kameře<br><strong>3)</strong> Znovu povolte rozšíření MAO Chat a obnovte stránku znovu<br><strong>4)</strong> Po výzvě povolte MAO Chat přístup k mikrofonu. Nyní byste měli vidět jak skutečná zařízení, tak <strong>\"MAO Chat Virtual Microphone\"</strong> ve svých nastaveních."
+  },
+  "jitsiTitle": {
+    "message": "MAO Chat for Jitsi Meet"
+  },
+  "jitsiGuidance": {
+    "message": "Chcete-li používat MAO Chat v Jitsi Meet, otevřete <strong>Settings > Devices</strong> a jako mikrofon vyberte <strong>\"MAO Chat Virtual Microphone\"</strong>. Poté otevřete <strong>Advanced audio settings</strong> a <strong>vypněte Potlačení šumu, Potlačení ozvěny a Automatické řízení zisku</strong> pro čistý přeložený zvuk."
+  },
+  "unsupportedHeadline": {
+    "message": "MAO Chat na $HOSTNAME$ zatím není k dispozici.",
+    "placeholders": {
+      "hostname": {
+        "content": "$1",
+        "example": "example.com"
+      }
+    }
+  },
+  "desktopCtaTitle": {
+    "message": "Překládejte v jakékoli aplikaci"
+  },
+  "desktopCtaBody": {
+    "message": "Virtuální mikrofon fungující v celém systému pro OBS, YouTube, Twitch a jakoukoli desktopovou aplikaci. Windows · macOS · Linux."
+  },
+  "desktopCtaButton": {
+    "message": "Stáhnout desktopovou aplikaci"
+  },
+  "browserSitesHeading": {
+    "message": "Preferujete prohlížeč? MAO Chat funguje na těchto stránkách — kliknutím otevřete:"
+  },
+  "requestSiteLink": {
+    "message": "Požádat o web"
+  },
+  "learnMore": {
+    "message": "Zjistit více →"
+  },
+  "detectFailHeadline": {
+    "message": "Nepodařilo se zjistit tento panel"
+  },
+  "detectFailBody": {
+    "message": "Obnovte stránku a znovu otevřete MAO Chat."
+  }
+}

@@ -1,0 +1,141 @@
+node_modules
+# dependencies
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# Evaluation results and audio files (not version controlled)
+evals/results/
+evals/audio/
+
+# production
+/build
+/dist
+/dist-electron
+/extension/dist
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs
+*.log
+
+# editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# electron
+/out
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files - CRITICAL (contains API keys and secrets)
+.env.development
+.env.production
+backend-cf/.dev.vars
+backend-cf/.env
+
+# Cloudflare configuration with sensitive data
+backend-cf/wrangler.dev.toml
+backend-cf/wrangler.prod.toml
+
+# Translation backup and temporary files
+*.bak
+*.tmp
+
+# Backend dependencies
+backend-cf/node_modules/
+
+# Local database files
+*.sqlite
+*.db
+
+# IDE and system files
+.vscode/settings.json
+.idea/workspace.xml
+
+# BlackHole build files
+BlackHole/build/
+
+# Claude settings and worktrees
+.claude/settings.local.json
+.claude/worktrees/
+
+# Local development scripts
+scripts/cf-*.mjs
+
+# Research documents (local only)
+docs/research/
+
+# sherpa-onnx WASM prebuilt packages (download via scripts/download-sherpa-wasm.sh)
+public/wasm/*
+# WASM runtimes committed for extension builds (small runtime files, not large model packs)
+!public/wasm/sherpa-onnx-tts/
+!public/wasm/sherpa-onnx-asr/
+!public/wasm/sherpa-onnx-asr-stream/
+!public/wasm/ort/
+!public/wasm/vad/
+!public/wasm/piper-plus/
+!public/wasm/gtcrn/
+
+.superpowers/
+# Playwright MCP scratch: page dumps and screenshots from interactive browser
+# sessions. This was previously a list of individual filenames, which only
+# covered the dumps that existed the day it was written — every later session
+# produced untracked files that a `git add` then swept into a commit. Ignore
+# the directory instead.
+/.playwright-mcp/
+
+# Local test-run output (`npm run test > test-results.txt`)
+/test-results.txt
+/pocket-mirrors/
+
+# OmniVoice TTS spike scratch (models, samples) — not committed
+.spike/
+
+# OmniVoice re-export toolchain venv (build-time, not committed)
+scripts/reexport-omnivoice/.venv/
+scripts/reexport-omnivoice/out/
+scripts/reexport-omnivoice/.venv
+__pycache__/
+
+# Architecture-review screenshots (scratch, same batch as .playwright-mcp/)
+/arch-review-*.png
+
+# Manual PalabraAI probe harness — drives the real PalabraAIClient against the
+# live API in a browser and tees the LiveKit signalling socket to print each
+# offer/answer SessionDescription.id. Kept locally for re-testing whenever
+# Palabra upgrades their LiveKit server (which is what pins livekit-client to an
+# exact version); takes credentials via query string, so never commit it.
+/palabra-probe/
+
+# Per-application capture helper binaries (built by npm run build:audio-host)
+/resources/bin/
+
+# Firecrawl research cache
+/.firecrawl/
+
+# Embedded sidecar runtime (built/synced locally, contains large PyTorch/MLX libraries)
+/resources/sidecar-runtime/
+
+.pytest_cache/

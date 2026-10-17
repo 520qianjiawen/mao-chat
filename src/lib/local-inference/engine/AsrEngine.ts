@@ -1,0 +1,326 @@
+/**
+ * AsrEngine — Main thread wrapper for offline ASR Web Workers.
+ * Provides a simple API for feeding audio and receiving transcription results.
+ *
+ * Supports multiple worker backends:
+ * - sherpa-onnx (classic Worker): VAD + OfflineRecognizer via Emscripten/WASM
+ * - whisper-webgpu (module Worker): VAD + Whisper via Transformers.js/WebGPU
+ * - cohere-transcribe-webgpu (module Worker): VAD + Cohere Transcribe via Transformers.js/WebGPU
+ * - voxtral-3b-webgpu (module Worker): VAD + Voxtral 3B (with lang hint) via Transformers.js/WebGPU
+ * - granite-speech-webgpu (module Worker): VAD + Granite Speech via Transformers.js/WebGPU
+ */
+
+import type { AsrWorkerOutMessage, StreamingAsrWorkerOutMessage, VadWebConfig } from '../types';
+import {
+  getManifestEntry,
+  getManifestByType,
+  ASR_BUNDLED_RUNTIME_PATH,
+  type ModelManifestEntry,
+} from '../modelManifest';
+import { ModelManager } from '../ModelManager';
+import { WorkerSession } from './WorkerSession';
+import { createClassicWorker, resolvePackagedAssetUrl } from '../../../utils/environment';
+import { mapSenseVoiceLanguage } from '../senseVoiceLanguage';
+
+export interface AsrResult {
+  text: string;
+  startSample?: number;
+  durationMs: number;
+  recognitionTimeMs: number;
+}
+
+type ResultCallback = (result: AsrResult) => void;
+type PartialResultCallback = (text: string) => void;
+type StatusCallback = (message: string) => void;
+type ErrorCallback = (error: string) => void;
+
+export class AsrEngine {
+  private session: WorkerSession | null = null;
+  private currentModel: ModelManifestEntry | null = null;
+  /** Models already repaired during this engine lifetime. Prevents a broken
+   *  CDN/runtime combination from entering an infinite delete/download loop. */
+  private cacheRepairAttempted = new Set<string>();
+
+  onResult: ResultCallback | null = null;
+  onPartialResult: PartialResultCallback | null = null;
+  onSpeechStart: (() => void) | null = null;
+  onStatus: StatusCallback | null = null;
+  onError: ErrorCallback | null = null;
+
+  /**
+   * Initialize the ASR engine with a specific model.
+   * Downloads WASM and model data, creates VAD + OfflineRecognizer.
+   *
+   * @param modelId - Model identifier (e.g. 'sensevoice-int8', 'moonshine-tiny-en-quant')
+   * @returns Promise that resolves with load time when ready
+   */
+  async init(
+    modelId: string,
+    vadConfig?: VadWebConfig,
+    language?: string,
+    taskConfig?: { task: 'transcribe' | 'translate'; targetLanguage?: string },
+    options?: { skipQuietSegments?: boolean },
+  ): Promise<{ loadTimeMs: number }> {
+    const model = getManifestEntry(modelId);
+    if (!model || model.type !== 'asr') {
+      const available = getManifestByType('asr').map(m => m.id).join(', ');
+      throw new Error(`Unknown ASR model: ${modelId}. Available: ${available}`);
+    }
+
+    // If already loaded with same model, skip
+    if (this.session?.ready && this.currentModel?.id === modelId) {
+      return { loadTimeMs: 0 };
+    }
+
+    // Dispose previous worker if switching models
+    if (this.session) {
+      this.dispose();
+    }
+
+    // Load model file blob URLs from IndexedDB
+    const manager = ModelManager.getInstance();
+    if (!await manager.isModelReady(modelId)) {
+      throw new Error(`ASR model "${modelId}" is not downloaded. Download it first via Model Management.`);
+    }
+    const { dtype } = await manager.getModelVariantInfo(modelId);
+    const fileUrls = await manager.getModelBlobUrls(modelId);
+
+    const workerType = model.asrWorkerType || 'sherpa-onnx';
+
+    // Cohere Transcribe requires an explicit source language
+    if (workerType === 'cohere-transcribe-webgpu' && !language) {
+      throw new Error('Cohere Transcribe requires a source language');
+    }
+
+    // sherpa-onnx: extract metadata and pass .data blob URL. This runs BEFORE
+    // `new WorkerSession(...)` (below) so the metadata fetch — which can fail
+    // or overlap with a worker error — completes before the session's
+    // resolve/reject handlers exist; those are only bound inside
+    // `session.start()`. If the worker were constructed first and this fetch
+    // awaited afterward, a worker onerror/pre-ready 'error' firing during the
+    // fetch would settle the session with no reject handler attached yet,
+    // and the eventual `session.start(...)` call would hang forever.
+    let dataFileUrls: Record<string, string> | undefined;
+    let dataPackageMetadata: Record<string, unknown> | undefined;
+    if (workerType === 'sherpa-onnx') {
+      const metadataBlobUrl = fileUrls['package-metadata.json'];
+      if (!metadataBlobUrl) {
+        manager.revokeBlobUrls(fileUrls);
+        throw new Error(`Missing package-metadata.json for ASR model "${modelId}"`);
+      }
+
+      try {
+        const response = await fetch(metadataBlobUrl);
+        dataPackageMetadata = await response.json();
+      } catch (err: any) {
+        manager.revokeBlobUrls(fileUrls);
+        throw new Error(`Failed to read package metadata: ${err.message}`);
+      }
+
+      dataFileUrls = {};
+      for (const [name, url] of Object.entries(fileUrls)) {
+        if (name !== 'package-metadata.json') {
+          dataFileUrls[name] = url;
+        }
+      }
+    }
+
+    // Create worker based on type
+    const makeWorker = (): Worker => {
+      switch (workerType) {
+        case 'whisper-webgpu':
+          return new Worker(
+            new URL('../workers/whisper-webgpu.worker.ts', import.meta.url),
+            { type: 'module' },
+          );
+        case 'cohere-transcribe-webgpu':
+          return new Worker(
+            new URL('../workers/cohere-transcribe-webgpu.worker.ts', import.meta.url),
+            { type: 'module' },
+          );
+        case 'voxtral-3b-webgpu':
+          return new Worker(
+            new URL('../workers/voxtral-3b-webgpu.worker.ts', import.meta.url),
+            { type: 'module' },
+          );
+        case 'granite-speech-webgpu':
+          return new Worker(
+            new URL('../workers/granite-speech-webgpu.worker.ts', import.meta.url),
+            { type: 'module' },
+          );
+        default: // sherpa-onnx
+          return createClassicWorker('workers/sherpa-onnx-asr.worker.js');
+      }
+    };
+
+    // Cohere and Voxtral 3B workers emit StreamingAsrWorkerOutMessage
+    // (includes 'partial'); other workers emit AsrWorkerOutMessage. Handle the union.
+    const isRepairableCacheError = (message: string): boolean =>
+      workerType === 'sherpa-onnx'
+      && message.toLowerCase().includes('null function')
+      && !this.cacheRepairAttempted.has(modelId);
+
+    const session = new WorkerSession({
+      makeWorker,
+      revokeBlobs: () => manager.revokeBlobUrls(fileUrls),
+      // A stale pre-bundled sherpa model can exist in IndexedDB even though all
+      // expected filenames are present. Suppress the first recoverable worker
+      // error while init() replaces that cache below; a failed retry is still
+      // surfaced normally.
+      onFatalError: (message) => {
+        if (!isRepairableCacheError(message)) this.onError?.(message);
+      },
+      onMessage: (msg: AsrWorkerOutMessage | StreamingAsrWorkerOutMessage) => {
+        switch (msg.type) {
+          case 'status':
+            this.onStatus?.(msg.message);
+            break;
+
+          case 'speech_start':
+            this.onSpeechStart?.();
+            break;
+
+          case 'partial':
+            this.onPartialResult?.(msg.text);
+            break;
+
+          case 'result':
+            this.onResult?.({
+              text: msg.text,
+              startSample: 'startSample' in msg ? msg.startSample : undefined,
+              durationMs: msg.durationMs,
+              recognitionTimeMs: msg.recognitionTimeMs,
+            });
+            break;
+
+          case 'error':
+            // Post-ready error; pre-ready 'error' is handled by WorkerSession.
+            this.onError?.(msg.error);
+            break;
+        }
+      },
+    });
+    this.session = session;
+
+    // Send init message — format depends on worker type. No `await` sits
+    // between `new WorkerSession(...)` above and any `session.start(...)`
+    // call below, on any path.
+    let ready: { loadTimeMs: number };
+    if (workerType === 'whisper-webgpu' || workerType === 'cohere-transcribe-webgpu' || workerType === 'voxtral-3b-webgpu') {
+      ready = await session.start({
+        type: 'init',
+        fileUrls,
+        hfModelId: model.hfModelId,
+        language,
+        vadConfig,
+        dtype,
+        ortWasmBaseUrl: new URL('./wasm/ort/', window.location.href).href,
+        vadModelUrl: new URL('./wasm/vad/silero_vad_v5.onnx', window.location.href).href,
+      });
+    } else if (workerType === 'granite-speech-webgpu') {
+      ready = await session.start({
+        type: 'init',
+        fileUrls,
+        hfModelId: model.hfModelId,
+        language,
+        vadConfig,
+        task: taskConfig?.task ?? 'transcribe',
+        targetLanguage: taskConfig?.targetLanguage,
+        dtype,
+        ortWasmBaseUrl: new URL('./wasm/ort/', window.location.href).href,
+        vadModelUrl: new URL('./wasm/vad/silero_vad_v5.onnx', window.location.href).href,
+      });
+    } else {
+      // sherpa-onnx: dataFileUrls/dataPackageMetadata were loaded above,
+      // before the WorkerSession was constructed.
+      try {
+        ready = await session.start({
+          type: 'init',
+          fileUrls: dataFileUrls,
+          asrEngine: model.asrEngine,
+          language: mapSenseVoiceLanguage(language),
+          vadConfig,
+          skipQuietSegments: Boolean(options?.skipQuietSegments),
+          runtimeBaseUrl: resolvePackagedAssetUrl(
+            model.asrRuntimePath || ASR_BUNDLED_RUNTIME_PATH,
+          ),
+          dataPackageMetadata,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!isRepairableCacheError(message)) throw error;
+
+        this.cacheRepairAttempted.add(modelId);
+        this.session?.dispose();
+        this.session = null;
+        this.onStatus?.('Cached ASR model is outdated. Downloading a fresh copy…');
+        console.warn(
+          `[LocalInference] Replacing stale ASR cache for ${modelId} after init failure:`,
+          message,
+        );
+
+        // Delete first: downloadModel supports resume and otherwise skips every
+        // existing filename, which would preserve the incompatible old blob.
+        await manager.deleteModel(modelId);
+        await manager.downloadModel(modelId, (progress) => {
+          this.onStatus?.(
+            `Refreshing ASR model: ${progress.percent}% (${progress.currentFile})`,
+          );
+        });
+        return this.init(modelId, vadConfig, language, taskConfig);
+      }
+    }
+
+    this.currentModel = model;
+    this.cacheRepairAttempted.delete(modelId);
+    return { loadTimeMs: ready.loadTimeMs };
+  }
+
+  /**
+   * Feed audio samples to the ASR engine.
+   * Audio is processed through VAD → OfflineRecognizer.
+   * Results arrive asynchronously via onResult callback.
+   *
+   * @param samples - Int16Array audio samples
+   * @param sampleRate - Sample rate of the input audio (e.g. 24000)
+   */
+  feedAudio(samples: Int16Array, sampleRate: number): void {
+    if (!this.session?.ready) return;
+
+    // Transfer the buffer for zero-copy performance
+    this.session.post(
+      { type: 'audio', samples, sampleRate },
+      [samples.buffer]
+    );
+  }
+
+  /**
+   * Flush any pending VAD speech segment through ASR.
+   * Used on PTT release to force recognition without waiting for silence detection.
+   */
+  flush(): void {
+    if (!this.session?.ready) return;
+    this.session.post({ type: 'flush' });
+  }
+
+  /**
+   * Get list of available ASR models.
+   */
+  static getModels(): ModelManifestEntry[] {
+    return getManifestByType('asr');
+  }
+
+  get ready(): boolean {
+    return this.session?.ready ?? false;
+  }
+
+  get model(): ModelManifestEntry | null {
+    return this.currentModel;
+  }
+
+  dispose(): void {
+    this.session?.dispose();
+    this.session = null;
+    this.currentModel = null;
+  }
+}
