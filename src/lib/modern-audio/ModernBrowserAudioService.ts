@@ -204,8 +204,10 @@ export class ModernBrowserAudioService implements IAudioService {
           await this.ensureMicrophonePermission();
           devices = await navigator.mediaDevices.enumerateDevices();
         } catch (permissionError: any) {
-          console.error('[Sokuji] [ModernBrowserAudio] Microphone permission warm-up failed; returning enumerated devices anyway:', permissionError);
-          this.showPermissionError(permissionError);
+          console.warn('[Sokuji] [ModernBrowserAudio] Microphone permission warm-up failed; returning enumerated devices anyway:', permissionError);
+          if (options.requestMicrophonePermission) {
+            this.showPermissionError(permissionError);
+          }
         }
       }
 

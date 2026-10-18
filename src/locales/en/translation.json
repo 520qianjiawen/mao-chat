@@ -440,8 +440,8 @@
     "volcengine_ast2": {
       "name": "Doubao AST 2.0",
       "description": "Doubao simultaneous interpretation",
-      "appIdPlaceholder": "APP ID",
-      "accessTokenPlaceholder": "Access Token"
+      "appIdPlaceholder": "APP ID (Optional for new console)",
+      "accessTokenPlaceholder": "Enter API Key (New) or Access Token"
     },
     "zoom_ai": {
       "name": "Zoom AI Services",

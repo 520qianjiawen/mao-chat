@@ -337,7 +337,6 @@ describe('legacy façade credential guards (deprecated ClientOperations/ClientFa
     const { ClientOperations } = await import('../ClientOperations');
     const cases: Array<[Provider, RegExp]> = [
       [Provider.VOLCENGINE_ST, /Access Key ID and Secret Access Key/],
-      [Provider.VOLCENGINE_AST2, /APP ID and Access Token/],
       [Provider.ZOOM_AI, /API Key and API Secret/],
     ];
     for (const [id, msg] of cases) {
@@ -346,6 +345,12 @@ describe('legacy façade credential guards (deprecated ClientOperations/ClientFa
       expect(r.validation.message, id).toMatch(msg);
       expect(r.models, id).toEqual([]);
     }
+  });
+
+  it('Volcengine AST2 extracts single API key when appId is omitted', async () => {
+    const got = await ProviderConfigFactory.getDescriptor(Provider.VOLCENGINE_AST2)
+      .extractCredentials({ appId: '', accessToken: 'test-api-key' }, {});
+    expect(got).toEqual({ ok: true, primary: '', secret: 'test-api-key' });
   });
 
   // PalabraAI is no longer a synchronous two-field guard: a missing `secret` is

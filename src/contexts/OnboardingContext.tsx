@@ -117,7 +117,12 @@ const createBasicOnboardingSteps = (t: any): OnboardingStep[] => {
     skipBeacon: true,
   }
   ];
-  return allSteps.filter((s): s is OnboardingStep => s !== null);
+  return allSteps
+    .filter((s): s is OnboardingStep => s !== null)
+    .map((step) => ({
+      ...step,
+      primaryColor: '#3D1C56',
+    }));
 };
 
 // Advanced mode onboarding steps - detailed for experienced users
@@ -211,9 +216,16 @@ const createAdvancedOnboardingSteps = (t: any, capabilities?: { hasTemplateMode:
     const stepMatch = step.title.match(/^(.+?)(\d+)([:：])/);
     if (stepMatch) {
       stepNumber++;
-      return { ...step, title: `${stepMatch[1]}${stepNumber}${stepMatch[3]}${step.title.slice(stepMatch[0].length)}` };
+      return {
+        ...step,
+        primaryColor: '#3D1C56',
+        title: `${stepMatch[1]}${stepNumber}${stepMatch[3]}${step.title.slice(stepMatch[0].length)}`,
+      };
     }
-    return step;
+    return {
+      ...step,
+      primaryColor: '#3D1C56',
+    };
   });
 };
 

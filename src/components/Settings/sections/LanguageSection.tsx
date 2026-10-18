@@ -307,7 +307,7 @@ const LanguageSection: React.FC<LanguageSectionProps> = ({
               onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
               label="YouTube 字幕轨"
               disabled={isSessionActive}
-              tooltip="和 KISS Translator 一样：拦截播放器字幕、按句切开再翻译。没有字幕轨时才用语音识别。"
+              tooltip="拦截播放器字幕、按句切开再翻译。没有字幕轨时才用语音识别。"
             />
           )}
 

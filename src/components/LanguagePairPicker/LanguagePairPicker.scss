@@ -1,35 +1,30 @@
 .language-pair-picker {
   display: flex;
-  align-items: stretch;
-  gap: 8px;
-  width: 100%;
+  align-items: center;
+  gap: 6px;
 }
 
 .language-pair-picker__field {
-  min-width: 0;
-  flex: 1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 13px;
-  border: 1px solid var(--interpreter-border, #e4e6ee);
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: none;
+  gap: 6px;
   cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
 }
 
 .language-pair-picker__flag {
-  font-size: 22px;
+  font-size: 16px;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .language-pair-picker__copy {
-  min-width: 0;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
 
   small {
     color: #8a8d9a;
@@ -40,38 +35,36 @@
 
 .language-pair-picker__select-wrap {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  min-width: 0;
-
-  select {
-    width: 100%;
-    max-width: 100%;
-    padding: 0 18px 0 0;
-    border: 0;
-    background: transparent;
-    color: #252630;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.2;
-    appearance: none;
-    cursor: pointer;
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    &:focus-visible {
-      outline: none;
-    }
-  }
+  gap: 4px;
 
   svg {
-    position: absolute;
-    right: 0;
     color: #858896;
+    flex-shrink: 0;
     pointer-events: none;
+  }
+}
+
+.language-pair-picker__selected-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #252630;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.language-pair-picker__native-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+
+  &:disabled {
+    cursor: not-allowed;
   }
 }
 
@@ -81,10 +74,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--interpreter-border, #e4e6ee);
-  background: #fff;
-  color: #666a78;
   cursor: pointer;
+  transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
     border-color: #3D1C56;
@@ -98,18 +89,51 @@
   }
 }
 
-.language-pair-picker__swap {
-  align-self: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-}
+.language-pair-picker--launcher {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
 
-.language-pair-picker__settings {
-  width: 44px;
-  height: 44px;
-  align-self: center;
-  border-radius: 13px;
+  .language-pair-picker__field {
+    flex: 0 1 200px;
+    padding: 8px 12px;
+    border: 1px solid var(--interpreter-border, #e4e6ee);
+    border-radius: 12px;
+    background: #fff;
+    gap: 8px;
+
+    &:hover {
+      border-color: #3D1C56;
+      background: #faf8fc;
+    }
+  }
+
+  .language-pair-picker__flag {
+    font-size: 18px;
+  }
+
+  .language-pair-picker__selected-text {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .language-pair-picker__swap {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--interpreter-border, #e4e6ee);
+    background: #fff;
+    color: #666a78;
+  }
+
+  .language-pair-picker__settings {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    border: 1px solid var(--interpreter-border, #e4e6ee);
+    background: #fff;
+    color: #666a78;
+  }
 }
 
 .language-pair-picker--footer {
@@ -119,33 +143,43 @@
 
   .language-pair-picker__field {
     min-height: 0;
-    padding: 3px 8px;
+    padding: 3px 6px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 6px;
     background: transparent;
     box-shadow: none;
-    gap: 6px;
+    gap: 4px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
   }
 
   .language-pair-picker__flag {
     font-size: 14px;
   }
 
-  .language-pair-picker__copy small {
-    display: none;
-  }
-
-  .language-pair-picker__select-wrap select {
-    color: inherit;
+  .language-pair-picker__selected-text {
     font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
+    color: inherit;
+  }
+
+  .language-pair-picker__select-wrap svg {
+    color: inherit;
+    opacity: 0.7;
   }
 
   .language-pair-picker__swap {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border: 0;
     background: transparent;
+    color: inherit;
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.05);
+      color: inherit;
+    }
   }
 }

@@ -440,8 +440,8 @@
     "volcengine_ast2": {
       "name": "豆包同声传译 2.0",
       "description": "豆包语音同声传译",
-      "appIdPlaceholder": "APP ID",
-      "accessTokenPlaceholder": "Access Token"
+      "appIdPlaceholder": "APP ID（选填，新版控制台无需填写）",
+      "accessTokenPlaceholder": "输入 API Key（新版）或 Access Token"
     },
     "zoom_ai": {
       "name": "Zoom AI Services",

@@ -3935,7 +3935,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                   onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
                 />
                 <span>YouTube 字幕轨</span>
-                <small>和 KISS Translator 一样：用视频自带字幕按句翻译。没有字幕才用语音识别</small>
+                <small>用视频自带字幕按句翻译。没有字幕才用语音识别</small>
               </label>
 
               <SegmentationModePicker

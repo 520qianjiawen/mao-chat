@@ -38,19 +38,26 @@ export class VolcengineAST2ProviderConfig extends BaseProviderDescriptor {
   // legacy settingsStore.ts cast this replaces.
   async extractCredentials(slice: unknown, _ctx: CredentialCtx): Promise<Credentials> {
     const s = slice as VolcengineAST2Settings;
-    if (!s?.appId || !s?.accessToken) {
-      return { ok: false, missing: 'Both APP ID and Access Token are required for Doubao AST 2.0' };
+    const appId = String(s?.appId ?? '').trim();
+    const token = String(s?.accessToken ?? '').trim();
+    if (!token && !appId) {
+      return { ok: false, missing: 'API Key or Access Token is required for Doubao AST 2.0' };
     }
-    return { ok: true, primary: String(s.appId), secret: String(s.accessToken) };
+    // New console uses a single API Key (passed in secret, primary is empty)
+    // Legacy console uses App ID (primary) + Access Token (secret)
+    const secret = token || appId;
+    const primary = token ? appId : '';
+    return { ok: true, primary, secret };
   }
 
   peekPrimaryCredential(slice: unknown): string {
-    return String((slice as VolcengineAST2Settings)?.appId ?? '');
+    const s = slice as VolcengineAST2Settings;
+    return String(s?.accessToken || s?.appId || '');
   }
 
   createClient(creds: Credentials & { ok: true }, _options: ClientOptions): IClient {
-    if (!creds.secret) throw new Error('Access Token is required for volcengine_ast2 provider');
-    return new VolcengineAST2Client(creds.primary, creds.secret);
+    if (!creds.secret) throw new Error('API Key or Access Token is required for volcengine_ast2 provider');
+    return new VolcengineAST2Client(creds.primary || '', creds.secret);
   }
 
   async validateAndFetchModels(creds: Credentials): Promise<{
@@ -60,11 +67,9 @@ export class VolcengineAST2ProviderConfig extends BaseProviderDescriptor {
       return { validation: { valid: false, message: creds.missing, validating: false }, models: [] };
     }
     if (!creds.secret) {
-      // Legacy façade callers pass raw positional args and skip
-      // extractCredentials — keep the old required-field contract here.
-      return { validation: { valid: false, message: 'Both APP ID and Access Token are required for Doubao AST 2.0', validating: false }, models: [] };
+      return { validation: { valid: false, message: 'API Key or Access Token is required for Doubao AST 2.0', validating: false }, models: [] };
     }
-    return VolcengineAST2Client.validateApiKeyAndFetchModels(creds.primary, creds.secret);
+    return VolcengineAST2Client.validateApiKeyAndFetchModels(creds.primary || '', creds.secret);
   }
 
   // The kizuna doubao twin inherits this builder (reads its own slice).

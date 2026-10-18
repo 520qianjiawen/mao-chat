@@ -54,6 +54,17 @@ const LanguagePairPicker: React.FC<Props> = ({
     swapLanguages,
   } = useTranslationLanguages();
 
+  const sourceDisplayName = React.useMemo(() => {
+    if (sourceLanguage === 'auto') return t('common.autoDetect', '自动检测');
+    const found = sourceLanguages.find((lang) => lang.value === sourceLanguage);
+    return getLanguageDisplayName(sourceLanguage, i18n.language, found?.name);
+  }, [sourceLanguage, sourceLanguages, i18n.language, t]);
+
+  const targetDisplayName = React.useMemo(() => {
+    const found = targetLanguages.find((lang) => lang.value === targetLanguage);
+    return getLanguageDisplayName(targetLanguage, i18n.language, found?.name);
+  }, [targetLanguage, targetLanguages, i18n.language]);
+
   return (
     <div className={`language-pair-picker language-pair-picker--${variant}`}>
       <label className="language-pair-picker__field">
@@ -61,13 +72,18 @@ const LanguagePairPicker: React.FC<Props> = ({
           {languageFlagEmoji(sourceLanguage)}
         </span>
         <span className="language-pair-picker__copy">
-          <small>{sourceLanguageLabel}</small>
+          {variant !== 'footer' && <small>{sourceLanguageLabel}</small>}
           <span className="language-pair-picker__select-wrap">
+            <span className="language-pair-picker__selected-text">
+              {sourceDisplayName}
+            </span>
+            <ChevronDown size={variant === 'footer' ? 12 : 14} aria-hidden="true" />
             <select
               aria-label={sourceLanguageLabel}
               value={sourceLanguage}
               disabled={disabled}
               onChange={(event) => updateSourceLanguage(event.target.value)}
+              className="language-pair-picker__native-select"
             >
               {showAutoSourceOption && (
                 <option value="auto">{t('common.autoDetect', '自动检测')}</option>
@@ -78,7 +94,6 @@ const LanguagePairPicker: React.FC<Props> = ({
                 </option>
               ))}
             </select>
-            <ChevronDown size={variant === 'footer' ? 12 : 16} aria-hidden="true" />
           </span>
         </span>
       </label>
@@ -91,7 +106,7 @@ const LanguagePairPicker: React.FC<Props> = ({
         title={t('simpleConfig.swapLanguages', '交换左右语言')}
         aria-label={t('simpleConfig.swapLanguages', '交换左右语言')}
       >
-        <ArrowLeftRight size={variant === 'footer' ? 13 : 16} />
+        <ArrowLeftRight size={variant === 'footer' ? 12 : 15} />
       </button>
 
       <label className="language-pair-picker__field">
@@ -99,13 +114,18 @@ const LanguagePairPicker: React.FC<Props> = ({
           {languageFlagEmoji(targetLanguage)}
         </span>
         <span className="language-pair-picker__copy">
-          <small>{targetLanguageLabel}</small>
+          {variant !== 'footer' && <small>{targetLanguageLabel}</small>}
           <span className="language-pair-picker__select-wrap">
+            <span className="language-pair-picker__selected-text">
+              {targetDisplayName}
+            </span>
+            <ChevronDown size={variant === 'footer' ? 12 : 14} aria-hidden="true" />
             <select
               aria-label={targetLanguageLabel}
               value={targetLanguage}
               disabled={disabled}
               onChange={(event) => updateTargetLanguage(event.target.value)}
+              className="language-pair-picker__native-select"
             >
               {targetLanguages.map((lang) => (
                 <option key={lang.value} value={lang.value}>
@@ -113,7 +133,6 @@ const LanguagePairPicker: React.FC<Props> = ({
                 </option>
               ))}
             </select>
-            <ChevronDown size={variant === 'footer' ? 12 : 16} aria-hidden="true" />
           </span>
         </span>
       </label>
@@ -126,7 +145,7 @@ const LanguagePairPicker: React.FC<Props> = ({
           title={t('settings.title', 'Settings')}
           aria-label={t('settings.title', 'Settings')}
         >
-          <Settings size={19} />
+          <Settings size={18} />
         </button>
       )}
     </div>

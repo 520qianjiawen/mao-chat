@@ -614,31 +614,21 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
         </div>
       ) : (!isKizunaManagedProvider(provider)) ? (
         provider === Provider.VOLCENGINE_AST2 ? (
-          // Volcengine AST2 requires both APP ID and Access Token
+          // Volcengine AST2: 新版支持单 API Key，旧版支持 APP ID + Access Token
           <div className="volcengine-st-credentials-group">
-            <div className="api-key-input-group">
-              <input
-                type="text"
-                value={volcengineAST2Settings.appId}
-                onChange={(e) => updateVolcengineAST2Settings({ appId: e.target.value })}
-                placeholder={t('providers.volcengine_ast2.appIdPlaceholder', 'APP ID')}
-                className={`api-key-input ${isApiKeyValid === true ? 'valid' : isApiKeyValid === false ? 'invalid' : ''}`}
-                disabled={isSessionActive}
-              />
-            </div>
             <div className="api-key-input-group">
               <input
                 type="password"
                 value={volcengineAST2Settings.accessToken}
                 onChange={(e) => updateVolcengineAST2Settings({ accessToken: e.target.value })}
-                placeholder={t('providers.volcengine_ast2.accessTokenPlaceholder', 'Access Token')}
+                placeholder={t('providers.volcengine_ast2.accessTokenPlaceholder', '输入 API Key（新版）或 Access Token')}
                 className={`api-key-input ${isApiKeyValid === true ? 'valid' : isApiKeyValid === false ? 'invalid' : ''}`}
                 disabled={isSessionActive}
               />
               <button
                 className="validate-button"
                 onClick={handleValidateApiKey}
-                disabled={!volcengineAST2Settings.appId || !volcengineAST2Settings.accessToken || isValidating || isSessionActive}
+                disabled={(!volcengineAST2Settings.accessToken?.trim() && !volcengineAST2Settings.appId?.trim()) || isValidating || isSessionActive}
                 title={t('simpleSettings.validate')}
               >
                 {isValidating ? (
@@ -649,6 +639,16 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
                   t('simpleSettings.validate')
                 )}
               </button>
+            </div>
+            <div className="api-key-input-group">
+              <input
+                type="text"
+                value={volcengineAST2Settings.appId}
+                onChange={(e) => updateVolcengineAST2Settings({ appId: e.target.value })}
+                placeholder={t('providers.volcengine_ast2.appIdPlaceholder', 'APP ID（选填，新版控制台无需填写）')}
+                className={`api-key-input ${isApiKeyValid === true ? 'valid' : isApiKeyValid === false ? 'invalid' : ''}`}
+                disabled={isSessionActive}
+              />
             </div>
           </div>
         ) : provider === Provider.VOLCENGINE_ST ? (

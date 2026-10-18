@@ -139,3 +139,6 @@ __pycache__/
 /resources/sidecar-runtime/
 
 .pytest_cache/
+
+# Built Chrome extension standalone folder (tracked by Mao-Chat-Plugin.git)
+/plugin/

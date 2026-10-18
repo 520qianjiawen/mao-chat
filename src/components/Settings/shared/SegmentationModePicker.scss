@@ -10,7 +10,7 @@
     gap: 6px;
     margin-bottom: 6px;
     font-size: vars.$font-body;
-    color: vars.$text-primary;
+    color: var(--settings-text-primary, vars.$text-primary);
   }
 
   &__options {
@@ -24,20 +24,22 @@
   &__option {
     flex: 1;
     background-color: vars.$bg-control;
-    color: vars.$text-primary;
+    color: var(--settings-text-primary, vars.$text-primary);
     border: none;
     padding: 8px 0;
     font-size: vars.$font-body;
     cursor: pointer;
-    transition: background-color vars.$transition-fast;
+    transition: background-color vars.$transition-fast, color vars.$transition-fast;
 
     &:not(:last-child) {
       border-right: 1px solid vars.$border-default;
     }
 
     &.active {
-      background-color: vars.$color-primary;
-      color: vars.$text-on-primary;
+      background: #3D1C56 !important;
+      background-color: #3D1C56 !important;
+      color: #ffffff !important;
+      font-weight: 600;
     }
 
     &:hover:not(.active):not(:disabled) {
@@ -64,17 +66,38 @@
 
     .segmentation-mode-picker__label {
       font-weight: 600;
-      color: var(--interpreter-ink, vars.$text-primary);
+      color: var(--interpreter-ink, #20212a);
     }
 
     .segmentation-mode-picker__options {
       border-radius: 12px;
-      border-color: var(--interpreter-border, vars.$border-default);
+      border: 1px solid var(--interpreter-border, #dfe1eb);
+      background: #ffffff;
+      overflow: hidden;
     }
 
     .segmentation-mode-picker__option {
       padding: 10px 0;
-      background: #fff;
+      background: #ffffff;
+      color: #5e6270;
+      font-weight: 500;
+      transition: background-color 0.2s ease, color 0.2s ease;
+
+      &:not(:last-child) {
+        border-right: 1px solid var(--interpreter-border, #dfe1eb);
+      }
+
+      &:hover:not(.active):not(:disabled) {
+        background: #f0f2f7;
+        color: var(--interpreter-ink, #20212a);
+      }
+
+      &.active {
+        background: #3D1C56 !important;
+        background-color: #3D1C56 !important;
+        color: #ffffff !important;
+        font-weight: 600;
+      }
     }
 
     .segmentation-mode-picker__hint {

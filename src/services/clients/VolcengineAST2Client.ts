@@ -193,14 +193,20 @@ export class VolcengineAST2Client implements IClient {
     // Headers are one-shot (consumed by the handler after injection), but we
     // still clear on failure in case the upgrade request never fired.
     const host = new URL(WS_ENDPOINT).host;
+    const headers: Record<string, string> = {
+      'X-Api-Resource-Id': this.resourceId,
+      'X-Api-Connect-Id': this.connectionId,
+    };
+    if (this.appId && this.appId.trim()) {
+      headers['X-Api-App-Key'] = this.appId.trim();
+      headers['X-Api-Access-Key'] = this.accessToken.trim();
+    } else {
+      headers['X-Api-Key'] = this.accessToken.trim();
+    }
+
     const result = await window.electron.invoke('ws-headers-set', {
       host,
-      headers: {
-        'X-Api-App-Key': this.appId,
-        'X-Api-Access-Key': this.accessToken,
-        'X-Api-Resource-Id': this.resourceId,
-        'X-Api-Connect-Id': this.connectionId,
-      },
+      headers,
     });
 
     if (!result?.success) {
@@ -235,8 +241,8 @@ export class VolcengineAST2Client implements IClient {
         {
           type: 'VOLCENGINE_AST2_SET_HEADERS',
           credentials: {
-            appKey: this.appId,
-            accessKey: this.accessToken,
+            appKey: this.appId?.trim() || '',
+            accessKey: this.accessToken.trim(),
             resourceId: this.resourceId,
             connectId: this.connectionId,
           },
@@ -397,15 +403,19 @@ export class VolcengineAST2Client implements IClient {
 
     const isTextOnly = this.currentConfig.textOnly || false;
 
+    const requestMeta: any = {
+      Endpoint: 'volc.service_type.10053',
+      ResourceID: this.resourceId,
+      ConnectionID: this.connectionId,
+      SessionID: this.sessionId,
+      Sequence: this.sequence++,
+    };
+    if (this.appId && this.appId.trim()) {
+      requestMeta.AppKey = this.appId.trim();
+    }
+
     const requestPayload: any = {
-      requestMeta: {
-        Endpoint: 'volc.service_type.10053',
-        AppKey: this.appId,
-        ResourceID: this.resourceId,
-        ConnectionID: this.connectionId,
-        SessionID: this.sessionId,
-        Sequence: this.sequence++,
-      },
+      requestMeta,
       event: EventType.StartSession,
       user: {
         uid: 'sokuji-user',
@@ -998,17 +1008,14 @@ export class VolcengineAST2Client implements IClient {
     models: FilteredModel[];
   }> {
     // Simple format validation — coerce to string since numeric IDs from storage may arrive as numbers
-    const appIdStr = String(appId ?? '');
-    const accessTokenStr = String(accessToken ?? '');
-    if (!appIdStr || appIdStr.trim().length === 0) {
+    const appIdStr = String(appId ?? '').trim();
+    const accessTokenStr = String(accessToken ?? '').trim();
+    const effectiveToken = accessTokenStr || appIdStr;
+    const effectiveAppId = accessTokenStr ? appIdStr : '';
+
+    if (!effectiveToken) {
       return {
-        validation: { valid: false, message: 'APP ID is required', validating: false },
-        models: []
-      };
-    }
-    if (!accessTokenStr || accessTokenStr.trim().length === 0) {
-      return {
-        validation: { valid: false, message: 'Access Token is required', validating: false },
+        validation: { valid: false, message: 'API Key or Access Token is required', validating: false },
         models: []
       };
     }
@@ -1028,14 +1035,19 @@ export class VolcengineAST2Client implements IClient {
 
         // Register headers for the validation WebSocket
         if (isElectron()) {
+          const headers: Record<string, string> = {
+            'X-Api-Resource-Id': 'volc.service_type.10053',
+            'X-Api-Connect-Id': connectionId,
+          };
+          if (effectiveAppId) {
+            headers['X-Api-App-Key'] = effectiveAppId;
+            headers['X-Api-Access-Key'] = effectiveToken;
+          } else {
+            headers['X-Api-Key'] = effectiveToken;
+          }
           const result = await window.electron.invoke('ws-headers-set', {
             host,
-            headers: {
-              'X-Api-App-Key': appIdStr.trim(),
-              'X-Api-Access-Key': accessTokenStr.trim(),
-              'X-Api-Resource-Id': 'volc.service_type.10053',
-              'X-Api-Connect-Id': connectionId,
-            },
+            headers,
           });
           if (!result?.success) {
             return {
@@ -1050,8 +1062,8 @@ export class VolcengineAST2Client implements IClient {
               {
                 type: 'VOLCENGINE_AST2_SET_HEADERS',
                 credentials: {
-                  appKey: appIdStr.trim(),
-                  accessKey: accessTokenStr.trim(),
+                  appKey: effectiveAppId,
+                  accessKey: effectiveToken,
                   resourceId: 'volc.service_type.10053',
                   connectId: connectionId,
                 },
@@ -1090,15 +1102,18 @@ export class VolcengineAST2Client implements IClient {
 
             // Send a minimal StartSession to fully verify credentials
             const sessionId = uuidv4();
+            const reqMeta: any = {
+              Endpoint: 'volc.service_type.10053',
+              ResourceID: 'volc.service_type.10053',
+              ConnectionID: connectionId,
+              SessionID: sessionId,
+              Sequence: 0,
+            };
+            if (effectiveAppId) {
+              reqMeta.AppKey = effectiveAppId;
+            }
             const startReq = TranslateRequest.encode({
-              requestMeta: {
-                Endpoint: 'volc.service_type.10053',
-                AppKey: appIdStr.trim(),
-                ResourceID: 'volc.service_type.10053',
-                ConnectionID: connectionId,
-                SessionID: sessionId,
-                Sequence: 0,
-              },
+              requestMeta: reqMeta,
               event: EventType.StartSession,
               user: { uid: 'validation', platform },
               sourceAudio: { format: 'pcm', rate: INPUT_SAMPLE_RATE, bits: 16, channel: 1 },
