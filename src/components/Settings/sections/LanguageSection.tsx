@@ -305,9 +305,9 @@ const LanguageSection: React.FC<LanguageSectionProps> = ({
             <ToggleSwitch
               checked={useYouTubeCaptions}
               onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
-              label="YouTube 字幕轨"
+              label="视频字幕轨 (YouTube / X)"
               disabled={isSessionActive}
-              tooltip="拦截播放器字幕、按句切开再翻译。没有字幕轨时才用语音识别。"
+              tooltip="拦截播放器字幕 (YouTube、Twitter/X 等)、按句切开再翻译。没有字幕轨时才用语音识别。"
             />
           )}
 

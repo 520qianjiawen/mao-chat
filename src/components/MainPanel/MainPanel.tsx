@@ -3995,8 +3995,8 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                       disabled={isSessionActive || isInitializing}
                       onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
                     />
-                    <span>YouTube 字幕轨</span>
-                    <small>用视频自带字幕按句翻译。没有字幕才用语音识别</small>
+                    <span>视频字幕轨</span>
+                    <small>优先使用视频自带字幕 (YouTube / X 等) 按句翻译。无字幕时自动使用语音识别</small>
                   </label>
 
                   <SegmentationModePicker

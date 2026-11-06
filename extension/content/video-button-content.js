@@ -79,17 +79,28 @@
     }
 
     const p = new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: 'TRANSLATE_TEXT', text: raw, to: targetLang, engine: engine },
-        (res) => {
-          if (res && res.success && res.translatedText) {
-            translationCache.set(cacheKey, res.translatedText);
-            resolve(res.translatedText);
-          } else {
-            resolve(raw);
+      const timer = setTimeout(() => resolve(raw), 4500);
+      try {
+        chrome.runtime.sendMessage(
+          { type: 'TRANSLATE_TEXT', text: raw, to: targetLang, engine: engine },
+          (res) => {
+            clearTimeout(timer);
+            if (chrome.runtime.lastError) {
+              resolve(raw);
+              return;
+            }
+            if (res && res.success && res.translatedText) {
+              translationCache.set(cacheKey, res.translatedText);
+              resolve(res.translatedText);
+            } else {
+              resolve(raw);
+            }
           }
-        }
-      );
+        );
+      } catch {
+        clearTimeout(timer);
+        resolve(raw);
+      }
     }).finally(() => {
       inFlightTranslations.delete(cacheKey);
     });
@@ -98,7 +109,7 @@
     return p;
   }
 
-  // Toggle hiding native CC (YouTube/Twitter) so they don't overlap with MAO subtitles
+  // Toggle hiding native CC (YouTube/Twitter/HTML5 video::cue) so they don't overlap with MAO subtitles
   const NATIVE_CAPTION_STYLE_ID = 'mao-hide-native-captions-style';
   function setNativeCaptionsVisibility(hidden) {
     let styleEl = document.getElementById(NATIVE_CAPTION_STYLE_ID);
@@ -107,10 +118,26 @@
         styleEl = document.createElement('style');
         styleEl.id = NATIVE_CAPTION_STYLE_ID;
         styleEl.textContent = `
+          /* Hide HTML5 browser native VTTCue tracks */
+          video::cue {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            font-size: 0px !important;
+            color: transparent !important;
+            background: transparent !important;
+          }
+          /* YouTube native captions */
           .ytp-caption-segment,
           .ytp-caption-window-bottom,
-          [data-testid="videoComponent"] span[style*="background-color: rgb(0, 0, 0)"],
-          [data-testid="videoPlayer"] span[style*="background-color: rgb(0, 0, 0)"] {
+          .ytp-caption-window-rollup {
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+          /* Twitter / X native captions */
+          [data-testid="videoComponent"] span[style*="background"],
+          [data-testid="videoComponent"] div[dir="auto"] span,
+          [data-testid="videoPlayer"] span[style*="background"],
+          [data-testid="videoPlayer"] div[dir="auto"] span {
             opacity: 0 !important;
             visibility: hidden !important;
           }
@@ -120,6 +147,22 @@
     } else {
       styleEl?.remove();
     }
+  }
+
+  // Filters out player controls, tooltips, time, and badges
+  function isIgnoredCaptionText(text) {
+    if (!text || typeof text !== 'string') return true;
+    const t = text.trim();
+    if (t.length === 0) return true;
+    // Time indicators e.g. "0:05", "0:05 / 0:11"
+    if (/^\d{1,2}:\d{2}/.test(t)) return true;
+    // Common media badges & resolutions
+    if (/^(LIVE|CC|HD|4K|1080p|720p|AD)$/i.test(t)) return true;
+    // Tooltips and player control labels (Chinese)
+    if (/隐藏字幕|显示字幕|开启字幕|关闭字幕|静音|取消静音|播放|暂停|全屏|退出全屏|播放速度|自动播放|画中画/i.test(t)) return true;
+    // Tooltips and player control labels (English)
+    if (/hide captions?|show captions?|closed captions?|toggle captions?|mute|unmute|play|pause|fullscreen|playback speed|auto-?play|picture in picture/i.test(t)) return true;
+    return false;
   }
 
   // Auto-enable Twitter closed captions if available
@@ -135,7 +178,13 @@
     if (pressed === 'true' || label.includes('隐藏') || label.includes('Hide') || label.includes('Disable')) {
       return;
     }
-    try { ccBtn.click(); } catch { /* ignore */ }
+    try {
+      ccBtn.click();
+      // Remove focus immediately so Twitter's focus tooltip disappears
+      setTimeout(() => {
+        try { ccBtn.blur(); } catch {}
+      }, 50);
+    } catch { /* ignore */ }
   }
 
   // --- SubtitleManager Class ---
@@ -303,21 +352,32 @@
       const setupTrack = (track) => {
         if (!track) return;
         try {
-          if (track.mode === 'disabled') {
+          if (track.mode !== 'hidden') {
             track.mode = 'hidden';
           }
         } catch { /* ignore */ }
 
-        track.oncuechange = () => {
+        const onCueChange = () => {
           if (!isSubtitlesActive) return;
           const cues = track.activeCues;
           if (cues && cues.length > 0) {
-            const text = Array.from(cues).map((c) => c.text || '').join(' ').replace(/<[^>]+>/g, '').trim();
-            if (text) {
+            const text = Array.from(cues)
+              .map((c) => c.text || '')
+              .join(' ')
+              .replace(/<[^>]+>/g, '')
+              .replace(/[\r\n]+/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (text && !isIgnoredCaptionText(text)) {
               this.handleExternalCaption(text);
             }
           }
         };
+
+        try {
+          track.removeEventListener('cuechange', onCueChange);
+          track.addEventListener('cuechange', onCueChange);
+        } catch { /* ignore */ }
 
         if (track.cues && track.cues.length > 0) {
           this.parseTrackCues(track.cues);
@@ -347,7 +407,7 @@
         const start = Math.round((cue.startTime || 0) * 1000);
         const end = Math.round((cue.endTime || 0) * 1000);
         const text = (cue.text || '').replace(/<[^>]+>/g, '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
-        if (text) {
+        if (text && !isIgnoredCaptionText(text)) {
           subs.push({ start, end, text, translation: null, isTranslating: false });
         }
       }
@@ -358,6 +418,79 @@
           this.onTimeUpdate();
         }
       }
+    }
+
+    readTwitterCaption() {
+      const containerRect = this.container.getBoundingClientRect();
+      if (containerRect.width < 80 || containerRect.height < 60) return null;
+
+      // Find all spans or divs with background color
+      const styledElements = this.container.querySelectorAll(
+        'span[style*="background"], div[dir="auto"] span, div[style*="background"]'
+      );
+
+      const candidateParents = new Map();
+
+      for (let i = 0; i < styledElements.length; i++) {
+        const el = styledElements[i];
+        if (el.closest('.mao-video-btn-host') || el.closest('.mao-in-video-caption-container')) {
+          continue;
+        }
+        // Exclude UI controls, buttons, tooltips
+        if (
+          el.closest('button') ||
+          el.closest('[role="button"]') ||
+          el.closest('[role="tooltip"]') ||
+          el.closest('[role="progressbar"]') ||
+          el.closest('[role="toolbar"]') ||
+          el.closest('[data-testid*="tooltip"]') ||
+          el.closest('[data-testid*="Control"]') ||
+          el.closest('[data-testid*="control"]') ||
+          el.closest('[data-testid="app-bar"]') ||
+          el.closest('.ytp-chrome-bottom')
+        ) {
+          continue;
+        }
+
+        const raw = (el.textContent || '').trim();
+        if (!raw || isIgnoredCaptionText(raw)) continue;
+
+        // Position check: must be in lower area (35% to 96%) of the video
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        const relTop = (rect.top - containerRect.top) / containerRect.height;
+        if (relTop < 0.35 || relTop > 0.96) continue;
+
+        // Check if computed background color is actually dark/black
+        const style = window.getComputedStyle(el);
+        const bg = style.backgroundColor;
+        const isDarkBg = bg.includes('rgb(0, 0, 0)') || bg.includes('rgba(0, 0, 0') || bg.includes('black');
+        if (!isDarkBg) continue;
+
+        const parent = el.parentElement || el;
+        if (!candidateParents.has(parent)) {
+          candidateParents.set(parent, []);
+        }
+        candidateParents.get(parent).push(el);
+      }
+
+      if (candidateParents.size > 0) {
+        const lines = [];
+        const elementsToHide = [];
+        for (const [parent, spans] of candidateParents.entries()) {
+          const lineText = (parent.textContent || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+          if (lineText && !isIgnoredCaptionText(lineText)) {
+            lines.push(lineText);
+            elementsToHide.push(parent);
+            spans.forEach((s) => elementsToHide.push(s));
+          }
+        }
+        const fullText = lines.join(' ').replace(/\s+/g, ' ').trim();
+        if (fullText.length >= 2) {
+          return { text: fullText, elements: elementsToHide };
+        }
+      }
+      return null;
     }
 
     readDOMCaption() {
@@ -378,19 +511,23 @@
         if (
           el.closest('button') ||
           el.closest('[role="button"]') ||
+          el.closest('[role="tooltip"]') ||
           el.closest('[role="progressbar"]') ||
+          el.closest('[role="toolbar"]') ||
+          el.closest('[data-testid*="tooltip"]') ||
+          el.closest('[data-testid*="Control"]') ||
+          el.closest('[data-testid*="control"]') ||
           el.closest('[data-testid="app-bar"]') ||
           el.closest('.ytp-chrome-bottom')
         ) {
           continue;
         }
 
-        const text = (el.textContent || '').trim();
+        const text = (el.textContent || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
         if (!text || text.length < 3) continue;
-        if (/^\d{1,2}:\d{2}/.test(text)) continue; // skip time displays like "0:05 / 0:11"
-        if (/^(LIVE|CC|HD|4K|隐藏字幕|显示字幕|Hide captions|Show captions)$/i.test(text)) continue;
+        if (isIgnoredCaptionText(text)) continue;
 
-        // Verify spatial position: subtitles are located in the lower 60% of the video container
+        // Verify spatial position: subtitles are located in the lower area of the video container
         const rect = el.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) continue;
         const relativeTop = (rect.top - containerRect.top) / containerRect.height;
@@ -409,14 +546,31 @@
     setupDOMCaptionObserver() {
       const observer = new MutationObserver(() => {
         if (!isSubtitlesActive) return;
+
+        // Priority 1: Twitter styled caption spans
+        const twitterCaption = this.readTwitterCaption();
+        if (twitterCaption) {
+          this.handleExternalCaption(twitterCaption.text);
+          if (Array.isArray(twitterCaption.elements)) {
+            twitterCaption.elements.forEach((el) => {
+              el.style.setProperty('opacity', '0', 'important');
+              el.style.setProperty('visibility', 'hidden', 'important');
+            });
+          }
+          return;
+        }
+
+        // Priority 2: Generic DOM caption
         const domCaption = this.readDOMCaption();
         if (domCaption) {
           this.handleExternalCaption(domCaption.text);
           if (domCaption.el) {
             domCaption.el.style.setProperty('opacity', '0', 'important');
+            domCaption.el.style.setProperty('visibility', 'hidden', 'important');
             const parent = domCaption.el.parentElement;
             if (parent && parent !== this.container && !parent.querySelector('video') && !parent.querySelector('button')) {
               parent.style.setProperty('opacity', '0', 'important');
+              parent.style.setProperty('visibility', 'hidden', 'important');
             }
           }
         }
@@ -466,7 +620,7 @@
           text = ev.segs.map((s) => s.utf8 || '').join('');
         }
         text = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
-        if (text && text !== '\n') {
+        if (text && text !== '\n' && !isIgnoredCaptionText(text)) {
           subs.push({ start, end, text, translation: null, isTranslating: false });
         }
       }
@@ -520,11 +674,11 @@
         }
       }
 
-      // 2. Check active textTracks cues (Twitter / HLS WebVTT)
+      // 2. Check active textTracks cues (HTML5 / HLS WebVTT)
       if (this.videoEl.textTracks && this.videoEl.textTracks.length > 0) {
         for (let i = 0; i < this.videoEl.textTracks.length; i++) {
           const track = this.videoEl.textTracks[i];
-          if (track.mode === 'disabled') {
+          if (track.mode !== 'hidden') {
             try { track.mode = 'hidden'; } catch { /* ignore */ }
           }
           if (this.formattedSubtitles.length === 0 && track.cues && track.cues.length > 0) {
@@ -533,8 +687,8 @@
           }
           const cues = track.activeCues;
           if (cues && cues.length > 0) {
-            const text = Array.from(cues).map((c) => c.text || '').join(' ').replace(/<[^>]+>/g, '').trim();
-            if (text) {
+            const text = Array.from(cues).map((c) => c.text || '').join(' ').replace(/<[^>]+>/g, '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+            if (text && !isIgnoredCaptionText(text)) {
               this.handleExternalCaption(text);
               return;
             }
@@ -548,30 +702,48 @@
           ? window.__maoReadOnscreenLines()
           : [];
         const combined = onScreenLines.join(' ').trim();
-        if (combined) {
+        if (combined && !isIgnoredCaptionText(combined)) {
           this.handleExternalCaption(combined);
           return;
         }
         const ytpSegments = document.querySelectorAll('.ytp-caption-segment');
         if (ytpSegments.length > 0) {
           const text = Array.from(ytpSegments).map((s) => s.textContent || '').join(' ').trim();
-          if (text) {
+          if (text && !isIgnoredCaptionText(text)) {
             this.handleExternalCaption(text);
-            ytpSegments.forEach((s) => s.style.setProperty('opacity', '0', 'important'));
+            ytpSegments.forEach((s) => {
+              s.style.setProperty('opacity', '0', 'important');
+              s.style.setProperty('visibility', 'hidden', 'important');
+            });
             return;
           }
         }
       }
 
-      // 4. Twitter / Generic DOM on-screen captions fallback
+      // 4. Twitter / X styled DOM captions
+      const twitterCaption = this.readTwitterCaption();
+      if (twitterCaption) {
+        this.handleExternalCaption(twitterCaption.text);
+        if (Array.isArray(twitterCaption.elements)) {
+          twitterCaption.elements.forEach((el) => {
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+          });
+        }
+        return;
+      }
+
+      // 5. Generic DOM on-screen captions fallback
       const domCaption = this.readDOMCaption();
       if (domCaption) {
         this.handleExternalCaption(domCaption.text);
         if (domCaption.el) {
           domCaption.el.style.setProperty('opacity', '0', 'important');
+          domCaption.el.style.setProperty('visibility', 'hidden', 'important');
           const parent = domCaption.el.parentElement;
           if (parent && parent !== this.container && !parent.querySelector('video') && !parent.querySelector('button')) {
             parent.style.setProperty('opacity', '0', 'important');
+            parent.style.setProperty('visibility', 'hidden', 'important');
           }
         }
       }
@@ -1108,8 +1280,8 @@
       'pointer-events: auto',
       'display: block',
       'transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-      'opacity: 0',
-      'transform: translateY(-4px)',
+      'opacity: 0.75',
+      'transform: translateY(0)',
     ].join(' !important;') + ' !important;';
 
     const shadow = host.attachShadow({ mode: 'open' });
@@ -1300,12 +1472,12 @@
         hideTimer = setTimeout(() => {
           if (isPopoverOpen) return;
           if (!isSubtitlesActive) {
-            host.style.setProperty('opacity', '0', 'important');
-            host.style.setProperty('transform', 'translateY(-4px)', 'important');
+            host.style.setProperty('opacity', '0.55', 'important');
+            host.style.setProperty('transform', 'translateY(0)', 'important');
           } else {
-            host.style.setProperty('opacity', '0.7', 'important');
+            host.style.setProperty('opacity', '0.75', 'important');
           }
-        }, 3000);
+        }, 3500);
       }
     };
 
@@ -1313,10 +1485,10 @@
       if (isPopoverOpen) return;
       if (hideTimer) clearTimeout(hideTimer);
       if (!isSubtitlesActive) {
-        host.style.setProperty('opacity', '0', 'important');
-        host.style.setProperty('transform', 'translateY(-4px)', 'important');
+        host.style.setProperty('opacity', '0.55', 'important');
+        host.style.setProperty('transform', 'translateY(0)', 'important');
       } else {
-        host.style.setProperty('opacity', '0.7', 'important');
+        host.style.setProperty('opacity', '0.75', 'important');
       }
     };
 
@@ -1383,39 +1555,27 @@
       }
     }
 
-    // 2. Twitter / X Video Containers
-    const xPlayers = document.querySelectorAll(
-      'div[data-testid="videoComponent"], div[data-testid="videoPlayer"], div[data-testid="tweetPhoto"]'
-    );
-    for (let i = 0; i < xPlayers.length; i++) {
-      const el = xPlayers[i];
-      const video = el.querySelector('video');
-      if (video) {
-        registerVideo(video, el);
-      }
-    }
-
-    // 3. Generic <video> fallback
+    // 2. All HTML5 / Twitter / Social Video Players
     const videos = document.querySelectorAll('video');
     for (let i = 0; i < videos.length; i++) {
       const video = videos[i];
       if (activeVideoManagers.has(video)) continue;
       const rect = video.getBoundingClientRect();
-      if (rect.width < 120 || rect.height < 80) continue;
+      if (rect.width < 100 || rect.height < 60) continue;
 
-      let parent = video.parentElement;
-      while (parent && parent !== document.body && parent !== document.documentElement) {
-        const style = window.getComputedStyle(parent);
-        if (style.position === 'relative' || style.position === 'absolute' || style.position === 'fixed') {
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if (!parent || parent === document.body) {
-        parent = video.parentElement;
-      }
-      if (parent) {
-        registerVideo(video, parent);
+      // Skip YouTube as handled above
+      if (video.closest('#movie_player') || video.closest('.html5-video-player')) continue;
+
+      // Find the best player container (Twitter videoComponent, tweetPhoto, tweet, or positioned parent)
+      const container =
+        video.closest('div[data-testid="videoComponent"]') ||
+        video.closest('div[data-testid="videoPlayer"]') ||
+        video.closest('div[data-testid="tweetPhoto"]') ||
+        video.closest('article[data-testid="tweet"]') ||
+        video.parentElement;
+
+      if (container) {
+        registerVideo(video, container);
       }
     }
   }
