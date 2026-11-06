@@ -29,6 +29,7 @@ import { defaultKizunaOpenaiTranslateSettings } from './KizunaAIOpenAITranslateP
 import { defaultKizunaVolcengineAst2Settings } from './KizunaAIVolcengineAST2ProviderConfig';
 import { defaultKizunaSonioxSettings } from './KizunaAISonioxProviderConfig';
 import { defaultSonioxSettings } from './SonioxProviderConfig';
+import { defaultAntLingSettings } from './AntLingProviderConfig';
 import en from '../../locales/en/translation.json';
 
 // Map each provider's settingsSliceKey to its per-module default settings slice,
@@ -48,12 +49,13 @@ const DEFAULTS_BY_SLICE: Record<string, unknown> = {
   kizunaVolcengineAst2: defaultKizunaVolcengineAst2Settings,
   kizunaSoniox: defaultKizunaSonioxSettings,
   soniox: defaultSonioxSettings,
+  antLing: defaultAntLingSettings,
 };
 
 describe('provider registry descriptors', () => {
   it('returns a descriptor for every available provider', () => {
     const ids = ProviderConfigFactory.getAvailableProviders();
-    expect(ids.length).toBe(14);
+    expect(ids.length).toBe(15);
     for (const id of ids) {
       const d = ProviderConfigFactory.getDescriptor(id);
       expect(d.getConfig().id).toBe(id);
@@ -149,6 +151,7 @@ describe('descriptor.extractCredentials', () => {
       [Provider.VOLCENGINE_ST, { accessKeyId: 'ak', secretAccessKey: 'sk' }, { primary: 'ak', secret: 'sk' }],
       [Provider.VOLCENGINE_AST2, { appId: 123, accessToken: 'tok' }, { primary: '123', secret: 'tok' }],
       [Provider.ZOOM_AI, { apiKey: 'zk', apiSecret: 'zs' }, { primary: 'zk', secret: 'zs' }],
+      [Provider.ANT_LING, { apiKey: 'ak', customEndpoint: 'https://api.ant-ling.com/v1' }, { primary: 'ak', endpoint: 'https://api.ant-ling.com/v1' }],
     ];
     for (const [id, slice, want] of cases) {
       const got = await ProviderConfigFactory.getDescriptor(id).extractCredentials(slice, {});
@@ -194,6 +197,7 @@ describe('descriptor.buildSessionConfig', () => {
       local_native: 'local_native',
       kizunaai_openai_translate: 'openai_translate', kizunaai_volcengine_ast2: 'volcengine_ast2',
       soniox: 'soniox', kizunaai_soniox: 'soniox',
+      ant_ling: 'ant_ling',
     };
     for (const id of ProviderConfigFactory.getAvailableProviders()) {
       const d = ProviderConfigFactory.getDescriptor(id);
@@ -271,6 +275,7 @@ describe('registry invariants', () => {
     [Provider.KIZUNA_AI_VOLCENGINE_AST2]: 'kizunaVolcengineAst2',
     [Provider.KIZUNA_AI_SONIOX]: 'kizunaSoniox',
     [Provider.SONIOX]: 'soniox',
+    [Provider.ANT_LING]: 'antLing',
   };
 
   it('settingsSliceKey matches the exact expected value per provider', () => {
@@ -300,6 +305,7 @@ describe('registry invariants', () => {
     [Provider.KIZUNA_AI_VOLCENGINE_AST2]: false,
     [Provider.KIZUNA_AI_SONIOX]: false,
     [Provider.SONIOX]: false,
+    [Provider.ANT_LING]: false,
   };
 
   it('supportsWebRTC matches the exact expected value per provider', () => {

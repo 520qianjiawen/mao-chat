@@ -28,6 +28,7 @@ import {
   useNativeCatalog,
   useNativeModelStatuses,
 } from '../../stores/nativeModelStore';
+import { speakText, stopSpeaking } from '../../utils/speechVoice';
 import { useLocalNativeSettings } from '../../stores/settingsStore';
 import { LANGUAGE_OPTIONS, getLanguageDisplayName } from '../../utils/languages';
 import {
@@ -411,6 +412,7 @@ export const QuickTranslateWindow: React.FC = () => {
 
   // Action: Close window
   const handleClose = useCallback(() => {
+    stopSpeaking();
     if (window.electron?.invoke) {
       window.electron.invoke('quick-translate:close');
     }
@@ -440,24 +442,21 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, [translatedText]);
 
-  // Action: Read aloud (TTS)
+  // Action: Read aloud (TTS with natural voice)
   const handleToggleSpeak = useCallback(() => {
-    if (!translatedText || !('speechSynthesis' in window)) return;
+    if (!translatedText) return;
 
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsSpeaking(false);
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(translatedText);
-    utterance.lang = targetLang === 'zh' ? 'zh-CN' : targetLang;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
     setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+    void speakText(translatedText, targetLang, {
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
   }, [translatedText, isSpeaking, targetLang]);
 
   // Keyboard shortcut listener within the window

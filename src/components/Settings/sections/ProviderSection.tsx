@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Cpu, Zap, HelpCircle, ChevronDown, ChevronUp, CheckCircle, AlertCircle, ExternalLink, X } from 'lucide-react';
+import { Cpu, Zap, Sparkles, HelpCircle, ChevronDown, ChevronUp, CheckCircle, AlertCircle, ExternalLink, X } from 'lucide-react';
 import { OpenAIIcon, GeminiIcon, PalabraAIIcon, KizunaAIIcon, VolcengineIcon, ZoomIcon, SonioxIcon } from '../../Icons/ProviderIcons';
 import { useTranslation, Trans } from 'react-i18next';
 import Tooltip from '../../Tooltip/Tooltip';
@@ -30,6 +30,8 @@ import {
   useNavigateToSettings,
   useLocalInferenceSettings,
   useLocalNativeSettings,
+  useAntLingSettings,
+  useUpdateAntLing,
   useSettingsStore,
 } from '../../../stores/settingsStore';
 import type { SettingsStore } from '../../../stores/settingsStore';
@@ -62,6 +64,7 @@ import {
 // carries the i18n key (see i18nKey on ProviderDescriptor). Keys omitted here
 // fall back to DefaultProviderIcon.
 const PROVIDER_ICONS: Partial<Record<ProviderType, React.ComponentType<{ size?: string | number }>>> = {
+  [Provider.ANT_LING]: Sparkles,
   [Provider.OPENAI]: OpenAIIcon,
   [Provider.GEMINI]: GeminiIcon,
   [Provider.OPENAI_COMPATIBLE]: Zap,
@@ -101,12 +104,14 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
   const volcengineSTSettings = useVolcengineSTSettings();
   const volcengineAST2Settings = useVolcengineAST2Settings();
   const zoomAISettings = useZoomAISettings();
+  const antLingSettings = useAntLingSettings();
   const isApiKeyValid = useIsApiKeyValid();
 
   const setProvider = useSetProvider();
   const updateOpenAISettings = useUpdateOpenAI();
   const updateGeminiSettings = useUpdateGemini();
   const updateOpenAICompatibleSettings = useUpdateOpenAICompatible();
+  const updateAntLingSettings = useUpdateAntLing();
   const updatePalabraAISettings = useUpdatePalabraAI();
   const updateOpenAITranslateSettings = useUpdateOpenAITranslate();
   const updateVolcengineSTSettings = useUpdateVolcengineST();
@@ -262,6 +267,9 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
         break;
       case Provider.OPENAI_COMPATIBLE:
         updateOpenAICompatibleSettings({ apiKey: value });
+        break;
+      case Provider.ANT_LING:
+        updateAntLingSettings({ apiKey: value });
         break;
       case Provider.PALABRA_AI:
         if (palabraAISettings.authMode === 'platform') {
@@ -420,14 +428,24 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
         )}
       </div>
 
-      {/* API Endpoint Input - Only for OpenAI Compatible */}
-      {provider === Provider.OPENAI_COMPATIBLE && (
+      {/* API Endpoint Input - For OpenAI Compatible and Ant-Ling */}
+      {(provider === Provider.OPENAI_COMPATIBLE || provider === Provider.ANT_LING) && (
         <div className="endpoint-input-group">
           <input
             type="text"
-            value={openAICompatibleSettings.customEndpoint}
-            onChange={(e) => updateOpenAICompatibleSettings({ customEndpoint: e.target.value })}
-            placeholder={t('providers.openaiCompatible.customEndpointPlaceholder', 'https://your-api-endpoint.com')}
+            value={provider === Provider.ANT_LING ? antLingSettings.customEndpoint : openAICompatibleSettings.customEndpoint}
+            onChange={(e) => {
+              if (provider === Provider.ANT_LING) {
+                updateAntLingSettings({ customEndpoint: e.target.value });
+              } else {
+                updateOpenAICompatibleSettings({ customEndpoint: e.target.value });
+              }
+            }}
+            placeholder={
+              provider === Provider.ANT_LING
+                ? 'https://api.ant-ling.com/v1'
+                : t('providers.openaiCompatible.customEndpointPlaceholder', 'https://your-api-endpoint.com')
+            }
             className="endpoint-input"
             disabled={isSessionActive}
           />

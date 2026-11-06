@@ -53,6 +53,7 @@ interface Props {
     isSessionActive: boolean;
     isInitializing: boolean;
     canStart: boolean;
+    disabledTooltip?: string;
     onStart: () => void;
     onStop: () => void;
   };
@@ -151,10 +152,14 @@ const SubtitleBar: React.FC<Props> = ({
             }
             title={sessionControl.isSessionActive
               ? t('subtitle.bar.stop', 'Stop session')
-              : t('subtitle.bar.start', 'Start session')}
+              : (!sessionControl.canStart && sessionControl.disabledTooltip)
+                ? sessionControl.disabledTooltip
+                : t('subtitle.bar.start', 'Start session')}
             aria-label={sessionControl.isSessionActive
               ? t('subtitle.bar.stop', 'Stop session')
-              : t('subtitle.bar.start', 'Start session')}
+              : (!sessionControl.canStart && sessionControl.disabledTooltip)
+                ? sessionControl.disabledTooltip
+                : t('subtitle.bar.start', 'Start session')}
           >
             {/* 14px matches every other icon in this bar. */}
             {sessionControl.isInitializing

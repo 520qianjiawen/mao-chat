@@ -103,10 +103,12 @@ export const isLikelyToGenerateFeedback = (
   // Check for virtual devices (which might cause feedback loops)
   // Support for different platforms:
   // - Linux: Sokuji_Virtual_Speaker, Sokuji_Virtual_Mic
-  // - Mac: SokujiVirtualAudio (for both mic and speaker)
+  // - Mac: MaoVirtualAudio / SokujiVirtualAudio (for both mic and speaker)
   // - General: any device with 'sokuji' or 'virtual' in the name
   if (outputLabel.includes('sokuji') || outputLabel.includes('virtual') ||
       inputLabel.includes('sokuji') || inputLabel.includes('virtual') ||
+      outputLabel.includes('maovirtualaudio') ||
+      inputLabel.includes('maovirtualaudio') ||
       outputLabel.includes('sokujivirtualaudio') || // Mac virtual device
       inputLabel.includes('sokujivirtualaudio')) {  // Mac virtual device
     return true;

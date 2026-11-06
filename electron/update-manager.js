@@ -4,6 +4,49 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+const R2_UPDATE_MANIFEST_URL = process.env.MAO_CHAT_UPDATE_URL || 'https://software.asg.li/mao-chat/latest-mac.json';
+
+function semverGt(v1, v2) {
+  const p1 = (v1 || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const p2 = (v2 || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+    const a = p1[i] || 0;
+    const b = p2[i] || 0;
+    if (a > b) return true;
+    if (a < b) return false;
+  }
+  return false;
+}
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        return fetchJson(res.headers.location).then(resolve, reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { raw += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(raw));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => {
+      req.destroy();
+      reject(new Error('Update check timeout'));
+    });
+  });
+}
+
 class UpdateManager {
   constructor(mainWindow) {
     this.mainWindow = mainWindow;
@@ -13,6 +56,7 @@ class UpdateManager {
     this.feedOwner = process.env.MAO_CHAT_UPDATE_OWNER || '';
     this.feedRepo = process.env.MAO_CHAT_UPDATE_REPO || '';
     this.updatesEnabled = !!(this.feedOwner && this.feedRepo);
+    this.r2Enabled = true;
 
     // Disable auto-download — user must confirm
     autoUpdater.autoDownload = false;
@@ -137,20 +181,43 @@ class UpdateManager {
     });
   }
 
+  /**
+   * Check Cloudflare R2 for newer MAO Chat releases.
+   */
+  async checkR2Updates() {
+    try {
+      const manifest = await fetchJson(R2_UPDATE_MANIFEST_URL);
+      if (!manifest || !manifest.version) {
+        return null;
+      }
+      const currentVersion = app.getVersion();
+      if (!semverGt(manifest.version, currentVersion)) {
+        return { available: false, version: manifest.version };
+      }
+
+      const platformKey = `${process.platform}-${process.arch}`;
+      const fileInfo = manifest.files?.[platformKey]
+        || manifest.files?.[process.platform]
+        || manifest.files?.['darwin-arm64'];
+
+      const downloadUrl = fileInfo?.url || `https://software.asg.li/mao-chat/MAO-Chat-${manifest.version}-${process.arch}.dmg`;
+
+      return {
+        available: true,
+        version: manifest.version,
+        releaseNotes: manifest.notes || `MAO Chat v${manifest.version}`,
+        downloadUrl,
+        size: fileInfo?.size || 0,
+      };
+    } catch (err) {
+      console.warn('[UpdateManager] R2 update check failed:', err.message);
+      return null;
+    }
+  }
+
   _setupIpcHandlers() {
     ipcMain.handle('update-check', async () => {
-      if (!this.updatesEnabled) {
-        this._sendStatus({ status: 'not-available' });
-        return { success: true, disabled: true };
-      }
-      try {
-        await autoUpdater.checkForUpdates();
-        return { success: true };
-      } catch (err) {
-        console.error('Update check failed:', err);
-        this._sendStatus({ status: 'error', message: err.message || String(err) });
-        return { success: false, error: err.message };
-      }
+      return this.checkForUpdates();
     });
 
     ipcMain.handle('update-download', async () => {
@@ -201,12 +268,7 @@ class UpdateManager {
         return { success: false, error: 'auto-update-not-supported' };
       }
 
-      // macOS: same notify-only path as non-AppImage Linux.
-      if (process.platform === 'darwin') {
-        return { success: false, error: 'auto-update-not-supported' };
-      }
-
-      // Windows (existing Squirrel-compatible manual download) — unchanged
+      // macOS and Windows: direct in-app download
       if (this._downloadPromise) return this._downloadPromise;
       this._downloadPromise = (async () => {
         try {
@@ -258,6 +320,22 @@ class UpdateManager {
    * falling back to constructed name.
    */
   _resolveDownloadUrl() {
+    if (this._updateInfo?.url) {
+      try {
+        const parsed = new URL(this._updateInfo.url);
+        const fileName = path.basename(parsed.pathname) || `MAO-Chat-${this._updateInfo.version}.dmg`;
+        return {
+          fileName,
+          url: this._updateInfo.url,
+        };
+      } catch {
+        return {
+          fileName: `MAO-Chat-${this._updateInfo.version}.dmg`,
+          url: this._updateInfo.url,
+        };
+      }
+    }
+
     const version = this._updateInfo.version;
     const files = this._updateInfo.files || [];
 
@@ -305,6 +383,15 @@ class UpdateManager {
       file.on('finish', () => {
         this._sendStatus({ status: 'downloaded' });
         resolve();
+
+        // 点击更新下载完成后自动启动安装器并退出当前应用
+        if (process.platform === 'darwin' || process.platform === 'win32') {
+          setTimeout(() => {
+            this._installUpdate().catch((err) => {
+              console.error('[UpdateManager] Auto launch installer failed:', err);
+            });
+          }, 600);
+        }
       });
 
       let receivedBytes = 0;
@@ -363,8 +450,11 @@ class UpdateManager {
    * #7: Use shell.openPath for reliable launch, then quit.
    */
   _installUpdate() {
+    if (this._isInstalling) return Promise.resolve();
+    this._isInstalling = true;
     return shell.openPath(this.downloadPath).then((errorMessage) => {
       if (errorMessage) {
+        this._isInstalling = false;
         throw new Error(`Failed to launch installer: ${errorMessage}`);
       }
       // Give the installer a moment to initialize, then quit
@@ -373,9 +463,38 @@ class UpdateManager {
   }
 
   /**
-   * Public method to check for updates (used by Help menu).
+   * Public method to check for updates (used by Help menu and Settings).
    */
-  checkForUpdates() {
+  async checkForUpdates() {
+    this._sendStatus({ status: 'checking' });
+
+    // 1. Check Cloudflare R2 manifest first
+    const r2Result = await this.checkR2Updates();
+    if (r2Result) {
+      if (r2Result.available) {
+        this._updateInfo = {
+          version: r2Result.version,
+          releaseNotes: r2Result.releaseNotes,
+          url: r2Result.downloadUrl,
+          size: r2Result.size,
+        };
+        this._sendStatus({
+          status: 'available',
+          version: r2Result.version,
+          releaseNotes: r2Result.releaseNotes,
+          supportsAutoUpdate: true,
+          downloadUrl: r2Result.downloadUrl,
+        });
+        return { success: true };
+      } else {
+        this._updateInfo = null;
+        this.downloadPath = null;
+        this._sendStatus({ status: 'not-available' });
+        return { success: true };
+      }
+    }
+
+    // 2. Fall back to GitHub autoUpdater if configured
     if (!this.updatesEnabled) {
       this._sendStatus({ status: 'not-available' });
       return Promise.resolve(null);
@@ -388,14 +507,11 @@ class UpdateManager {
 
   /**
    * Check for updates with a delay (used at startup).
-   * #10: Send error status to renderer on failure (consistent with manual check).
    */
   checkAfterDelay(delayMs = 5000) {
-    if (!this.updatesEnabled) return;
     setTimeout(() => {
-      autoUpdater.checkForUpdates().catch((err) => {
-        console.error('Startup update check failed:', err);
-        this._sendStatus({ status: 'error', message: err.message || String(err) });
+      this.checkForUpdates().catch((err) => {
+        console.warn('Startup update check failed:', err);
       });
     }, delayMs);
   }

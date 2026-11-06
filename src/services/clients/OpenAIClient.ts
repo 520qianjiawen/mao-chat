@@ -44,17 +44,36 @@ export class OpenAIClient implements IClient {
    */
   private keepReplayAudio: boolean = false;
 
+  /**
+   * Normalizes an API host by removing trailing slashes and redundant /v1.
+   * Endpoints append `/v1/...`, so an apiHost ending in `/v1`
+   * would otherwise turn into `/v1/v1/...`.
+   */
+  static normalizeApiHost(apiHost?: string): string {
+    let host = (apiHost || OpenAIClient.DEFAULT_API_HOST).trim().replace(/\/+$/, '');
+    if (host.endsWith('/v1')) {
+      host = host.slice(0, -3).replace(/\/+$/, '');
+    }
+    return host;
+  }
+
+  /**
+   * Converts an HTTP/HTTPS API host to a WS/WSS URL for OpenAI Realtime WebSocket connection.
+   */
+  static toWebSocketUrl(apiHost?: string): string {
+    const host = OpenAIClient.normalizeApiHost(apiHost);
+    const wsHost = host.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
+    return `${wsHost}/v1/realtime`;
+  }
+
   constructor(apiKey: string, apiHost?: string) {
     this.apiKey = apiKey;
-    this.apiHost = apiHost || OpenAIClient.DEFAULT_API_HOST;
-    
-    // Remove trailing slash from API host if present
-    this.apiHost = this.apiHost.replace(/\/$/, '');
+    this.apiHost = OpenAIClient.normalizeApiHost(apiHost);
     
     this.client = new RealtimeClient({
       apiKey: apiKey,
       dangerouslyAllowAPIKeyInBrowser: true,
-      url: `${this.apiHost}/v1/realtime`
+      url: OpenAIClient.toWebSocketUrl(this.apiHost)
     });
     this.setupEventListeners();
   }
@@ -85,7 +104,7 @@ export class OpenAIClient implements IClient {
       };
     }
 
-    const host = (apiHost || OpenAIClient.DEFAULT_API_HOST).replace(/\/$/, '');
+    const host = OpenAIClient.normalizeApiHost(apiHost);
     const modelsEndpoint = `${host}/v1/models`;
 
     try {
@@ -467,11 +486,28 @@ export class OpenAIClient implements IClient {
     this.itemCreatedAtMap.clear();
     this.keepReplayAudio = config.keepReplayAudio ?? false;
 
+    // Register Authorization header for Electron WebSocket upgrade
+    // This allows custom OpenAI-compatible endpoints that require standard
+    // Authorization: Bearer headers (rather than Sec-WebSocket-Protocol) to authenticate.
+    if (typeof window !== 'undefined' && (window as any).electron?.invoke) {
+      try {
+        const wsUrl = new URL(OpenAIClient.toWebSocketUrl(this.apiHost));
+        await (window as any).electron.invoke('ws-headers-set', {
+          host: wsUrl.host,
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+        });
+      } catch (err) {
+        console.warn('[OpenAIClient] Failed to register ws headers via electron IPC:', err);
+      }
+    }
+
     // Create new client instance with fresh API key, API host and model
     this.client = new RealtimeClient({
       apiKey: this.apiKey,
       dangerouslyAllowAPIKeyInBrowser: true,
-      url: `${this.apiHost}/v1/realtime`,
+      url: OpenAIClient.toWebSocketUrl(this.apiHost),
       model: config.model
     });
 
@@ -513,6 +549,12 @@ export class OpenAIClient implements IClient {
   }
 
   async disconnect(): Promise<void> {
+    if (typeof window !== 'undefined' && (window as any).electron?.invoke) {
+      try {
+        const wsUrl = new URL(OpenAIClient.toWebSocketUrl(this.apiHost));
+        await (window as any).electron.invoke('ws-headers-clear', { host: wsUrl.host });
+      } catch {}
+    }
     this.client.disconnect();
     this.eventHandlers.onRealtimeEvent?.({
       source: 'client',

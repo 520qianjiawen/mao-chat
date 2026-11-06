@@ -4,12 +4,17 @@ import TitleBar from './TitleBar';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }));
-vi.mock('../../utils/environment', () => ({
-  isElectron: () => true,
-  isExtension: () => false,
-  isMacOS: () => true,
-}));
+vi.mock('../../utils/environment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/environment')>();
+  return {
+    ...actual,
+    isElectron: () => true,
+    isExtension: () => false,
+    isMacOS: () => true,
+  };
+});
 vi.mock('../Subtitle/SubtitleEnterButton', () => ({ default: () => null }));
 
 describe('TitleBar standalone tools', () => {

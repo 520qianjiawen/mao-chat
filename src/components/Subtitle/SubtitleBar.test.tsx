@@ -151,6 +151,7 @@ describe('SubtitleBar session pill', () => {
     isSessionActive: boolean;
     isInitializing: boolean;
     canStart: boolean;
+    disabledTooltip?: string;
     onStart: ReturnType<typeof vi.fn>;
     onStop: ReturnType<typeof vi.fn>;
   }
@@ -176,6 +177,12 @@ describe('SubtitleBar session pill', () => {
     const c = control({ canStart: false });
     render(<SubtitleBar {...baseProps} surface="electron" sessionControl={c} />);
     expect(screen.getByLabelText('Start session')).toBeDisabled();
+  });
+
+  it('shows disabledTooltip when the session cannot start and a reason is provided', () => {
+    const c = control({ canStart: false, disabledTooltip: 'Configure microphone' });
+    render(<SubtitleBar {...baseProps} surface="electron" sessionControl={c} />);
+    expect(screen.getByLabelText('Configure microphone')).toBeDisabled();
   });
 
   it('renders a stop pill during a session', () => {

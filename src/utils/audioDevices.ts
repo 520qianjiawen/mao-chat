@@ -31,7 +31,9 @@ export const isVirtualDevice = (device: LabeledDevice): boolean => {
   return label.includes('sokuji_virtual_mic') ||
          label.includes('sokuji_virtual_speaker') ||
          label.includes('sokuji virtual output') || // Windows display name
-         label.includes('sokujivirtualaudio') || // Mac virtual device
+         label.includes('maovirtualaudio') || // Mac virtual device
+         label.includes('mao virtual audio') ||
+         label.includes('sokujivirtualaudio') || // Legacy Mac virtual device
          label.includes('mao chat virtual microphone') || // extension rebrand
          label.includes('cable');
 };
@@ -42,6 +44,8 @@ export const isVirtualDevice = (device: LabeledDevice): boolean => {
 export const isVirtualMic = (device: LabeledDevice): boolean => {
   const label = device.label.toLowerCase();
   return label.includes('sokuji_virtual_mic') ||
+         label.includes('maovirtualaudio') ||
+         label.includes('mao virtual audio') ||
          label.includes('sokujivirtualaudio') ||
          label.includes('mao chat virtual microphone') ||
          label.includes('cable');
@@ -54,6 +58,8 @@ export const isVirtualSpeaker = (device: LabeledDevice): boolean => {
   const label = device.label.toLowerCase();
   return label.includes('sokuji_virtual_speaker') ||
          label.includes('sokuji virtual output') || // Windows display name
+         label.includes('maovirtualaudio') ||
+         label.includes('mao virtual audio') ||
          label.includes('sokujivirtualaudio') ||
          label.includes('cable');
 };

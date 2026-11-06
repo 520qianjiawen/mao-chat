@@ -245,4 +245,164 @@ async function ensureUnityGain(deviceName, { spawn = nodeSpawn, resolvePath = re
   });
 }
 
-module.exports = { listAppSources, startCapture, stopCapture, ensureUnityGain };
+/**
+ * List available native speech voices
+ */
+async function listSystemVoices({ spawn = nodeSpawn, resolvePath = resolveAudioHostPath } = {}) {
+  const exe = resolvePath();
+  if (!exe) return [];
+  return new Promise((resolve) => {
+    let out = '';
+    let child;
+    try {
+      child = spawn(exe, ['--list-voices']);
+    } catch {
+      return resolve([]);
+    }
+    child.stdout.on('data', (d) => { out += d.toString('utf8'); });
+    child.on('error', () => resolve([]));
+    child.on('close', (code) => {
+      if (code !== 0) return resolve([]);
+      try {
+        const rows = JSON.parse(out);
+        resolve(Array.isArray(rows) ? rows : []);
+      } catch {
+        resolve([]);
+      }
+    });
+  });
+}
+
+/**
+ * Synthesize and play speech directly into the virtual microphone
+ */
+async function speakToVirtualMic(text, { lang = 'en-US', voice = '', device = '' } = {}, { spawn = nodeSpawn, resolvePath = resolveAudioHostPath } = {}) {
+  const exe = resolvePath();
+  if (!exe || !text) return false;
+  const args = ['--speak', text, '--lang', lang];
+  if (voice) args.push('--voice', voice);
+  if (device) args.push('--device', device);
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(exe, args);
+    } catch {
+      return resolve(false);
+    }
+    child.on('error', (err) => {
+      console.error('[AudioHost] speakToVirtualMic error:', err);
+      resolve(false);
+    });
+    child.on('close', (code) => resolve(code === 0));
+  });
+}
+
+/**
+ * Play an audio file (e.g. from cloud TTS or WAV) into the virtual microphone
+ */
+async function playFileToVirtualMic(filePath, { device = '' } = {}, { spawn = nodeSpawn, resolvePath = resolveAudioHostPath } = {}) {
+  const exe = resolvePath();
+  if (!exe || !filePath) return false;
+  const args = ['--play-file', filePath];
+  if (device) args.push('--device', device);
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(exe, args);
+    } catch {
+      return resolve(false);
+    }
+    child.on('error', (err) => {
+      console.error('[AudioHost] playFileToVirtualMic error:', err);
+      resolve(false);
+    });
+    child.on('close', (code) => resolve(code === 0));
+  });
+}
+
+/**
+ * Test the virtual microphone by speaking a test sentence
+ */
+async function testVirtualMic({ device = '' } = {}, { spawn = nodeSpawn, resolvePath = resolveAudioHostPath } = {}) {
+  const exe = resolvePath();
+  if (!exe) return false;
+  const args = ['--test-mic'];
+  if (device) args.push('--device', device);
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(exe, args);
+    } catch {
+      return resolve(false);
+    }
+    child.on('error', (err) => {
+      console.error('[AudioHost] testVirtualMic error:', err);
+      resolve(false);
+    });
+    child.on('close', (code) => resolve(code === 0));
+  });
+}
+
+let currentLocalSayProcess = null;
+
+function stopLocalAudio() {
+  if (currentLocalSayProcess) {
+    try {
+      currentLocalSayProcess.kill('SIGKILL');
+    } catch {}
+    currentLocalSayProcess = null;
+  }
+  return true;
+}
+
+/**
+ * Play speech locally to the system default output (speakers/headphones) via macOS say command
+ */
+async function speakLocalAudio(text, { lang = 'en-US', voice = '' } = {}, { spawn = nodeSpawn } = {}) {
+  stopLocalAudio();
+  if (!text || !text.trim()) return false;
+
+  if (process.platform === 'darwin') {
+    let v = voice ? voice.replace(/^(system|ming):/, '').trim() : '';
+    if (!v) {
+      const base = (lang || 'en').split('-')[0].toLowerCase();
+      v = (base === 'zh') ? 'Tingting' : 'Samantha';
+    }
+    // Map known aliases
+    if (v === 'US_Emma' || v === 'UK_Charlotte') v = 'Samantha';
+    else if (v === 'UK_George') v = 'Daniel';
+    else if (v.startsWith('灵') || v === 'Ting-Ting') v = 'Tingting';
+
+    return new Promise((resolve) => {
+      let child;
+      try {
+        child = spawn('/usr/bin/say', ['-v', v, text.trim()]);
+        currentLocalSayProcess = child;
+      } catch {
+        return resolve(false);
+      }
+      child.on('error', () => {
+        if (currentLocalSayProcess === child) currentLocalSayProcess = null;
+        resolve(false);
+      });
+      child.on('close', (code) => {
+        if (currentLocalSayProcess === child) currentLocalSayProcess = null;
+        resolve(code === 0);
+      });
+    });
+  }
+  return false;
+}
+
+module.exports = {
+  listAppSources,
+  startCapture,
+  stopCapture,
+  ensureUnityGain,
+  listSystemVoices,
+  speakToVirtualMic,
+  playFileToVirtualMic,
+  testVirtualMic,
+  speakLocalAudio,
+  stopLocalAudio
+};

@@ -176,8 +176,8 @@ const UpdateDialog: React.FC = () => {
                     {t('update.later')}
                   </button>
                 </>
-              ) : downloadUrl ? (
-                // Legacy (any platform passing a generic downloadUrl, e.g. old callers)
+              ) : downloadUrl && !supportsAutoUpdate ? (
+                // Manual download path (when auto-update is not supported)
                 <>
                   <button
                     className="primary-button"

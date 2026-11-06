@@ -49,6 +49,7 @@ import Foundation
 import CoreAudio
 import AudioToolbox
 import AppKit
+import AVFoundation
 
 // The pipeline consumes 24 kHz mono s16. The tap hands us 48 kHz float32, so
 // unlike the Windows helper - where WASAPI converts for us - we convert here.
@@ -794,6 +795,232 @@ func runCapture(pid: pid_t?) -> Int32 {
     return 0
 }
 
+// MARK: - Speech Synthesis and Output Routing to Virtual Mic
+
+func findDevice(matching substring: String) -> AudioObjectID? {
+    var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDevices,
+                                          mScope: kAudioObjectPropertyScopeGlobal,
+                                          mElement: kAudioObjectPropertyElementMain)
+    var size: UInt32 = 0
+    guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size) == noErr else { return nil }
+    var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+    guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &ids) == noErr else { return nil }
+    let needle = substring.lowercased()
+    for id in ids {
+        var strAddr = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName,
+                                                 mScope: kAudioObjectPropertyScopeGlobal,
+                                                 mElement: kAudioObjectPropertyElementMain)
+        var nameVal: CFString = "" as CFString
+        var strSize = UInt32(MemoryLayout<CFString>.size)
+        let status = withUnsafeMutablePointer(to: &nameVal) {
+            AudioObjectGetPropertyData(id, &strAddr, 0, nil, &strSize, $0)
+        }
+        if status == noErr && (nameVal as String).lowercased().contains(needle) {
+            return id
+        }
+    }
+    return nil
+}
+
+func findVirtualMicOutputDevice(preferred: String? = nil) -> AudioObjectID? {
+    if let pref = preferred, !pref.isEmpty, let id = findDevice(matching: pref) {
+        return id
+    }
+    if let id = findDevice(matching: "MaoVirtualAudio") { return id }
+    if let id = findDevice(matching: "SokujiVirtualAudio") { return id }
+    if let id = findDevice(matching: "BlackHole") { return id }
+    if let id = findDevice(matching: "Loopback") { return id }
+    return nil
+}
+
+func isCleanNaturalVoice(_ v: AVSpeechSynthesisVoice) -> Bool {
+    if v.voiceTraits.contains(.isNoveltyVoice) || v.voiceTraits.contains(.isPersonalVoice) {
+        return false
+    }
+    let id = v.identifier.lowercased()
+    if id.hasPrefix("com.apple.eloquence") || id.hasPrefix("com.apple.speech.synthesis.voice") || id.hasPrefix("com.apple.siri") {
+        return false
+    }
+    let name = v.name.lowercased()
+    let forbidden = [
+        "albert", "bad news", "bahh", "bells", "boing", "bubbles", "cellos",
+        "deranged", "wobble", "fred", "good news", "hysterical", "jester",
+        "junior", "kathy", "organ", "superstar", "princess", "ralph",
+        "trinoids", "whisper", "zarvox", "eddy", "flo", "grandma",
+        "grandpa", "reed", "rocko", "sandy", "shelley"
+    ]
+    for f in forbidden {
+        if name == f || name.hasPrefix(f + " ") || name.hasPrefix(f + "(") {
+            return false
+        }
+    }
+    return true
+}
+
+func runListVoices() -> Int32 {
+    let voices = AVSpeechSynthesisVoice.speechVoices().filter { isCleanNaturalVoice($0) }
+    var rows: [String] = []
+    for v in voices {
+        let qualityStr = v.quality == .enhanced ? "enhanced" : (v.quality == .premium ? "premium" : "default")
+        rows.append("{\"id\":\"\(jsonEscape(v.identifier))\",\"name\":\"\(jsonEscape(v.name))\",\"lang\":\"\(jsonEscape(v.language))\",\"quality\":\"\(qualityStr)\",\"gender\":\"\(v.gender == .male ? "male" : "female")\"}")
+    }
+    FileHandle.standardOutput.write(("[" + rows.joined(separator: ",") + "]\n").data(using: .utf8)!)
+    return 0
+}
+
+func runSpeak(text: String, lang: String, voiceName: String?, deviceName: String?) -> Int32 {
+    guard let targetDevice = findVirtualMicOutputDevice(preferred: deviceName) else {
+        emitError("target_device_not_found")
+        return 1
+    }
+    let synth = AVSpeechSynthesizer()
+    let utterance = AVSpeechUtterance(string: text)
+
+    let voices = AVSpeechSynthesisVoice.speechVoices().filter { isCleanNaturalVoice($0) }
+
+    var targetVoiceName = voiceName
+    if let vName = voiceName, !vName.isEmpty {
+        var clean = vName.hasPrefix("system:") ? String(vName.dropFirst(7)) : vName
+        clean = clean.hasPrefix("ming:") ? String(clean.dropFirst(5)) : clean
+        if clean == "US_Emma" || clean == "UK_Charlotte" { clean = "Samantha" }
+        else if clean == "UK_George" { clean = "Daniel" }
+        else if clean.hasPrefix("灵") { clean = "Tingting" }
+        targetVoiceName = clean
+    }
+
+    if let vName = targetVoiceName, !vName.isEmpty {
+        if let v = voices.first(where: {
+            $0.name.lowercased() == vName.lowercased() ||
+            $0.identifier.lowercased() == vName.lowercased() ||
+            $0.name.lowercased().contains(vName.lowercased())
+        }) {
+            utterance.voice = v
+        }
+    }
+
+    if utterance.voice == nil {
+        let prefix = lang.components(separatedBy: "-")[0].components(separatedBy: "_")[0].lowercased()
+        let matched = voices.filter { $0.language.lowercased().hasPrefix(prefix) }
+
+        if prefix == "en" {
+            utterance.voice = matched.first(where: { $0.name.lowercased().contains("samantha") })
+                ?? matched.first(where: { $0.name.lowercased().contains("daniel") })
+                ?? matched.first(where: { $0.name.lowercased().contains("karen") })
+                ?? matched.max(by: { $0.quality.rawValue < $1.quality.rawValue })
+        } else if prefix == "zh" {
+            utterance.voice = matched.first(where: { $0.name.lowercased().contains("tingting") })
+                ?? matched.first(where: { $0.name.lowercased().contains("meijia") })
+                ?? matched.max(by: { $0.quality.rawValue < $1.quality.rawValue })
+        } else {
+            utterance.voice = matched.max(by: { $0.quality.rawValue < $1.quality.rawValue })
+        }
+
+        if utterance.voice == nil {
+            utterance.voice = AVSpeechSynthesisVoice(language: lang)
+        }
+    }
+
+    utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+    utterance.pitchMultiplier = 1.0
+    utterance.volume = 1.0
+
+    var buffers: [AVAudioPCMBuffer] = []
+    var done = false
+
+    synth.write(utterance) { buf in
+        guard !done else { return }
+        if let pcm = buf as? AVAudioPCMBuffer, pcm.frameLength > 0 {
+            buffers.append(pcm)
+        } else {
+            done = true
+        }
+    }
+
+    while !done && !gStop {
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
+    }
+
+    guard let first = buffers.first else {
+        return 0
+    }
+
+    let engine = AVAudioEngine()
+    let player = AVAudioPlayerNode()
+    engine.attach(player)
+
+    if let unit = engine.outputNode.audioUnit {
+        var devId = targetDevice
+        AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devId, UInt32(MemoryLayout<AudioObjectID>.size))
+    }
+
+    engine.connect(player, to: engine.mainMixerNode, format: first.format)
+    engine.prepare()
+    do {
+        try engine.start()
+    } catch {
+        emitError("engine_start_failed")
+        return 1
+    }
+
+    var played = false
+    for (i, b) in buffers.enumerated() {
+        if i == buffers.count - 1 {
+            player.scheduleBuffer(b, completionCallbackType: .dataPlayedBack) { _ in played = true }
+        } else {
+            player.scheduleBuffer(b)
+        }
+    }
+    player.play()
+
+    while !played && !gStop {
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+    }
+    player.stop()
+    engine.stop()
+    return 0
+}
+
+func runPlayFile(path: String, deviceName: String?) -> Int32 {
+    guard let targetDevice = findVirtualMicOutputDevice(preferred: deviceName) else {
+        emitError("target_device_not_found")
+        return 1
+    }
+    let url = URL(fileURLWithPath: path)
+    guard let file = try? AVAudioFile(forReading: url) else {
+        emitError("unreadable_file")
+        return 1
+    }
+    let engine = AVAudioEngine()
+    let player = AVAudioPlayerNode()
+    engine.attach(player)
+
+    if let unit = engine.outputNode.audioUnit {
+        var devId = targetDevice
+        AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devId, UInt32(MemoryLayout<AudioObjectID>.size))
+    }
+
+    engine.connect(player, to: engine.mainMixerNode, format: file.processingFormat)
+    do {
+        try engine.start()
+    } catch {
+        emitError("engine_start_failed")
+        return 1
+    }
+
+    var played = false
+    player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { _ in
+        played = true
+    }
+    player.play()
+
+    while !played && !gStop {
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+    }
+    player.stop()
+    engine.stop()
+    return 0
+}
+
 // MARK: - main
 
 func SetupSignals() {
@@ -805,6 +1032,8 @@ func SetupSignals() {
 let args = CommandLine.arguments
 if args.count >= 2 && args[1] == "--list" {
     exit(runList())
+} else if args.count >= 2 && args[1] == "--list-voices" {
+    exit(runListVoices())
 } else if args.count >= 3 && args[1] == "--ensure-unity-gain" {
     guard !args[2].isEmpty else {
         emitError("bad_device_name")
@@ -822,10 +1051,62 @@ if args.count >= 2 && args[1] == "--list" {
     }
     SetupSignals()
     exit(runCapture(pid: pid))
+} else if args.count >= 2 && args[1] == "--speak" {
+    SetupSignals()
+    var text = ""
+    var lang = "en-US"
+    var voice: String? = nil
+    var device: String? = nil
+    var i = 2
+    if args.count > 2 && !args[2].hasPrefix("--") {
+        text = args[2]
+        i = 3
+    }
+    while i < args.count {
+        if args[i] == "--text" && i + 1 < args.count {
+            text = args[i + 1]
+            i += 2
+        } else if args[i] == "--lang" && i + 1 < args.count {
+            lang = args[i + 1]
+            i += 2
+        } else if args[i] == "--voice" && i + 1 < args.count {
+            voice = args[i + 1]
+            i += 2
+        } else if args[i] == "--device" && i + 1 < args.count {
+            device = args[i + 1]
+            i += 2
+        } else {
+            i += 1
+        }
+    }
+    guard !text.isEmpty else {
+        emitError("missing_text")
+        exit(2)
+    }
+    exit(runSpeak(text: text, lang: lang, voiceName: voice, deviceName: device))
+} else if args.count >= 3 && args[1] == "--play-file" {
+    SetupSignals()
+    let path = args[2]
+    var device: String? = nil
+    if args.count >= 5 && args[3] == "--device" {
+        device = args[4]
+    }
+    exit(runPlayFile(path: path, deviceName: device))
+} else if args.count >= 2 && args[1] == "--test-mic" {
+    SetupSignals()
+    var device: String? = nil
+    if args.count >= 4 && args[2] == "--device" {
+        device = args[3]
+    }
+    exit(runSpeak(text: "Hello, this is a test of simultaneous interpretation through the virtual microphone.", lang: "en-US", voiceName: "Samantha", deviceName: device))
 } else {
     emit("usage:")
     emit("  sokuji-audio-host --list")
+    emit("  sokuji-audio-host --list-voices")
     emit("  sokuji-audio-host --target pid:<processId>")
     emit("  sokuji-audio-host --ensure-unity-gain <deviceName>")
+    emit("  sokuji-audio-host --speak <text> [--lang <code>] [--voice <name>] [--device <name>]")
+    emit("  sokuji-audio-host --play-file <path> [--device <name>]")
+    emit("  sokuji-audio-host --test-mic [--device <name>]")
     exit(2)
 }

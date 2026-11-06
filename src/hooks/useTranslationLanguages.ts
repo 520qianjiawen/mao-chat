@@ -22,6 +22,7 @@ import {
   useUpdateVolcengineAST2,
   useUpdateZoomAI,
   useUpdateSoniox,
+  useUpdateAntLing,
 } from '../stores/settingsStore';
 import type { SettingsStore } from '../stores/settingsStore';
 import { Provider, kizunaBaseProvider } from '../types/Provider';
@@ -65,6 +66,7 @@ export function useTranslationLanguages() {
   const updateLocalNativeSettings = useUpdateLocalNative();
   const updateZoomAISettings = useUpdateZoomAI();
   const updateSonioxSettings = useUpdateSoniox();
+  const updateAntLingSettings = useUpdateAntLing();
 
   const effectiveProvider = kizunaBaseProvider(provider) ?? provider;
   const activeVolcengineAST2Settings =
@@ -118,6 +120,9 @@ export function useTranslationLanguages() {
         break;
       case Provider.OPENAI_COMPATIBLE:
         updateOpenAICompatibleSettings({ sourceLanguage: value });
+        break;
+      case Provider.ANT_LING:
+        updateAntLingSettings({ sourceLanguage: value });
         break;
       case Provider.PALABRA_AI:
         updatePalabraAISettings({ sourceLanguage: value });
@@ -234,6 +239,9 @@ export function useTranslationLanguages() {
         break;
       case Provider.OPENAI_COMPATIBLE:
         updateOpenAICompatibleSettings({ targetLanguage: value });
+        break;
+      case Provider.ANT_LING:
+        updateAntLingSettings({ targetLanguage: value });
         break;
       case Provider.PALABRA_AI:
         updatePalabraAISettings({ targetLanguage: value });

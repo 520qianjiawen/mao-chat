@@ -52,6 +52,7 @@ function makeFakeWindow() {
     setBounds: vi.fn(),
     getBounds: vi.fn(() => ({ x: 0, y: 0, width: 1200, height: 800 })),
     setAlwaysOnTop: vi.fn(),
+    setHasShadow: vi.fn(),
     moveTop: vi.fn(),
     setResizable: vi.fn(),
     setWindowButtonVisibility: vi.fn(),
@@ -161,6 +162,14 @@ describe('subtitle-window always-on-top enforcement (#326)', () => {
     vi.advanceTimersByTime(5000);
 
     expect(win.setAlwaysOnTop).not.toHaveBeenCalled();
+  });
+
+  it('disables native window shadow on subtitle:enter and restores it on subtitle:exit', async () => {
+    await enter({});
+    expect(win.setHasShadow).toHaveBeenCalledWith(false);
+
+    await exit();
+    expect(win.setHasShadow).toHaveBeenCalledWith(true);
   });
 
   it('stops enforcement when the pin is toggled off, restarts when toggled on', async () => {

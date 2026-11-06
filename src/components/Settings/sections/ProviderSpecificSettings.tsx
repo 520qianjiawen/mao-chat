@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useMemo } from 'react';
+import React, { Fragment, useEffect, useMemo, useState, useRef } from 'react';
 import { ProviderConfig } from '../../../services/providers/ProviderConfig';
 import { ProviderConfigFactory } from '../../../services/providers/ProviderConfigFactory';
 import { resolveAST2LanguagePair } from '../../../services/providers/volcengineAST2LanguageSync';
@@ -40,6 +40,8 @@ import {
   useUpdateKizunaVolcengineAst2,
   useUpdateKizunaSoniox,
   useUpdateLocalInference,
+  useUpdateAntLing,
+  useAntLingSettings,
   useGetCurrentProviderSettings,
   TransportType,
   useLocalSystemPrompt,
@@ -50,9 +52,10 @@ import {
   resolveTranslationWorkerTypeForModelId,
 } from '../../../stores/settingsStore';
 import type { OpenAICompatibleSettingsBase } from '../../../stores/settingsStore';
+import { speakText, stopSpeaking } from '../../../utils/speechVoice';
 import { ClientFactory } from '../../../services/clients';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, RotateCw, Info, CircleHelp, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronRight, RotateCw, Info, CircleHelp, ExternalLink, Volume2, Square } from 'lucide-react';
 import Tooltip from '../../Tooltip/Tooltip';
 import { FilteredModel } from '../../../services/interfaces/IClient';
 import { Provider, isOpenAICompatible, kizunaBaseProvider, isKizunaManagedProvider } from '../../../types/Provider';
@@ -150,7 +153,11 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
   const updateKizunaVolcengineAst2Settings = useUpdateKizunaVolcengineAst2();
   const updateKizunaSonioxSettings = useUpdateKizunaSoniox();
   const updateLocalInferenceSettings = useUpdateLocalInference();
+  const updateAntLingSettings = useUpdateAntLing();
+  const antLingSettings = useAntLingSettings();
   const getCurrentProviderSettings = useGetCurrentProviderSettings();
+  const [isPlayingVoicePreview, setIsPlayingVoicePreview] = useState(false);
+  const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const localSystemPrompt = useLocalSystemPrompt();
   const localParticipantSystemPrompt = useLocalParticipantSystemPrompt();
   const localUseTemplateMode = useLocalUseTemplateMode();
@@ -316,6 +323,8 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
       updateKizunaSonioxSettings({ [key]: value });
     } else if (provider === Provider.LOCAL_INFERENCE) {
       updateLocalInferenceSettings({ [key]: value });
+    } else if (provider === Provider.ANT_LING) {
+      updateAntLingSettings({ [key]: value });
     } else {
       console.warn('[Sokuji][ProviderSpecificSettings] Unsupported provider:', provider);
     }
@@ -370,6 +379,142 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
     return settings as OpenAICompatibleSettingsBase;
   };
 
+  useEffect(() => {
+    return () => {
+      if (voiceAudioRef.current) {
+        voiceAudioRef.current.pause();
+        voiceAudioRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handlePlayVoicePreview = async () => {
+    if (isPlayingVoicePreview) {
+      if (voiceAudioRef.current) {
+        voiceAudioRef.current.pause();
+        voiceAudioRef.current.currentTime = 0;
+        voiceAudioRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlayingVoicePreview(false);
+      return;
+    }
+
+    const currentVoice = (currentProviderSettings as any)?.voice || config.voices[0]?.value || '灵小雅';
+    const isEnglishVoice = ['Emma', 'George', 'Charlotte', 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'].includes(currentVoice);
+    const sampleText = isEnglishVoice
+      ? 'Hello, this is MAO Chat voice preview.'
+      : '你好，这是 MAO Chat 语音合成试听。';
+
+    setIsPlayingVoicePreview(true);
+
+    try {
+      if (provider === Provider.ANT_LING) {
+        const apiKey = antLingSettings.apiKey || 'sk-studio-8e6cffe1bce9454cafde670c526822d4';
+        const rawHost = (antLingSettings.customEndpoint || 'https://api.ant-ling.com/v1').replace(/\/+$/, '');
+        const host = rawHost.endsWith('/v1') ? rawHost : `${rawHost}/v1`;
+
+        const res = await fetch(`${host}/audio/speech`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: antLingSettings.ttsModel || 'Ming-3.0-tts-0.5B',
+            input: sampleText,
+            voice: currentVoice,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`TTS request failed: ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        voiceAudioRef.current = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          setIsPlayingVoicePreview(false);
+          voiceAudioRef.current = null;
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          setIsPlayingVoicePreview(false);
+          voiceAudioRef.current = null;
+        };
+        await audio.play();
+      } else if (provider === Provider.OPENAI || provider === Provider.OPENAI_COMPATIBLE) {
+        const apiKey = provider === Provider.OPENAI ? openAISettings.apiKey : openAICompatibleSettings.apiKey;
+        const endpoint = provider === Provider.OPENAI
+          ? 'https://api.openai.com/v1'
+          : (openAICompatibleSettings.customEndpoint || 'https://api.openai.com/v1').replace(/\/+$/, '');
+
+        if (apiKey) {
+          const res = await fetch(`${endpoint}/audio/speech`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'tts-1',
+              input: sampleText,
+              voice: currentVoice,
+            }),
+          });
+
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            voiceAudioRef.current = audio;
+            audio.onended = () => {
+              URL.revokeObjectURL(url);
+              setIsPlayingVoicePreview(false);
+              voiceAudioRef.current = null;
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(url);
+              setIsPlayingVoicePreview(false);
+              voiceAudioRef.current = null;
+            };
+            await audio.play();
+            return;
+          }
+        }
+        // Fallback to natural voice synthesis if API fails or no key
+        const success = await speakText(sampleText, isEnglishVoice ? 'en' : 'zh', {
+          onEnd: () => setIsPlayingVoicePreview(false),
+          onError: () => setIsPlayingVoicePreview(false),
+        });
+        if (!success) {
+          setIsPlayingVoicePreview(false);
+        }
+      } else {
+        // Other providers
+        const success = await speakText(sampleText, isEnglishVoice ? 'en' : 'zh', {
+          onEnd: () => setIsPlayingVoicePreview(false),
+          onError: () => setIsPlayingVoicePreview(false),
+        });
+        if (!success) {
+          setIsPlayingVoicePreview(false);
+        }
+      }
+    } catch (err) {
+      console.warn('[ProviderSpecificSettings] Voice preview failed:', err);
+      setIsPlayingVoicePreview(false);
+      voiceAudioRef.current = null;
+    }
+  };
+
   const renderVoiceSettings = () => {
     if (!config.capabilities.hasVoiceSettings || provider === Provider.PALABRA_AI) {
       return null;
@@ -387,16 +532,37 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
           </Tooltip>
         </h2>
         <div className="setting-item">
-          <select 
-            className="select-dropdown"
-            value={(currentProviderSettings as any).voice}
-            onChange={(e) => updateCurrentProviderSetting('voice', e.target.value)}
-            disabled={isSessionActive}
-          >
-            {config.voices.map((voice) => (
-              <option key={voice.value} value={voice.value}>{voice.name}</option>
-            ))}
-          </select>
+          <div className="voice-control-row">
+            <select 
+              className="select-dropdown"
+              value={(currentProviderSettings as any).voice || config.voices[0]?.value}
+              onChange={(e) => updateCurrentProviderSetting('voice', e.target.value)}
+              disabled={isSessionActive}
+            >
+              {config.voices.map((voice) => (
+                <option key={voice.value} value={voice.value}>{voice.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={`voice-preview-button ${isPlayingVoicePreview ? 'playing' : ''}`}
+              onClick={handlePlayVoicePreview}
+              disabled={isSessionActive}
+              title={isPlayingVoicePreview ? '停止试听' : '试听当前声音'}
+            >
+              {isPlayingVoicePreview ? (
+                <>
+                  <Square size={13} fill="currentColor" />
+                  <span>停止</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 size={15} />
+                  <span>试听</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1976,6 +2142,28 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
     );
   };
 
+  const renderAntLingSettings = () => {
+    if (provider !== Provider.ANT_LING) {
+      return null;
+    }
+
+    return (
+      <SpeechModeControl
+        value={antLingSettings.turnDetectionMode || 'Auto'}
+        onChange={(mode) => {
+          trackEvent('speech_mode_changed', {
+            provider: provider,
+            from_mode: antLingSettings.turnDetectionMode || 'Auto',
+            to_mode: mode,
+          });
+          updateAntLingSettings({ turnDetectionMode: mode });
+        }}
+        disabled={isSessionActive}
+        tooltip={`${t('settings.turnDetectionTooltip', '自动：持续检测人声。\n按住说话：平时麦克风静音，按住快捷键（右 ⌥ 或 空格）才收音，彻底杜绝环境杂音。\n按住翻译：按住时翻译，不按时原始麦克风直通。')}\n\n${t('settings.speechModeAppliesTo', '仅作用于您的麦克风声音。对方的声音始终自动翻译。')}`}
+      />
+    );
+  };
+
   const renderZoomAISettings = () => {
     if (provider !== Provider.ZOOM_AI) return null;
 
@@ -2216,6 +2404,7 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
       {renderSonioxSettings()}
       {renderLocalInferenceSettings()}
       {renderLocalNativeSettings()}
+      {renderAntLingSettings()}
     </Fragment>
   );
 };

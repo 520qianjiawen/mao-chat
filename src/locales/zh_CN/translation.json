@@ -408,6 +408,11 @@
       "name": "Google Gemini",
       "description": "谷歌AI技术"
     },
+    "antLing": {
+      "name": "蚂蚁灵动 (Ant-Ling)",
+      "description": "ASR 语音识别 + Ling-3.1 极速翻译与语音合成",
+      "customEndpointPlaceholder": "https://api.ant-ling.com/v1"
+    },
     "openaiCompatible": {
       "name": "OpenAI 兼容 API",
       "description": "自定义 OpenAI 兼容端点",

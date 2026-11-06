@@ -1,8 +1,12 @@
-import React, { useEffect, useLayoutEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import ConversationRow from '../MainPanel/ConversationRow';
 import { shouldShowItem } from '../MainPanel/conversationFilter';
 import type { DisplayMode } from '../../stores/subtitleStore';
+import { useSetSubtitleFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX } from '../../stores/subtitleStore';
 import { usePlaybackHighlight } from '../../stores/playbackStore';
+import { fitTail } from './fitTail';
+import type { SubtitleSurfaceKind } from './SubtitleApp';
 
 import './SubtitleStream.scss';
 import '../../styles/karaoke.scss';
@@ -21,6 +25,9 @@ interface Props {
   // do not receive the `--new` modifier — the CSS highlight never fires.
   // Defaults to true; passed through from the persisted subtitle setting.
   newItemHighlightEnabled?: boolean;
+  autoCollapse?: boolean;
+  surface?: SubtitleSurfaceKind;
+  isSnapped?: boolean;
 }
 
 function itemText(item: any): string {
@@ -179,7 +186,21 @@ const SubtitleStream: React.FC<Props> = ({
   sourceTextColor,
   translationTextColor,
   newItemHighlightEnabled = true,
+  autoCollapse = false,
+  surface = 'electron',
+  isSnapped = false,
 }) => {
+  const { t } = useTranslation();
+  const setFontSize = useSetSubtitleFontSize();
+  const capsuleRef = useRef<HTMLDivElement | null>(null);
+  const lastSpeechTimeRef = useRef(Date.now());
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [peeking, setPeeking] = useState(false);
+  const [dimmed, setDimmed] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const stillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const filtered = useMemo(
     () => items.filter((item) => shouldShowItem(item, speakerMode, participantMode)),
     [items, speakerMode, participantMode],
@@ -335,6 +356,117 @@ const SubtitleStream: React.FC<Props> = ({
     }
   }, [compact, filtered.length]);
 
+  // Track speech activity for auto-collapse
+  useEffect(() => {
+    if (latestCueLive || (latestCue && (latestCue.origin?.text || latestCue.translation?.text))) {
+      lastSpeechTimeRef.current = Date.now();
+      setIsCollapsed(false);
+    }
+  }, [items, latestCueLive, latestCue]);
+
+  // Periodic check to auto-collapse into mini-pill when quiet
+  useEffect(() => {
+    if (!compact || !autoCollapse) {
+      setIsCollapsed(false);
+      return;
+    }
+    const timer = setInterval(() => {
+      if (isEditing || isDragging || peeking || latestCueLive) return;
+      if (Date.now() - lastSpeechTimeRef.current > 4000) {
+        setIsCollapsed(true);
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [compact, autoCollapse, isEditing, isDragging, peeking, latestCueLive]);
+
+  // Hover dimming & 0.6s rest-to-edit
+  const handleCapsuleMouseEnter = useCallback(() => {
+    if (isEditing || isDragging) return;
+    setDimmed(true);
+    if (surface === 'electron' && window.electron?.invoke) {
+      void window.electron.invoke('subtitle:set-ignore-mouse-events', { ignore: true, forward: true });
+    }
+    if (stillTimerRef.current) clearTimeout(stillTimerRef.current);
+    stillTimerRef.current = setTimeout(() => {
+      setDimmed(false);
+      setIsEditing(true);
+      if (surface === 'electron' && window.electron?.invoke) {
+        void window.electron.invoke('subtitle:set-ignore-mouse-events', { ignore: false });
+      }
+    }, 600);
+  }, [isEditing, isDragging, surface]);
+
+  const handleCapsuleMouseMove = useCallback(() => {
+    if (isEditing || isDragging) return;
+    setDimmed(true);
+    if (stillTimerRef.current) clearTimeout(stillTimerRef.current);
+    stillTimerRef.current = setTimeout(() => {
+      setDimmed(false);
+      setIsEditing(true);
+      if (surface === 'electron' && window.electron?.invoke) {
+        void window.electron.invoke('subtitle:set-ignore-mouse-events', { ignore: false });
+      }
+    }, 600);
+  }, [isEditing, isDragging, surface]);
+
+  const handleCapsuleMouseLeave = useCallback(() => {
+    if (stillTimerRef.current) {
+      clearTimeout(stillTimerRef.current);
+      stillTimerRef.current = null;
+    }
+    if (!isDragging) {
+      setDimmed(false);
+      setIsEditing(false);
+      if (surface === 'electron' && window.electron?.invoke) {
+        void window.electron.invoke('subtitle:set-ignore-mouse-events', { ignore: false });
+      }
+    }
+    if (peeking) {
+      setPeeking(false);
+    }
+  }, [isDragging, peeking, surface]);
+
+  // Corner grip scaling
+  const handleGripMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    const startX = e.clientX;
+    const startFontSize = fontSize;
+    const capsuleEl = capsuleRef.current;
+    const startWidth = capsuleEl ? capsuleEl.getBoundingClientRect().width : 600;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(340, startWidth + deltaX);
+      const ratio = newWidth / startWidth;
+      const newFontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, Math.round(startFontSize * ratio)));
+      if (newFontSize !== fontSize) {
+        void setFontSize(newFontSize);
+      }
+    };
+
+    const onMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [fontSize, setFontSize]);
+
+  // Double click reset
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, a, input, select, .subtitle-corner-grip')) {
+      return;
+    }
+    if (surface === 'electron' && window.electron?.invoke) {
+      void window.electron.invoke('subtitle:reset-position');
+    }
+    void setFontSize(24);
+  }, [surface, setFontSize]);
+
   // Item "new" highlight state — locked on first sight.
   const itemStatesRef = useRef<Map<string, 'existing' | 'new'>>(new Map());
   const isFirstRenderRef = useRef(true);
@@ -377,53 +509,102 @@ const SubtitleStream: React.FC<Props> = ({
       {compact
         ? (
           <div className="subtitle-stream__stage">
-            {compactCues.map((cue, index) => (
+            {autoCollapse && (isCollapsed || compactCues.length === 0) && !peeking ? (
               <div
-                key={cue.id}
-                className={`subtitle-cue subtitle-cue--${cue.side}${index === compactCues.length - 1 && compactCues.length > 1 ? ' subtitle-cue--ahead' : ''}`}
-                data-side={cue.side}
+                className="subtitle-mini-pill"
+                onMouseEnter={() => setPeeking(true)}
+                onClick={() => {
+                  setIsCollapsed(false);
+                  lastSpeechTimeRef.current = Date.now() + 5000;
+                }}
+                title={t('subtitle.pill.hint', '知了极简胶囊 (悬停窥视上一句)')}
               >
-                <div className="subtitle-cue__window">
-                  {cue.origin && (
-                    <p
-                      className={[
-                        'subtitle-stream__line',
-                        'subtitle-stream__line--source',
-                        `subtitle-stream__line--${cue.side}`,
-                        cue.origin.live ? 'is-live' : '',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      <CueText
-                        line={cue.origin}
-                        item={itemsById.get(cue.origin.id)}
-                        showNewHighlight={
-                          newItemHighlightEnabled && itemStateFor(cue.origin.id) === 'new'
-                        }
-                      />
-                    </p>
-                  )}
-                  {cue.translation && (
-                    <p
-                      className={[
-                        'subtitle-stream__line',
-                        'subtitle-stream__line--translation',
-                        `subtitle-stream__line--${cue.side}`,
-                        cue.translation.live ? 'is-live' : '',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      <CueText
-                        line={cue.translation}
-                        item={itemsById.get(cue.translation.id)}
-                        showNewHighlight={
-                          newItemHighlightEnabled
-                          && itemStateFor(cue.translation.id) === 'new'
-                        }
-                      />
-                    </p>
-                  )}
-                </div>
+                <span className="subtitle-mini-pill__pulse" />
+                <span className="subtitle-mini-pill__dot" />
+                <span className="subtitle-mini-pill__dot" />
               </div>
-            ))}
+            ) : compactCues.length > 0 ? (
+              <div
+                ref={capsuleRef}
+                className={`subtitle-glass-capsule${dimmed ? ' is-dimmed' : ''}${isEditing ? ' is-editing' : ''}${isSnapped ? ' is-snapped' : ''}`}
+                onDoubleClick={handleDoubleClick}
+                onMouseEnter={handleCapsuleMouseEnter}
+                onMouseMove={handleCapsuleMouseMove}
+                onMouseLeave={handleCapsuleMouseLeave}
+              >
+                {compactCues.map((cue, index) => (
+                  <div
+                    key={cue.id}
+                    className={`subtitle-cue subtitle-cue--${cue.side}${index === compactCues.length - 1 && compactCues.length > 1 ? ' subtitle-cue--ahead' : ''}`}
+                    data-side={cue.side}
+                  >
+                    <div className="subtitle-cue__window">
+                      {cue.side === 'speaker' && (
+                        <div className="subtitle-speaker-status">
+                          <span className="subtitle-speaker-badge">
+                            {cue.origin?.live
+                              ? t('subtitle.speaker.speaking', '你在说…')
+                              : cue.translation?.live
+                                ? t('subtitle.speaker.translating', '翻译中…')
+                                : t('subtitle.speaker.me', '你')}
+                          </span>
+                        </div>
+                      )}
+                      {cue.origin && (
+                        <p
+                          className={[
+                            'subtitle-stream__line',
+                            'subtitle-stream__line--source',
+                            `subtitle-stream__line--${cue.side}`,
+                            cue.origin.live ? 'is-live' : '',
+                          ].filter(Boolean).join(' ')}
+                        >
+                          <CueText
+                            line={cue.origin}
+                            item={itemsById.get(cue.origin.id)}
+                            showNewHighlight={
+                              newItemHighlightEnabled && itemStateFor(cue.origin.id) === 'new'
+                            }
+                            applyFitTail
+                          />
+                        </p>
+                      )}
+                      {cue.translation && (
+                        <p
+                          className={[
+                            'subtitle-stream__line',
+                            'subtitle-stream__line--translation',
+                            `subtitle-stream__line--${cue.side}`,
+                            cue.translation.live ? 'is-live' : '',
+                          ].filter(Boolean).join(' ')}
+                        >
+                          <CueText
+                            line={cue.translation}
+                            item={itemsById.get(cue.translation.id)}
+                            showNewHighlight={
+                              newItemHighlightEnabled
+                              && itemStateFor(cue.translation.id) === 'new'
+                            }
+                          />
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isEditing && (
+                  <div
+                    className="subtitle-corner-grip"
+                    title={t('subtitle.grip.resize', '拖动缩放字号与宽度')}
+                    onMouseDown={handleGripMouseDown}
+                  >
+                    <svg viewBox="0 0 10 10" className="subtitle-corner-grip__icon">
+                      <line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      <line x1="8" y1="5" x2="5" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         )
         : filtered.map((item, i) => (
@@ -444,10 +625,11 @@ interface CueTextProps {
   line: CueLine;
   item: any | undefined;
   showNewHighlight: boolean;
+  applyFitTail?: boolean;
 }
 
-const CueText: React.FC<CueTextProps> = ({ line, item, showNewHighlight }) => {
-  const displayText = line.text;
+const CueText: React.FC<CueTextProps> = ({ line, item, showNewHighlight, applyFitTail = false }) => {
+  const displayText = applyFitTail ? fitTail(line.text, 65) : line.text;
   const { isPlaying, highlightedChars } = usePlaybackHighlight(item, line.text);
   const classes = [
     'subtitle-stream__item',
@@ -459,17 +641,17 @@ const CueText: React.FC<CueTextProps> = ({ line, item, showNewHighlight }) => {
   if (!isPlaying || highlightedChars <= 0) {
     return <span className={classes}>{displayText}</span>;
   }
-  if (highlightedChars >= line.text.length) {
+  if (highlightedChars >= displayText.length) {
     return (
       <span className={classes}>
-        <span className="karaoke-played">{line.text}</span>
+        <span className="karaoke-played">{displayText}</span>
       </span>
     );
   }
   return (
     <span className={classes}>
-      <span className="karaoke-played">{line.text.slice(0, highlightedChars)}</span>
-      <span className="subtitle-stream__unplayed">{line.text.slice(highlightedChars)}</span>
+      <span className="karaoke-played">{displayText.slice(0, highlightedChars)}</span>
+      <span className="subtitle-stream__unplayed">{displayText.slice(highlightedChars)}</span>
     </span>
   );
 };

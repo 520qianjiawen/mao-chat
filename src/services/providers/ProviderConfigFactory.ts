@@ -14,6 +14,7 @@ import { LocalInferenceProviderConfig } from './LocalInferenceProviderConfig';
 import { LocalNativeProviderConfig } from './LocalNativeProviderConfig';
 import { ZoomAIProviderConfig } from './ZoomAIProviderConfig';
 import { SonioxProviderConfig } from './SonioxProviderConfig';
+import { AntLingProviderConfig } from './AntLingProviderConfig';
 import { Provider, ProviderType } from '../../types/Provider';
 import { isKizunaAIEnabled, isPalabraAIEnabled, isLocalNativeEnabled, isElectron, isExtension } from '../../utils/environment';
 
@@ -25,6 +26,7 @@ export class ProviderConfigFactory {
     // list (the configs Map preserves insertion order). Each provider keeps
     // its own environment / feature-flag guard.
 
+    ProviderConfigFactory.configs.set(Provider.ANT_LING, new AntLingProviderConfig());
     ProviderConfigFactory.configs.set(Provider.OPENAI, new OpenAIProviderConfig());
     ProviderConfigFactory.configs.set(Provider.OPENAI_TRANSLATE, new OpenAITranslateProviderConfig());
 

@@ -629,8 +629,183 @@ async function bingTranslatorClearDNRHeaders() {
   }
 }
 
+// ─── Multi-Engine Translation Service ──────────────────────────────────────────
+let bingScrapeSession = null;
+let bingScrapeInFlight = null;
+
+async function getBingScrapeSession() {
+  const now = Date.now();
+  if (bingScrapeSession && bingScrapeSession.expiresAt > now + 60_000) {
+    return bingScrapeSession;
+  }
+  if (bingScrapeInFlight) {
+    return bingScrapeInFlight;
+  }
+  bingScrapeInFlight = (async () => {
+    try {
+      const hosts = ['https://cn.bing.com', 'https://www.bing.com'];
+      for (const host of hosts) {
+        try {
+          const res = await fetch(`${host}/translator`, {
+            headers: {
+              Accept: 'text/html,application/xhtml+xml',
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+          });
+          if (!res.ok) continue;
+          const html = await res.text();
+          const ig = html.match(/IG:"([0-9A-Fa-f]+)"/)?.[1];
+          const iid = html.match(/data-iid="([^"]+)"/)?.[1] || 'translator.5023';
+          const matchHelper = html.match(/params_AbusePreventionHelper\s*=\s*\[\s*(\d+)\s*,\s*"([^"]+)"\s*,\s*\d+\s*\]/);
+          if (ig && matchHelper) {
+            const session = {
+              host,
+              ig,
+              iid,
+              key: matchHelper[1],
+              token: matchHelper[2],
+              expiresAt: now + 45 * 60_000,
+            };
+            bingScrapeSession = session;
+            return session;
+          }
+        } catch { /* try next host */ }
+      }
+    } finally {
+      bingScrapeInFlight = null;
+    }
+    return null;
+  })();
+  return bingScrapeInFlight;
+}
+
+async function translateBing(text, from = 'auto', to = 'zh-Hans') {
+  const session = await getBingScrapeSession();
+  if (!session) throw new Error('Bing translator session unavailable');
+
+  const fromLang = (from === 'auto' || from === 'auto-detect') ? 'auto-detect' : from;
+  let toLang = to;
+  if (to === 'zh-CN' || to === 'zh') toLang = 'zh-Hans';
+  else if (to === 'zh-TW' || to === 'zh-HK') toLang = 'zh-Hant';
+
+  const url = `${session.host}/ttranslatev3?isVertical=1&IG=${encodeURIComponent(session.ig)}&IID=${encodeURIComponent(session.iid)}`;
+  const body = new URLSearchParams({
+    fromLang,
+    text,
+    to: toLang,
+    token: session.token,
+    key: session.key,
+  });
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      Referer: `${session.host}/translator`,
+    },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    bingScrapeSession = null;
+    throw new Error(`Bing translate failed: HTTP ${res.status}`);
+  }
+
+  const json = await res.json();
+  const trans = json?.[0]?.translations?.[0]?.text;
+  if (!trans) throw new Error('Empty Bing translation');
+  return trans;
+}
+
+async function translateGoogle(text, from = 'auto', to = 'zh-CN') {
+  let gTo = to;
+  if (to === 'zh') gTo = 'zh-CN';
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(from)}&tl=${encodeURIComponent(gTo)}&dt=t&q=${encodeURIComponent(text)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Google translate HTTP ${r.status}`);
+  const json = await r.json();
+  return json && json[0] ? json[0].map((x) => x[0]).filter(Boolean).join('') : '';
+}
+
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'MAO_VIDEO_BUTTON_CLICK') {
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      // Direct in-video subtitle mode: DO NOT open side panel or trigger legacy iframe overlay.
+      // Broadcast state to tab content scripts so in-video overlay syncs cleanly.
+      chrome.tabs.sendMessage(tabId, {
+        type: message.active ? 'MAO_SUBTITLE_ACTIVE' : 'MAO_SUBTITLE_INACTIVE',
+      }).catch(() => {});
+    }
+    sendResponse({ success: true, active: message.active });
+    return false;
+  }
+
+  if (message.type === 'TRANSLATE_TEXT') {
+    const text = (message.text || '').trim();
+    if (!text) {
+      sendResponse({ success: true, translatedText: '' });
+      return false;
+    }
+    const to = message.to || 'zh-CN';
+    const from = message.from || 'auto';
+    const engine = message.engine || 'google';
+
+    (async () => {
+      try {
+        let result = '';
+        if (engine === 'bing') {
+          try {
+            result = await translateBing(text, from, to);
+          } catch (bingErr) {
+            console.warn('[MAO] Bing translate error, falling back to Google:', bingErr);
+            result = await translateGoogle(text, from, to);
+          }
+        } else if (engine === 'deepl') {
+          try {
+            const { config } = await chrome.storage.local.get('config');
+            const deeplKey = config?.deeplApiKey;
+            if (deeplKey) {
+              const isFree = deeplKey.trim().endsWith(':fx');
+              const deeplBase = isFree ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+              let dTarget = to.toUpperCase().replace('-', '_');
+              if (dTarget === 'ZH_CN') dTarget = 'ZH';
+              const deeplRes = await fetch(`${deeplBase}/v2/translate`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `DeepL-Auth-Key ${deeplKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  text: [text],
+                  target_lang: dTarget,
+                }),
+              });
+              if (deeplRes.ok) {
+                const dJson = await deeplRes.json();
+                result = dJson?.translations?.[0]?.text || '';
+              }
+            }
+          } catch (dErr) {
+            console.warn('[MAO] DeepL error:', dErr);
+          }
+          if (!result) {
+            result = await translateGoogle(text, from, to);
+          }
+        } else {
+          result = await translateGoogle(text, from, to);
+        }
+        sendResponse({ success: true, translatedText: result });
+      } catch (err) {
+        console.warn('[MAO] Translation error:', err);
+        sendResponse({ success: false, error: String(err) });
+      }
+    })();
+    return true; // async
+  }
+
   if (message.type === 'PREPARE_SUBTITLE_TAKEOVER') {
     prepareSubtitleTakeover().then(sendResponse).catch((error) => {
       sendResponse({ success: false, error: error?.message || String(error) });

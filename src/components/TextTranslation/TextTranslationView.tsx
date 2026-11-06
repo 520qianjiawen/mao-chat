@@ -28,6 +28,7 @@ import {
   useNativeCatalog,
   useNativeModelStatuses,
 } from '../../stores/nativeModelStore';
+import { speakText, stopSpeaking } from '../../utils/speechVoice';
 import { useLocalNativeSettings } from '../../stores/settingsStore';
 import { LANGUAGE_OPTIONS, getLanguageDisplayName } from '../../utils/languages';
 import './TextTranslationView.scss';
@@ -684,23 +685,21 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
     }
   }, [sourceLang, targetLang, sourceText, translatedText, handleTranslate]);
 
-  // Read aloud (TTS) using native OS speech synthesis
+  // Read aloud (TTS) using natural voice speech synthesis
   const handleSpeak = useCallback(() => {
-    if (!translatedText || !('speechSynthesis' in window)) return;
+    if (!translatedText) return;
 
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsSpeaking(false);
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(translatedText);
-    utterance.lang = targetLang === 'zh' ? 'zh-CN' : targetLang;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
     setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+    void speakText(translatedText, targetLang, {
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
   }, [translatedText, isSpeaking, targetLang]);
 
   // Handle keyboard shortcut: Cmd+Enter / Ctrl+Enter

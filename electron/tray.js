@@ -19,6 +19,9 @@ function getTrayIcon() {
   const isMac = process.platform === 'darwin';
 
   const candidates = [
+    path.join(__dirname, '../assets/trayTemplate.png'),
+    path.join(app.getAppPath(), 'assets/trayTemplate.png'),
+    process.resourcesPath ? path.join(process.resourcesPath, 'assets/trayTemplate.png') : null,
     path.join(__dirname, '../assets/tray.png'),
     path.join(app.getAppPath(), 'assets/tray.png'),
     process.resourcesPath ? path.join(process.resourcesPath, 'assets/tray.png') : null,
@@ -33,11 +36,15 @@ function getTrayIcon() {
         const icon = nativeImage.createFromPath(p);
         if (!icon.isEmpty()) {
           const iconSize = typeof icon.getSize === 'function' ? icon.getSize() : { width: 20, height: 20 };
-          if (iconSize && iconSize.width <= 24 && iconSize.height <= 24) {
-            return icon;
+          let finalIcon = icon;
+          if (!iconSize || iconSize.width > 24 || iconSize.height > 24) {
+            const size = isMac ? { width: 20, height: 20 } : { width: 16, height: 16 };
+            finalIcon = icon.resize({ ...size, quality: 'best' });
           }
-          const size = isMac ? { width: 20, height: 20 } : { width: 16, height: 16 };
-          return icon.resize({ ...size, quality: 'best' });
+          if (isMac && typeof finalIcon.setTemplateImage === 'function') {
+            finalIcon.setTemplateImage(true);
+          }
+          return finalIcon;
         }
       } catch (err) {
         console.warn('[Tray] Failed to load icon from', p, err);
@@ -61,11 +68,11 @@ function buildContextMenu() {
       accelerator: 'Control+Q',
       click: async () => {
         try {
-          const selectedText = await captureSelectedText();
+          const selectedText = await captureSelectedText(mainWindow);
           if (selectedText && selectedText.trim().length > 0) {
-            showQuickTranslate(selectedText, 'selection');
+            showQuickTranslate(selectedText, 'selection', mainWindow);
           } else {
-            showQuickTranslate('', 'manual');
+            showQuickTranslate('', 'manual', mainWindow);
           }
         } catch (e) {
           console.warn('[Tray] Selection capture error:', e);
@@ -77,9 +84,9 @@ function buildContextMenu() {
       accelerator: 'Control+Z',
       click: async () => {
         try {
-          const result = await captureScreenshotAndOcr();
+          const result = await captureScreenshotAndOcr({ parentWindow: mainWindow });
           if (result?.text && result.text.length > 0) {
-            showQuickTranslate(result.text, 'screenshot');
+            showQuickTranslate(result.text, 'screenshot', mainWindow);
           } else if (result?.empty && !result?.cancelled) {
             if (process.platform === 'darwin') {
               global.suppressMainWindowActivation = true;
@@ -105,9 +112,9 @@ function buildContextMenu() {
         try {
           const text = clipboard.readText();
           if (text && text.trim().length > 0) {
-            showQuickTranslate(text.trim(), 'clipboard');
+            showQuickTranslate(text.trim(), 'clipboard', mainWindow);
           } else {
-            showQuickTranslate('', 'manual');
+            showQuickTranslate('', 'manual', mainWindow);
           }
         } catch (e) {
           console.warn('[Tray] Clipboard translate error:', e);
@@ -117,7 +124,7 @@ function buildContextMenu() {
     {
       label: '显示翻译窗口',
       click: () => {
-        showQuickTranslate('', 'manual');
+        showQuickTranslate('', 'manual', mainWindow);
       },
     },
     { type: 'separator' },

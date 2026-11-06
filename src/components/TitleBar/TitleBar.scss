@@ -1,5 +1,6 @@
 // src/components/TitleBar/TitleBar.scss
 .title-bar {
+  position: relative;
   height: 36px;
   display: flex;
   align-items: center;
@@ -41,12 +42,34 @@
   flex-shrink: 0;
 }
 
+.title-bar__center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  z-index: 20;
+
+  @media (max-width: 680px) {
+    position: static;
+    transform: none;
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+}
+
 .title-bar__actions {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-left: auto;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .title-bar__action {
@@ -62,6 +85,9 @@
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.08);
@@ -70,6 +96,37 @@
   &.is-active {
     background: rgba(255, 255, 255, 0.16);
     color: #fff;
+  }
+
+  // When all labels are hidden on compact windows, collapse buttons into square icon buttons
+  @media (max-width: 900px) {
+    padding: 0;
+    width: 28px;
+    height: 26px;
+    justify-content: center;
+    gap: 0;
+  }
+
+  &.update-pill-button {
+    background: rgba(147, 51, 234, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    border-radius: 13px;
+    padding: 0 10px;
+    font-weight: 600;
+    animation: titlebar-update-pulse 2.2s infinite ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: rgba(147, 51, 234, 0.35);
+      border-color: rgba(168, 85, 247, 0.8);
+      color: #ffffff;
+    }
+
+    @media (max-width: 900px) {
+      width: 28px;
+      padding: 0;
+      border-radius: 4px;
+    }
   }
 
   &:focus-visible {
@@ -85,9 +142,18 @@
 
 .title-bar__action-label {
   font-size: 12px;
+  white-space: nowrap;
 
-  // Hide labels on narrow windows; icon + tooltip remain
-  @media (max-width: 576px) {
+  // Progressively hide secondary utility labels (settings, logs) below 1060px
+  &--secondary {
+    @media (max-width: 1060px) {
+      display: none;
+    }
+  }
+
+  // Hide all action text labels on medium/narrow windows (<= 900px) to prevent
+  // any overlap with the center ListenPill. Icons and tooltips remain intact.
+  @media (max-width: 900px) {
     display: none;
   }
 }
@@ -154,5 +220,14 @@
       background: #edeef4;
       color: #292b35;
     }
+  }
+}
+
+@keyframes titlebar-update-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0);
   }
 }

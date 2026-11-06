@@ -8,6 +8,7 @@ import {
   AccountSection,
   ProviderSection,
   LanguageSection,
+  SpeakSection,
   AudioDeviceSection,
   SystemAudioSection,
   HelpSection
@@ -39,17 +40,10 @@ const SimpleSettings: React.FC<SimpleSettingsProps> = ({ highlightSection }) => 
   // mode scope, so the mode picker is the master control. Pre-session this means
   // Speaker mode disables it; in-session the locked mode governs.
   const effectiveMode = lockedMode ?? mode;
-  // Monitor is in scope ONLY in pure speaker mode (mutex with participant) —
-  // locked in Both/Participant pre- and in-session so it can't be enabled
-  // where it would violate the mutex.
-  const lockMonitor = effectiveMode !== 'speaker';
+  // Speaker / monitor is unlocked so users can select headphones (EarPods) or output device freely in any mode
+  const lockMonitor = false;
   const lockParticipant = effectiveMode !== 'participant' && effectiveMode !== 'both';
-
-  // The monitor lock survives restarts (mode is persisted), so without a stated
-  // reason the greyed section reads as broken rather than locked. Name the mode
-  // through modePicker's own key so the reason and the picker segment can't
-  // drift apart in a locale.
-  const monitorLockedReason = t('audioPanel.monitorLockedByMode', { mode: t('modePicker.modeYou') });
+  const monitorLockedReason = undefined;
 
   // Handle scrolling and highlighting when highlightSection or settingsNavigationTarget changes
   useEffect(() => {
@@ -97,6 +91,9 @@ const SimpleSettings: React.FC<SimpleSettingsProps> = ({ highlightSection }) => 
           showInterfaceLanguage={false}
           showTranslationLanguages={true}
         />
+
+        {/* Speak / Voice output (同声传译声音模块) */}
+        <SpeakSection />
 
         {/* Provider and API Key */}
         <ProviderSection

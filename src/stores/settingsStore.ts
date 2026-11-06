@@ -18,7 +18,7 @@ import useSessionStore from './sessionStore';
 import { getSubtitleSurface } from '../components/Subtitle/surfaces';
 import { canEnterSubtitleMode } from '../components/Subtitle/subtitleEnterGate';
 import {ApiKeyValidationResult} from '../services/interfaces/ISettingsService';
-import {Provider, ProviderType, isKizunaManagedProvider} from '../types/Provider';
+import {Provider, ProviderType, isKizunaManagedProvider, isOpenAICompatible} from '../types/Provider';
 import {ClientOperations} from '../services/ClientOperations';
 import i18n from '../locales';
 import { isElectron, isExtension } from '../utils/environment';
@@ -59,6 +59,9 @@ import { defaultKizunaSonioxSettings } from '../services/providers/KizunaAISonio
 import {
   SonioxSettings, defaultSonioxSettings,
 } from '../services/providers/SonioxProviderConfig';
+import {
+  AntLingSettings, defaultAntLingSettings,
+} from '../services/providers/AntLingProviderConfig';
 
 /** Map a native readiness reason to its user-facing message. Verbatim port of
  * the messages the inline LOCAL_NATIVE gate produced. */
@@ -235,6 +238,7 @@ export interface SettingsStore {
   kizunaSoniox: SonioxSettings;
   localInference: LocalInferenceSettings;
   localNative: LocalNativeSettings;
+  antLing: AntLingSettings;
 
   // Validation state
   isApiKeyValid: boolean | null;
@@ -329,6 +333,7 @@ export interface SettingsStore {
   updateKizunaSoniox: (settings: Partial<SonioxSettings>) => void;
   updateLocalInference: (settings: Partial<LocalInferenceSettings>) => void;
   updateLocalNative: (settings: Partial<LocalNativeSettings>) => void;
+  updateAntLing: (settings: Partial<AntLingSettings>) => void;
 
   // Async actions
   validateApiKey: (getAuthToken?: () => Promise<string | null>) => Promise<ApiKeyValidationResult>;
@@ -735,6 +740,7 @@ const PROVIDER_SLICE_REGISTRY = {
   kizunaSoniox: { defaults: defaultKizunaSonioxSettings, neverPersist: ['apiKey'], persistErrors: 'swallow' },
   localInference: { defaults: defaultLocalInferenceSettings, persistErrors: 'swallow' },
   localNative: { defaults: defaultLocalNativeSettings, persistErrors: 'swallow' },
+  antLing: { defaults: defaultAntLingSettings, persistErrors: 'throw' },
 } satisfies Record<string, SliceUpdateSpec>;
 
 export type ProviderSliceKey = keyof typeof PROVIDER_SLICE_REGISTRY;
@@ -787,6 +793,7 @@ const useSettingsStore = create<SettingsStore>()(
     kizunaSoniox: defaultKizunaSonioxSettings,
     localInference: defaultLocalInferenceSettings,
     localNative: defaultLocalNativeSettings,
+    antLing: defaultAntLingSettings,
 
     isApiKeyValid: null,
     isValidating: false,
@@ -1039,6 +1046,7 @@ const useSettingsStore = create<SettingsStore>()(
     updateKizunaSoniox: (settings) => updateProviderSlice(set, 'kizunaSoniox', settings),
     updateLocalInference: (settings) => updateProviderSlice(set, 'localInference', settings),
     updateLocalNative: (settings) => updateProviderSlice(set, 'localNative', settings),
+    updateAntLing: (settings) => updateProviderSlice(set, 'antLing', settings),
 
     // === Async Actions ===
     validateApiKey: async (getAuthToken) => {
@@ -1195,7 +1203,8 @@ const useSettingsStore = create<SettingsStore>()(
         if (result.models.length > 0) {
           const currentModel = (state.getCurrentProviderSettings() as any)?.model;
           const realtimeModels = result.models.filter(m => m.type === 'realtime');
-          if (realtimeModels.length > 0 && (!currentModel || !realtimeModels.some(m => m.id === currentModel))) {
+          const shouldAutoSelect = (!currentModel || !result.models.some(m => m.id === currentModel));
+          if (shouldAutoSelect) {
             const latestModel = ClientOperations.getLatestRealtimeModel(result.models, provider);
             if (latestModel) {
               // Update the provider-specific model setting
@@ -1208,6 +1217,9 @@ const useSettingsStore = create<SettingsStore>()(
                   break;
                 case Provider.OPENAI_COMPATIBLE:
                   get().updateOpenAICompatible({ model: latestModel });
+                  break;
+                case Provider.ANT_LING:
+                  get().updateAntLing({ chatModel: latestModel });
                   break;
                 case Provider.OPENAI_TRANSLATE:
                   // Translate locks model server-side; settings shape has
@@ -1723,6 +1735,7 @@ export const useKizunaVolcengineAst2Settings = () => useSettingsStore((state) =>
 export const useKizunaSonioxSettings = () => useSettingsStore((state) => state.kizunaSoniox);
 export const useLocalInferenceSettings = () => useSettingsStore((state) => state.localInference);
 export const useLocalNativeSettings = () => useSettingsStore((state) => state.localNative);
+export const useAntLingSettings = () => useSettingsStore((state) => state.antLing);
 
 // Transport type selector (for OpenAI provider)
 export const useTransportType = () => useSettingsStore((state) => state.openai.transportType);
@@ -1780,6 +1793,7 @@ export const useUpdateKizunaVolcengineAst2 = () => useSettingsStore((state) => s
 export const useUpdateKizunaSoniox = () => useSettingsStore((state) => state.updateKizunaSoniox);
 export const useUpdateLocalInference = () => useSettingsStore((state) => state.updateLocalInference);
 export const useUpdateLocalNative = () => useSettingsStore((state) => state.updateLocalNative);
+export const useUpdateAntLing = () => useSettingsStore((state) => state.updateAntLing);
 
 export const useValidateApiKey = () => useSettingsStore((state) => state.validateApiKey);
 export const useFetchAvailableModels = () => useSettingsStore((state) => state.fetchAvailableModels);
@@ -1816,6 +1830,28 @@ export const useCurrentTurnDetectionMode = (): string => useSettingsStore((state
   const slice = state[descriptor.settingsSliceKey as keyof SettingsStore] as { turnDetectionMode?: string };
   return slice?.turnDetectionMode ?? 'Auto';
 });
+
+export const useSetCurrentTurnDetectionMode = () => {
+  return (mode: 'Auto' | 'Push-to-Talk' | 'Push-to-Translate') => {
+    const store = useSettingsStore.getState();
+    const provider = store.provider;
+    if (provider === Provider.ANT_LING) {
+      store.updateAntLing({ turnDetectionMode: mode });
+    } else if (provider === Provider.GEMINI) {
+      store.updateGeminiSettings({ turnDetectionMode: mode });
+    } else if (provider === Provider.VOLCENGINE_AST2 || provider === Provider.KIZUNA_AI_VOLCENGINE_AST2) {
+      store.updateVolcengineAST2({ turnDetectionMode: mode });
+    } else if (provider === Provider.LOCAL_INFERENCE) {
+      store.updateLocalInference({ turnDetectionMode: mode });
+    } else if (provider === Provider.LOCAL_NATIVE) {
+      store.updateLocalNative({ turnDetectionMode: mode });
+    } else if (isOpenAICompatible(provider)) {
+      store.updateOpenAI({
+        turnDetectionMode: mode === 'Push-to-Talk' ? 'Disabled' : mode === 'Push-to-Translate' ? 'Push-to-Translate' : 'Normal',
+      });
+    }
+  };
+};
 
 export { useSettingsStore };
 export default useSettingsStore;

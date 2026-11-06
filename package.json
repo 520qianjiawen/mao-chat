@@ -1,7 +1,7 @@
 {
   "name": "mao-chat",
   "productName": "MAO Chat",
-  "version": "1.0.29",
+  "version": "1.0.45",
   "sidecarVersion": "0.1.13",
   "private": true,
   "main": "dist-electron/main.js",
@@ -48,10 +48,6 @@
           "**/*",
           "!sidecar-runtime/**"
         ]
-      },
-      {
-        "from": "resources/sidecar-runtime",
-        "to": "sidecar-runtime"
       }
     ],
     "linux": {
@@ -78,7 +74,7 @@
     "mac": {
       "target": [
         {
-          "target": "pkg",
+          "target": "dmg",
           "arch": [
             "arm64"
           ]
@@ -87,13 +83,6 @@
       "category": "public.app-category.utilities",
       "icon": "assets/icon.icns",
       "identity": null
-    },
-    "pkg": {
-      "scripts": "../pkg-scripts",
-      "installLocation": "/Applications",
-      "isRelocatable": false,
-      "isVersionChecked": false,
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "dmg": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"
@@ -129,6 +118,8 @@
     "tar@7": "^7.5.21"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1162.0",
+    "@aws-sdk/lib-storage": "^3.1162.0",
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-dmg": "^7.11.1",
     "@electron-forge/maker-flatpak": "^7.11.1",
@@ -207,9 +198,10 @@
     "electron:start": "electron .",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
-    "prepare:mac-runtime": "python3 scripts/sync-macos-live-caption-runtime.py",
-    "make:pkg": "npm run prepare:mac-runtime && npm run build:audio-host && npm run build:ocr && npm run build && electron-builder --mac pkg --publish never -c.directories.output=out && rm -rf out/mac-arm64",
-    "make:mac": "npm run prepare:mac-runtime && npm run build:audio-host && npm run build:ocr && npm run build && electron-builder --mac pkg --publish never -c.directories.output=out && rm -rf out/mac-arm64",
+    "bundle:sidecar": "node scripts/upload-sidecar-r2.mjs",
+    "make:dmg": "npm run build:audio-host && npm run build:ocr && npm run build && electron-builder --mac dmg --publish never -c.directories.output=out && rm -rf out/mac-arm64",
+    "make:mac": "npm run make:dmg",
+    "publish:r2": "node scripts/publish-r2.mjs",
     "postinstall": "electron-rebuild && bash scripts/copy-ort-wasm.sh",
     "eval": "tsx evals/runner/index.ts",
     "eval:validate": "tsx evals/runner/index.ts validate",

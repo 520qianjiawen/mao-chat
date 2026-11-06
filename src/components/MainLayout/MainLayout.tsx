@@ -132,6 +132,7 @@ const MainLayout: React.FC = () => {
     const target = provider === Provider.OPENAI
       || provider === Provider.OPENAI_TRANSLATE
       || provider === Provider.OPENAI_COMPATIBLE
+      || provider === Provider.ANT_LING
       ? 'voice-settings'
       : 'model-tts';
     setTimeout(() => navigateToSettings(target), 0);

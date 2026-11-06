@@ -142,6 +142,9 @@ ipcMain.handle('subtitle:enter', (_event, payload) => {
   normalBoundsSnapshot = win.getBounds();
   beginTransition();
   win.setBounds(clamped);
+  if (typeof win.setHasShadow === 'function') {
+    win.setHasShadow(false);
+  }
   win.setAlwaysOnTop(Boolean(payload?.alwaysOnTop), pinLevel());
   if (payload?.alwaysOnTop) {
     startPinEnforcement();
@@ -185,6 +188,9 @@ ipcMain.handle('subtitle:exit', (_event, payload) => {
       height: 800,
     });
   }
+  if (typeof win.setHasShadow === 'function') {
+    win.setHasShadow(true);
+  }
   stopPinEnforcement();
   win.setAlwaysOnTop(false);
   win.setResizable(true);
@@ -223,6 +229,39 @@ ipcMain.handle('subtitle:set-fullscreen', (_event, flag) => {
   beginTransition();
   win.setFullScreen(Boolean(flag));
   return { ok: true };
+});
+
+ipcMain.handle('subtitle:set-ignore-mouse-events', (_event, payload) => {
+  const win = getLiveWindow();
+  if (!win) return { ok: false };
+  const ignore = Boolean(typeof payload === 'boolean' ? payload : payload?.ignore);
+  const forward = Boolean(payload?.forward ?? true);
+  try {
+    win.setIgnoreMouseEvents(ignore, { forward });
+  } catch (_e) {
+    try {
+      win.setIgnoreMouseEvents(ignore);
+    } catch {}
+  }
+  return { ok: true };
+});
+
+ipcMain.handle('subtitle:set-bounds', (_event, bounds) => {
+  const win = getLiveWindow();
+  if (!win || !bounds) return { ok: false };
+  const work = screen.getPrimaryDisplay().workArea;
+  const clamped = clampToScreen(bounds, work);
+  win.setBounds(clamped);
+  return { ok: true, bounds: clamped };
+});
+
+ipcMain.handle('subtitle:reset-position', () => {
+  const win = getLiveWindow();
+  if (!win) return { ok: false };
+  const work = screen.getPrimaryDisplay().workArea;
+  const defaults = defaultSubtitleBounds(work);
+  win.setBounds(defaults);
+  return { ok: true, bounds: defaults };
 });
 
 function setupSubtitleHandlers(mainWindow) {

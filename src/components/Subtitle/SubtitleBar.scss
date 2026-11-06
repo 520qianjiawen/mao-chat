@@ -4,22 +4,27 @@
   // flex column. This frees up the 36 px the bar used to reserve so the
   // subtitle text fills the whole window when the bar is auto-hidden.
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
+  top: 6px;
+  left: 12px;
+  right: 12px;
+  z-index: 50;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 36px;
+  height: 38px;
   padding: 0 12px;
-  background: rgba(20, 20, 20, 0.95);
+  background: rgba(18, 18, 20, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
   color: #e8e8e8;
   font-size: 12px;
   flex-shrink: 0;
   opacity: var(--bar-opacity, 1);
-  transition: opacity 200ms ease-in-out;
+  transition: opacity 200ms ease-in-out, transform 200ms ease;
   // When the bar is fading out / hidden, let clicks pass through to the
   // subtitle area underneath. SubtitleApp toggles --bar-pointer-events
   // alongside --bar-opacity.
@@ -44,6 +49,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
     // Non-interactive areas inside segments (logo, timer, lang label,
     // dividers) stay in the drag region so the user can grab almost any
     // visible part of the bar to move the window. Interactive elements

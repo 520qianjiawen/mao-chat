@@ -99,27 +99,41 @@ async function cleanupOrphanedDevices() {
 }
 
 /**
- * Check if Sokuji Virtual Audio is installed
- * @returns {Promise<boolean>} True if Sokuji Virtual Audio is installed and functional, false otherwise
+ * Check if Mao Virtual Audio (or legacy Sokuji Virtual Audio) is installed
+ * @returns {Promise<boolean>} True if virtual audio driver is installed and functional, false otherwise
  */
 async function isSokujiVirtualAudioInstalled() {
   try {
-    console.log('[Sokuji] [macOS Audio] Checking Sokuji Virtual Audio installation...');
+    console.log('[Mao] [macOS Audio] Checking Mao Virtual Audio installation...');
 
     // Method 1: Check if driver file exists
     try {
-      await fs.access('/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver');
-      console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio driver found in HAL Plug-Ins');
-
-      // Check if installation flag exists
+      let driverFound = false;
       try {
-        await fs.access('/Library/Audio/Plug-Ins/HAL/.sokuji_installed');
-        console.log('[Sokuji] [macOS Audio] Installation flag confirmed');
-      } catch (flagError) {
-        console.log('[Sokuji] [macOS Audio] Installation flag missing, but driver exists');
+        await fs.access('/Library/Audio/Plug-Ins/HAL/MaoVirtualAudio.driver');
+        console.log('[Mao] [macOS Audio] Mao Virtual Audio driver found in HAL Plug-Ins');
+        driverFound = true;
+      } catch {
+        await fs.access('/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver');
+        console.log('[Mao] [macOS Audio] Legacy Sokuji Virtual Audio driver found in HAL Plug-Ins');
+        driverFound = true;
       }
 
-      return true;
+      if (driverFound) {
+        // Check if installation flag exists
+        try {
+          await fs.access('/Library/Audio/Plug-Ins/HAL/.mao_installed');
+          console.log('[Mao] [macOS Audio] Installation flag confirmed');
+        } catch {
+          try {
+            await fs.access('/Library/Audio/Plug-Ins/HAL/.sokuji_installed');
+            console.log('[Mao] [macOS Audio] Legacy installation flag confirmed');
+          } catch {
+            console.log('[Mao] [macOS Audio] Installation flag missing, but driver exists');
+          }
+        }
+        return true;
+      }
     } catch (fsError) {
       // Driver file not found, continue checking other methods
     }
@@ -128,31 +142,32 @@ async function isSokujiVirtualAudioInstalled() {
     try {
       const { stdout } = await execPromise('system_profiler SPAudioDataType 2>/dev/null');
 
-      if (stdout.includes('Sokuji Virtual Audio') || stdout.includes('SokujiVirtualAudio')) {
-        console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio device found in system');
+      if (stdout.includes('Mao Virtual Audio') || stdout.includes('MaoVirtualAudio') ||
+          stdout.includes('Sokuji Virtual Audio') || stdout.includes('SokujiVirtualAudio')) {
+        console.log('[Mao] [macOS Audio] Virtual Audio device found in system');
         return true;
       }
     } catch (spError) {
-      console.log('[Sokuji] [macOS Audio] system_profiler query failed:', spError.message);
+      console.log('[Mao] [macOS Audio] system_profiler query failed:', spError.message);
     }
 
     // Method 3: Check using osascript
     try {
-      const osascriptCommand = `osascript -e 'set devices to do shell script "system_profiler SPAudioDataType"' -e 'return devices contains "Sokuji"'`;
+      const osascriptCommand = `osascript -e 'set devices to do shell script "system_profiler SPAudioDataType"' -e 'return (devices contains "Mao" or devices contains "Sokuji")'`;
       const { stdout } = await execPromise(osascriptCommand);
 
       if (stdout.trim() === 'true') {
-        console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio found via osascript');
+        console.log('[Mao] [macOS Audio] Virtual Audio found via osascript');
         return true;
       }
     } catch (osascriptError) {
-      console.log('[Sokuji] [macOS Audio] osascript query failed:', osascriptError.message);
+      console.log('[Mao] [macOS Audio] osascript query failed:', osascriptError.message);
     }
 
-    console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio not detected by any method');
+    console.log('[Mao] [macOS Audio] Mao Virtual Audio not detected by any method');
     return false;
   } catch (error) {
-    console.error('[Sokuji] [macOS Audio] Error checking Sokuji Virtual Audio installation:', error);
+    console.error('[Mao] [macOS Audio] Error checking Mao Virtual Audio installation:', error);
     return false;
   }
 }
@@ -308,10 +323,17 @@ module.exports = {
   // Per-application capture helper control, used by main.js IPC handlers
   startCapture: audioHost.startCapture,
   stopCapture: audioHost.stopCapture,
+  listSystemVoices: audioHost.listSystemVoices,
+  speakToVirtualMic: audioHost.speakToVirtualMic,
+  playFileToVirtualMic: audioHost.playFileToVirtualMic,
+  testVirtualMic: audioHost.testVirtualMic,
+  speakLocalAudio: audioHost.speakLocalAudio,
+  stopLocalAudio: audioHost.stopLocalAudio,
   createVirtualAudioDevices,
   removeVirtualAudioDevices,
   isMacOSAudioAvailable,
   cleanupOrphanedDevices,
+  isMaoVirtualAudioInstalled: isSokujiVirtualAudioInstalled,
   isSokujiVirtualAudioInstalled,
   getAudioDevices,
   // System audio capture functions

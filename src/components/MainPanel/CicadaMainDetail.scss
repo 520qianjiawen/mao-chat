@@ -1,0 +1,749 @@
+// src/components/MainPanel/CicadaMainDetail.scss
+.cicada-main-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  background: #ffffff;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  &--empty {
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__empty-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 32px;
+    box-sizing: border-box;
+  }
+
+  &__error-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    max-width: 520px;
+    width: 100%;
+    color: #991b1b;
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
+
+    .error-icon {
+      color: #ef4444;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .error-text {
+      flex: 1;
+      min-width: 0;
+
+      .error-title {
+        font-size: 13.5px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .error-desc {
+        font-size: 12.5px;
+        color: #b91c1c;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+    }
+
+    .error-close {
+      appearance: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #ef4444;
+      font-size: 15px;
+      line-height: 1;
+      padding: 0 4px;
+      opacity: 0.7;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    max-width: 420px;
+    gap: 12px;
+  }
+
+  &__empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+
+  &__empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+
+  &__empty-desc {
+    font-size: 13.5px;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  &__header {
+    padding: 20px 32px 0 32px;
+    border-bottom: 1px solid #eef0f3;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #ffffff;
+    user-select: none;
+  }
+
+  // Top Bar: Title on left, [EN -> 中] [结束] [◫] [—] on right
+  &__top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__title-container {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.88;
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #14171c;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+  }
+
+  &__subtitle {
+    font-size: 13px;
+    color: #717682;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__title-input {
+    width: 100%;
+    font-size: 20px;
+    font-weight: 700;
+    color: #14171c;
+    border: none;
+    border-bottom: 2px solid #ff6b35;
+    outline: none;
+    background: transparent;
+    padding: 0 0 2px 0;
+    font-family: inherit;
+  }
+
+  &__top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+
+    .cicada-lang-chip {
+      transform: scale(0.92);
+      transform-origin: right center;
+    }
+
+    .cicada-top-end-btn {
+      appearance: none;
+      background: #ffffff;
+      border: 1px solid #e4e6eb;
+      border-radius: 7px;
+      height: 28px;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #14171c;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+      }
+    }
+
+    .cicada-header-icon-btn {
+      appearance: none;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #717682;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #f3f4f6;
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #fff0eb;
+        color: #ff6b35;
+        border-color: #ffd8c7;
+      }
+    }
+  }
+
+  // Second Row: Meta status + Audio source mode
+  &__meta-row {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+  }
+
+  &__meta-left {
+    display: flex;
+    align-items: center;
+  }
+
+  &__meta-right {
+    display: flex;
+    align-items: center;
+  }
+
+  .cicada-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 2px;
+    border-radius: 6px;
+    gap: 2px;
+
+    .cicada-mode-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-family: inherit;
+      color: #717682;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+
+      &:hover {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #ffffff;
+        color: #14171c;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  .cicada-speech-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 2px;
+    border-radius: 6px;
+    gap: 2px;
+    margin-left: 8px;
+
+    .cicada-speech-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-family: inherit;
+      color: #717682;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+
+      &:hover:not(:disabled) {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #ffffff;
+        color: #4f46e5;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .cicada-ptt-hint-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    margin: 8px 16px 0 16px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: #4338ca;
+    line-height: 1.4;
+  }
+
+  &__live-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #ff6b35;
+    font-weight: 600;
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff6b35;
+      animation: meta-pulse 2s infinite ease-out;
+    }
+  }
+
+  &__history-meta {
+    color: #717682;
+  }
+
+  // Third Row: Segmented Switcher [ 纪要 ] [ 文字记录 · N ]
+  &__segmented-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .cicada-segmented-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 3px;
+    border-radius: 12px;
+    min-width: 240px;
+    max-width: 320px;
+
+    &__btn {
+      flex: 1;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 500;
+      color: #717682;
+      background: none;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #ffffff;
+        color: #14171c;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    .cicada-segmented-count {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: #9ca3af;
+    }
+  }
+
+  &__filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cicada-segments {
+    display: inline-flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 2px;
+    border-radius: 6px;
+    gap: 2px;
+
+    .cicada-segment-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-family: inherit;
+      color: #717682;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #ffffff;
+        color: #14171c;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  .cicada-speech-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 2px;
+    border-radius: 6px;
+    gap: 2px;
+    margin-left: 8px;
+
+    .cicada-speech-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-family: inherit;
+      color: #717682;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+
+      &:hover:not(:disabled) {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #ffffff;
+        color: #4f46e5;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .cicada-ptt-hint-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    margin: 8px 16px 0 16px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 6px;
+    font-size: 11.5px;
+    color: #4338ca;
+    line-height: 1.4;
+  }
+
+  .cicada-export-wrapper {
+    position: relative;
+  }
+
+  .cicada-export-btn {
+    appearance: none;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: #717682;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+      color: #14171c;
+    }
+  }
+
+  .cicada-export-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    padding: 6px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    min-width: 170px;
+
+    button {
+      appearance: none;
+      background: none;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #14171c;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+
+      &:hover {
+        background: #f3f4f6;
+      }
+    }
+
+    &__divider {
+      height: 1px;
+      background: #eef0f3;
+      margin: 4px 0;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  &__single-view {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  &__side-by-side {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+
+    .cicada-side-col {
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+
+      &--notes {
+        max-width: 55%;
+      }
+      &--transcript {
+        max-width: 45%;
+        background: #fafafb;
+      }
+    }
+
+    .cicada-side-divider {
+      width: 1px;
+      background: #eef0f3;
+    }
+  }
+
+  // Compact Card Mode View
+  .cicada-card-mode-view {
+    padding: 24px;
+    max-width: 460px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .cicada-card-mode-card {
+      background: #f6f7f9;
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cicada-card-mode-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .cicada-card-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #717682;
+      background: #eef0f3;
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+
+    .cicada-card-timer {
+      font-size: 12px;
+      color: #9ca3af;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cicada-card-expand-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: #ff6b35;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: auto;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .cicada-card-summary {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #14171c;
+    }
+
+    .cicada-card-placeholder {
+      margin: 0;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .cicada-card-current-topic {
+      border-top: 1px solid #eef0f3;
+      padding-top: 8px;
+
+      h5 {
+        margin: 0 0 6px 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #14171c;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13px;
+        color: #717682;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+
+    .cicada-card-live-caption {
+      background: #fff6f2;
+      border: 1px solid #ffd8c7;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      .caption-src {
+        font-size: 12px;
+        color: #717682;
+      }
+      .caption-dst {
+        font-size: 14px;
+        font-weight: 600;
+        color: #14171c;
+      }
+    }
+  }
+}
+
+@keyframes meta-pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(2); opacity: 0; }
+}

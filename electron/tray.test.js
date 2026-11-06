@@ -98,6 +98,7 @@ describe('electron/tray.js', () => {
         createFromPath: vi.fn(() => ({
           isEmpty: () => false,
           getSize: () => ({ width: 20, height: 20 }),
+          setTemplateImage: vi.fn(),
           resize: vi.fn(() => ({
             setTemplateImage: vi.fn(),
           })),
@@ -281,5 +282,13 @@ describe('electron/tray.js', () => {
 
     cleanupTray();
     expect(fakeTrayInstance.destroy).toHaveBeenCalled();
+  });
+
+  it('sets template image on macOS in getTrayIcon', () => {
+    const { getTrayIcon } = nodeRequire(trayModulePath);
+    const icon = getTrayIcon();
+    if (process.platform === 'darwin') {
+      expect(icon.setTemplateImage).toHaveBeenCalledWith(true);
+    }
   });
 });

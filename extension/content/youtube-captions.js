@@ -265,4 +265,9 @@
     }
     return undefined;
   });
+
+  // Expose directly to window for video-button-content.js in the same isolated world
+  window.__maoLoadYouTubeCaptions = loadCaptions;
+  window.__maoEnableNativeCaptions = enableNativeCaptions;
+  window.__maoReadOnscreenLines = readOnscreenLines;
 })();

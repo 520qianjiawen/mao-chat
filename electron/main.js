@@ -947,8 +947,8 @@ ipcMain.handle('install-vbcable', async () => {
   }
 });
 
-// Handler for Sokuji Virtual Audio detection (called from renderer process)
-ipcMain.handle('check-sokuji-audio', async () => {
+// Handler for Mao / Sokuji Virtual Audio detection (called from renderer process)
+const handleCheckVirtualAudio = async () => {
   try {
     if (process.platform === 'darwin') {
       const { isSokujiVirtualAudioInstalled } = audioUtils;
@@ -956,22 +956,127 @@ ipcMain.handle('check-sokuji-audio', async () => {
       return {
         installed,
         platform: 'macos',
-        driverName: 'Sokuji Virtual Audio'
+        driverName: 'Mao Virtual Audio'
       };
     } else {
       return {
         installed: false,
         platform: process.platform,
-        message: 'Sokuji Virtual Audio is macOS-specific'
+        message: 'Virtual Audio driver is macOS-specific'
       };
     }
   } catch (error) {
-    console.error('[Sokuji] [Main] Error in Sokuji Virtual Audio check:', error);
+    console.error('[Mao] [Main] Error in Virtual Audio check:', error);
     return {
       installed: false,
       error: error.message
     };
   }
+};
+ipcMain.handle('check-sokuji-audio', handleCheckVirtualAudio);
+ipcMain.handle('check-mao-audio', handleCheckVirtualAudio);
+
+// Virtual microphone speech synthesis and test handlers
+ipcMain.handle('list-system-voices', async () => {
+  if (typeof audioUtils.listSystemVoices === 'function') {
+    return await audioUtils.listSystemVoices();
+  }
+  return [];
+});
+
+ipcMain.handle('speak-to-virtual-mic', async (_event, payload) => {
+  if (typeof audioUtils.speakToVirtualMic === 'function') {
+    const text = typeof payload === 'string' ? payload : payload?.text;
+    const options = typeof payload === 'object' ? payload : {};
+    const ok = await audioUtils.speakToVirtualMic(text, options);
+    return { ok };
+  }
+  return { ok: false, error: 'Not supported on this platform' };
+});
+
+ipcMain.handle('play-file-to-virtual-mic', async (_event, payload) => {
+  if (typeof audioUtils.playFileToVirtualMic === 'function') {
+    let filePath = typeof payload === 'string' ? payload : payload?.filePath;
+    let isTemp = false;
+
+    if (!filePath && payload?.base64) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
+        const buffer = Buffer.from(payload.base64, 'base64');
+        let ext = payload?.ext || 'wav';
+        if (buffer.length >= 4 && buffer.toString('ascii', 0, 4) === 'RIFF') {
+          ext = 'wav';
+        }
+        filePath = path.join(os.tmpdir(), `mao-tts-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`);
+        fs.writeFileSync(filePath, buffer);
+        isTemp = true;
+      } catch (err) {
+        console.error('[Sokuji] [Main] Error writing temp TTS file for virtual mic:', err);
+      }
+    } else if (!filePath && payload?.buffer) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
+        const buffer = Buffer.from(payload.buffer);
+        let ext = payload?.ext || 'wav';
+        if (buffer.length >= 4 && buffer.toString('ascii', 0, 4) === 'RIFF') {
+          ext = 'wav';
+        }
+        filePath = path.join(os.tmpdir(), `mao-tts-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`);
+        fs.writeFileSync(filePath, buffer);
+        isTemp = true;
+      } catch (err) {
+        console.error('[Sokuji] [Main] Error writing temp TTS file for virtual mic:', err);
+      }
+    }
+
+    if (!filePath) {
+      return { ok: false, error: 'No audio file path or data provided' };
+    }
+
+    const options = typeof payload === 'object' ? payload : {};
+    try {
+      const ok = await audioUtils.playFileToVirtualMic(filePath, options);
+      return { ok };
+    } finally {
+      if (isTemp && filePath) {
+        try {
+          const fs = require('fs');
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch {}
+      }
+    }
+  }
+  return { ok: false, error: 'Not supported on this platform' };
+});
+
+ipcMain.handle('test-virtual-mic', async (_event, payload) => {
+  if (typeof audioUtils.testVirtualMic === 'function') {
+    const ok = await audioUtils.testVirtualMic(payload || {});
+    return { ok };
+  }
+  return { ok: false, error: 'Not supported on this platform' };
+});
+
+ipcMain.handle('speak-local-audio', async (_event, payload) => {
+  if (typeof audioUtils.speakLocalAudio === 'function') {
+    const text = typeof payload === 'string' ? payload : payload?.text;
+    const options = typeof payload === 'object' ? payload : {};
+    const ok = await audioUtils.speakLocalAudio(text, options);
+    return { ok };
+  }
+  return { ok: false, error: 'Not supported on this platform' };
+});
+
+ipcMain.handle('stop-local-audio', async () => {
+  if (typeof audioUtils.stopLocalAudio === 'function') {
+    audioUtils.stopLocalAudio();
+    return { ok: true };
+  }
+  return { ok: true };
 });
 
 // Configuration now handled directly in renderer process via localStorage

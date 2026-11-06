@@ -72,4 +72,30 @@ describe('OpenAIClient — keepReplayAudio gating in convertToConversationItem',
     expect(result.formatted?.audio).toBeUndefined();
     expect(result.formatted?.file).toBeUndefined();
   });
+
+  describe('normalizeApiHost', () => {
+    it('strips redundant trailing /v1 and trailing slashes', () => {
+      expect(OpenAIClient.normalizeApiHost('https://api.ant-ling.com/v1')).toBe('https://api.ant-ling.com');
+      expect(OpenAIClient.normalizeApiHost('https://api.ant-ling.com/v1/')).toBe('https://api.ant-ling.com');
+      expect(OpenAIClient.normalizeApiHost('https://api.ant-ling.com/')).toBe('https://api.ant-ling.com');
+      expect(OpenAIClient.normalizeApiHost('https://api.ant-ling.com')).toBe('https://api.ant-ling.com');
+    });
+
+    it('falls back to default host when undefined or empty', () => {
+      expect(OpenAIClient.normalizeApiHost()).toBe(OpenAIClient.DEFAULT_API_HOST);
+      expect(OpenAIClient.normalizeApiHost('')).toBe(OpenAIClient.DEFAULT_API_HOST);
+    });
+  });
+
+  describe('toWebSocketUrl', () => {
+    it('converts https to wss and appends /v1/realtime', () => {
+      expect(OpenAIClient.toWebSocketUrl('https://api.openai.com')).toBe('wss://api.openai.com/v1/realtime');
+      expect(OpenAIClient.toWebSocketUrl('https://api.ant-ling.com/v1')).toBe('wss://api.ant-ling.com/v1/realtime');
+      expect(OpenAIClient.toWebSocketUrl('http://localhost:8080/v1')).toBe('ws://localhost:8080/v1/realtime');
+    });
+
+    it('falls back to default wss endpoint when undefined', () => {
+      expect(OpenAIClient.toWebSocketUrl()).toBe('wss://api.openai.com/v1/realtime');
+    });
+  });
 });

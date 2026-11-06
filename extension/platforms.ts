@@ -80,6 +80,11 @@ export const YOUTUBE_MATCH_PATTERNS = [
   'https://www.youtube-nocookie.com/*',
 ] as const;
 
+export const X_MATCH_PATTERNS = [
+  'https://x.com/*',
+  'https://twitter.com/*',
+] as const;
+
 export function deriveContentScripts(): Array<{ matches: string[]; js: string[]; run_at: string; all_frames?: boolean; world?: 'MAIN' | 'ISOLATED' }> {
   const patterns = (profile: ContentProfile) => platformsByProfile(profile).map(p => p.matchPattern);
   const standard = patterns('standard');
@@ -95,7 +100,8 @@ export function deriveContentScripts(): Array<{ matches: string[]; js: string[];
     { matches: [...zoom], js: ['zoom-content.js'], run_at: 'document_start', all_frames: true },
     { matches: [...zoom], js: ['subtitle-overlay-content.js'], run_at: 'document_idle' },
     { matches: [...YOUTUBE_MATCH_PATTERNS], js: ['youtube-timedtext-hook.js'], run_at: 'document_start', world: 'MAIN' },
-    { matches: [...YOUTUBE_MATCH_PATTERNS], js: ['youtube-captions.js', 'subtitle-overlay-content.js'], run_at: 'document_idle' },
+    { matches: [...YOUTUBE_MATCH_PATTERNS], js: ['youtube-captions.js', 'subtitle-overlay-content.js', 'video-button-content.js'], run_at: 'document_idle' },
+    { matches: [...X_MATCH_PATTERNS], js: ['subtitle-overlay-content.js', 'video-button-content.js'], run_at: 'document_idle' },
   ];
 }
 

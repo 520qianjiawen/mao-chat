@@ -1,0 +1,225 @@
+// src/components/MainPanel/ListenPill.scss
+.listen-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border-radius: 9999px;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-app-region: no-drag !important; // clickable inside macOS drag titlebar
+  pointer-events: auto !important;
+
+  * {
+    -webkit-app-region: no-drag !important;
+    pointer-events: none !important;
+  }
+
+  .listen-pill__stop-btn {
+    pointer-events: auto !important;
+  }
+
+  &--idle {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    padding: 0 12px 0 6px;
+    gap: 8px;
+
+    &.listen-pill--blocked {
+      border-color: #f59e0b;
+      &:hover {
+        border-color: #d97706;
+        box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);
+      }
+    }
+
+    &:hover {
+      background: #fafafb;
+      border-color: #d1d5db;
+      transform: translateY(-0.5px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    &:active {
+      transform: translateY(0.5px);
+    }
+
+    .listen-pill__brand {
+      font-size: 13px;
+      font-weight: 700;
+      color: #14171c;
+      letter-spacing: -0.2px;
+
+      @media (max-width: 580px) {
+        display: none;
+      }
+    }
+
+    .listen-pill__divider {
+      width: 1px;
+      height: 12px;
+      background: #e4e6eb;
+
+      @media (max-width: 580px) {
+        display: none;
+      }
+    }
+
+    .listen-pill__text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #14171c;
+    }
+
+    .listen-pill__shortcut {
+      font-size: 11px;
+      font-weight: 500;
+      color: #9ca3af;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+
+      @media (max-width: 768px) {
+        display: none;
+      }
+    }
+  }
+
+  &--active {
+    background: #14171c;
+    color: #ffffff;
+    padding: 0 5px 0 7px;
+    gap: 9px;
+    box-shadow: 0 3px 12px rgba(20, 23, 28, 0.22);
+    cursor: default;
+
+    .listen-pill__label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    .listen-pill__timer {
+      font-size: 13px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      color: #9ca3af;
+      margin-left: 1px;
+    }
+
+    .listen-pill__stop-btn {
+      appearance: none;
+      border: none;
+      outline: none;
+      background: #ffffff;
+      color: #14171c;
+      font-size: 12px;
+      font-weight: 600;
+      height: 22px;
+      padding: 0 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #f3f4f6;
+        transform: scale(1.02);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  }
+
+  &__logo-img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    position: relative;
+    z-index: 2;
+  }
+
+  &__breathing {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+  }
+
+  &__pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #ff6b35;
+    opacity: 0.7;
+    z-index: 1;
+
+    &.ring-1 {
+      animation: pill-pulse 2s infinite ease-out;
+    }
+
+    &.ring-2 {
+      animation: pill-pulse 2s infinite ease-out 1s;
+    }
+  }
+
+  &__meter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 14px;
+
+    .meter-bar {
+      display: inline-block;
+      width: 2.5px;
+      background: #ff6b35;
+      border-radius: 999px;
+      animation: meter-bounce 1.2s infinite ease-in-out alternate;
+
+      &.b1 { height: 6px; animation-delay: 0.1s; }
+      &.b2 { height: 11px; animation-delay: 0.3s; }
+      &.b3 { height: 8px; animation-delay: 0.15s; }
+      &.b4 { height: 13px; animation-delay: 0.45s; }
+      &.b5 { height: 7px; animation-delay: 0.25s; }
+      &.b6 { height: 12px; animation-delay: 0.35s; }
+      &.b7 { height: 9px; animation-delay: 0.05s; }
+      &.b8 { height: 5px; animation-delay: 0.2s; }
+    }
+  }
+}
+
+@keyframes pill-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes meter-bounce {
+  0% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}

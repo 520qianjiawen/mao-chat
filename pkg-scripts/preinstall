@@ -12,10 +12,13 @@ chown root:wheel /Library/Audio/Plug-Ins/HAL
 chmod 755 /Library/Audio/Plug-Ins/HAL
 
 # Remove any existing virtual audio installation
+if [ -d "/Library/Audio/Plug-Ins/HAL/MaoVirtualAudio.driver" ]; then
+    echo "MAO Chat preinstall: Removing existing MaoVirtualAudio driver..."
+    rm -rf /Library/Audio/Plug-Ins/HAL/MaoVirtualAudio.driver
+fi
 if [ -d "/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver" ]; then
-    echo "MAO Chat preinstall: Removing existing virtual audio driver..."
+    echo "MAO Chat preinstall: Removing legacy SokujiVirtualAudio driver..."
     rm -rf /Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver
-    echo "MAO Chat preinstall: Old driver removed"
 fi
 
 # Also check for the app in case of reinstallation

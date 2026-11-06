@@ -1,9 +1,11 @@
 // src/components/TitleBar/TitleBar.tsx
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AudioLines, Languages, Minus, Square, X, Settings, Terminal } from 'lucide-react';
+import { AudioLines, Languages, Minus, Square, X, Settings, Terminal, ArrowUpCircle } from 'lucide-react';
 import { isElectron, isExtension, isMacOS } from '../../utils/environment';
 import SubtitleEnterButton from '../Subtitle/SubtitleEnterButton';
+import ListenPill from '../MainPanel/ListenPill';
+import { useUpdateStatus, useUpdateNewVersion, useOpenUpdateDialog } from '../../stores/updateStore';
 import './TitleBar.scss';
 
 interface TitleBarProps {
@@ -47,6 +49,10 @@ const TitleBar: React.FC<TitleBarProps> = ({
   const maximizeLabel = t('titleBar.maximize', 'Maximize');
   const closeLabel = t('titleBar.close', 'Close');
 
+  const updateStatus = useUpdateStatus();
+  const updateNewVersion = useUpdateNewVersion();
+  const openUpdateDialog = useOpenUpdateDialog();
+
   // Only Electron Win/Linux render the in-app min/max/close buttons. On
   // macOS the OS draws traffic-light buttons (titleBarStyle: hiddenInset),
   // and the browser extension lives inside the browser chrome which already
@@ -66,6 +72,11 @@ const TitleBar: React.FC<TitleBarProps> = ({
         <span className="title-bar__title">
           {t('titleBar.extensionTitle', 'MAO Chat - 实时字幕翻译')}
         </span>
+      )}
+      {isElectron() && (
+        <div className="title-bar__center">
+          <ListenPill />
+        </div>
       )}
       <div className="title-bar__actions">
         <SubtitleEnterButton />
@@ -93,6 +104,18 @@ const TitleBar: React.FC<TitleBarProps> = ({
             <span className="title-bar__action-label">{textToSpeechLabel}</span>
           </button>
         )}
+        {isElectron() && updateStatus === 'available' && (
+          <button
+            type="button"
+            className="title-bar__action update-pill-button"
+            onClick={openUpdateDialog}
+            title={t('update.available', { version: updateNewVersion, defaultValue: `发现新版本 v${updateNewVersion}，点击立即升级` })}
+            aria-label={t('update.upgradeTo', { version: updateNewVersion, defaultValue: `升级 v${updateNewVersion}` })}
+          >
+            <ArrowUpCircle size={15} />
+            <span className="title-bar__action-label">升级 v{updateNewVersion}</span>
+          </button>
+        )}
         <button
           type="button"
           // Keep the legacy `settings-button` class so onboarding's
@@ -104,7 +127,7 @@ const TitleBar: React.FC<TitleBarProps> = ({
           aria-label={settingsLabel}
         >
           <Settings size={14} />
-          <span className="title-bar__action-label">{settingsLabel}</span>
+          <span className="title-bar__action-label title-bar__action-label--secondary">{settingsLabel}</span>
         </button>
         <button
           type="button"
@@ -116,7 +139,7 @@ const TitleBar: React.FC<TitleBarProps> = ({
           aria-label={logsLabel}
         >
           <Terminal size={14} />
-          <span className="title-bar__action-label">{logsLabel}</span>
+          <span className="title-bar__action-label title-bar__action-label--secondary">{logsLabel}</span>
         </button>
       </div>
       {showInAppWindowControls && (

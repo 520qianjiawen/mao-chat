@@ -64,6 +64,7 @@ export default defineConfig(({ mode }) => {
           { src: 'content/content.js', dest: '.' },
           { src: 'content/zoom-content.js', dest: '.' },
           { src: 'content/subtitle-overlay-content.js', dest: '.' },
+          { src: 'content/video-button-content.js', dest: '.' },
           { src: 'content/youtube-captions.js', dest: '.' },
           { src: 'content/youtube-timedtext-hook.js', dest: '.' },
           { src: 'content/site-plugins.js', dest: 'content' },

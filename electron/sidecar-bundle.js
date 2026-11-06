@@ -20,6 +20,7 @@ function bundleStatus(userDataDir, sku) {
   }
 }
 
+const R2_SIDECAR_BASE = 'https://software.asg.li/mao-chat/sidecars';
 const GITHUB_RELEASES_BASE = 'https://github.com/kizuna-ai-lab/sokuji/releases/download';
 
 // The engine version this app build requires (spec S1/S2): package.json's
@@ -39,7 +40,7 @@ function requiredSidecarVersion({ env = process.env, pkg = null } = {}) {
 function bundleBaseUrl(version, env = process.env) {
   const o = env.SOKUJI_SIDECAR_BUNDLE_BASE_URL;
   if (o) return o.replace(/\/+$/, '');
-  return `${GITHUB_RELEASES_BASE}/sidecar-v${version}`;
+  return `${R2_SIDECAR_BASE}/v${version}`;
 }
 
 // Download staging lives under userData, NOT os.tmpdir(): /tmp is commonly
@@ -336,7 +337,20 @@ async function installBundle({
   // failure the previous bundle is restored from .old before rethrowing.
   let movedExisting = false;
   try {
-    if (fs.existsSync(dest)) { fs.renameSync(dest, oldDir); movedExisting = true; }
+    const lstat = fs.lstatSync(dest, { throwIfNoEntry: false });
+    if (lstat) {
+      if (lstat.isSymbolicLink()) {
+        fs.unlinkSync(dest);
+      } else if (lstat.isDirectory()) {
+        fs.renameSync(dest, oldDir);
+        movedExisting = true;
+      } else {
+        fs.unlinkSync(dest);
+      }
+    }
+    if (fs.existsSync(dest) || fs.lstatSync(dest, { throwIfNoEntry: false })) {
+      fs.rmSync(dest, { recursive: true, force: true });
+    }
     fs.renameSync(tmpDir, dest);
   } catch (error) {
     if (movedExisting && !fs.existsSync(dest) && fs.existsSync(oldDir)) fs.renameSync(oldDir, dest);

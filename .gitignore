@@ -74,8 +74,8 @@ backend-cf/node_modules/
 .vscode/settings.json
 .idea/workspace.xml
 
-# BlackHole build files
-BlackHole/build/
+# BlackHole build files & source
+BlackHole/
 
 # Claude settings and worktrees
 .claude/settings.local.json

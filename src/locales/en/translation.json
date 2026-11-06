@@ -408,6 +408,11 @@
       "name": "Google Gemini",
       "description": "Google's AI technology"
     },
+    "antLing": {
+      "name": "Ant-Ling",
+      "description": "High-throughput real-time ASR, Ling-3.1 flash translation & Ming TTS",
+      "customEndpointPlaceholder": "https://api.ant-ling.com/v1"
+    },
     "openaiCompatible": {
       "name": "OpenAI Compatible API",
       "description": "Custom OpenAI-compatible endpoint",

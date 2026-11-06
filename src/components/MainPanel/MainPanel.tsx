@@ -83,6 +83,10 @@ import AudioSystemBanner from '../AudioSystemBanner/AudioSystemBanner';
 import { useInitAudioSystemListeners, useCleanupAudioSystemListeners } from '../../stores/audioSystemStore';
 import DisplayModeButton from './DisplayModeButton';
 import ConversationRow from './ConversationRow';
+import SessionSidebar from '../Sidebar/SessionSidebar';
+import CicadaMainDetail from './CicadaMainDetail';
+import { useMeetingStore } from '../../stores/meetingStore';
+import { useSpeakStore } from '../../stores/speakStore';
 import {
   hideSupersededRaw,
   rawFirstPassItems,
@@ -384,6 +388,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     return provider === Provider.OPENAI ||
            provider === Provider.GEMINI ||
            provider === Provider.OPENAI_COMPATIBLE ||
+           provider === Provider.ANT_LING ||
            provider === Provider.LOCAL_INFERENCE ||
            provider === Provider.LOCAL_NATIVE;
   }, [provider]);
@@ -398,6 +403,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     () => isPttLikeMode(currentTurnDetectionMode),
     [currentTurnDetectionMode]
   );
+  const speakShortcut = useSpeakStore((s) => s.speakShortcut);
 
   // Advanced mode text input state
   const [advancedTextInput, setAdvancedTextInput] = useState('');
@@ -721,7 +727,8 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       }
 
       // Update participant items state
-      setParticipantItems(client.getConversationItems());
+      const pItems = client.getConversationItems().map(it => it.source ? it : { ...it, source: 'participant' as const });
+      setParticipantItems(pItems);
     },
     onClose: async () => {
       // Bail out if the session is already inactive. This handler can be invoked
@@ -763,6 +770,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     const config = {
       ...baseConfig,
       textOnly: true,
+      channelSource: 'participant' as const,
       // Override turn detection to use semantic VAD for participant audio (OpenAI-compatible)
       turnDetection: {
         type: 'semantic_vad' as const,
@@ -1761,6 +1769,14 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         if (item.status === 'completed' && item.role === 'assistant' && 
             (item.formatted?.text || item.formatted?.transcript)) {
           setTranslationCount(prevCount => prevCount + 1);
+
+          // Voice the translation directly into the virtual microphone (SokujiVirtualAudio) so meeting apps hear it
+          const translatedText = (item.formatted?.transcript || item.formatted?.text || '').trim();
+          if (translatedText && !(item as any).hasSpokenToVirtualMic) {
+            (item as any).hasSpokenToVirtualMic = true;
+            const targetLang = getCurrentProviderSettings().targetLanguage || 'en';
+            void useSpeakStore.getState().speakVirtualMicText(translatedText, targetLang);
+          }
           
           // Track translation completion with latency
           if (item.createdAt) {
@@ -1778,6 +1794,17 @@ const MainPanel: React.FC<MainPanelProps> = () => {
               latency_ms: translationLatency,
               provider: provider
             });
+          }
+        }
+
+        // Handle single-item bilingual translations from user turns
+        if (item.status === 'completed' && item.role === 'user' && 
+            item.formatted?.text && item.formatted?.transcript && item.formatted.text !== item.formatted.transcript) {
+          const translatedText = item.formatted.text.trim();
+          if (translatedText && !(item as any).hasSpokenToVirtualMic) {
+            (item as any).hasSpokenToVirtualMic = true;
+            const targetLang = getCurrentProviderSettings().targetLanguage || 'en';
+            void useSpeakStore.getState().speakVirtualMicText(translatedText, targetLang);
           }
         }
         
@@ -2785,7 +2812,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         // Note: AST2 handles response creation server-side via VAD, so skip client.createResponse() for it
         // Note: LOCAL_INFERENCE always calls createResponse() — for streaming ASR it flushes the
         //       pending utterance; for offline ASR (VAD-based) it's harmless (silence frames handle it)
-        const MIN_VOICE_CHUNKS = 5; // At least 5 non-silent chunks (~0.5 seconds of speech)
+        const minRequiredChunks = effectiveProvider === Provider.ANT_LING ? 2 : MIN_VOICE_CHUNKS;
         if (client && usesLocalSileroVad(effectiveProvider)) {
           client.createResponse();
         } else if (client && effectiveProvider === Provider.GEMINI) {
@@ -2797,11 +2824,11 @@ const MainPanel: React.FC<MainPanelProps> = () => {
             client.cancelPttTurn?.();
             console.debug(`[Sokuji] [MainPanel] PTT: Gemini turn cancelled - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${MIN_VOICE_CHUNKS})`);
           }
-        } else if (client && effectiveProvider !== Provider.VOLCENGINE_AST2 && pttVoiceChunkCountRef.current >= MIN_VOICE_CHUNKS) {
+        } else if (client && effectiveProvider !== Provider.VOLCENGINE_AST2 && pttVoiceChunkCountRef.current >= minRequiredChunks) {
           // Model drift prevention is handled by the silent anchor mechanism (useEffect)
           client.createResponse();
         } else if (client && effectiveProvider !== Provider.VOLCENGINE_AST2) {
-          console.debug(`[Sokuji] [MainPanel] PTT: Skipping response - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${MIN_VOICE_CHUNKS})`);
+          console.debug(`[Sokuji] [MainPanel] PTT: Skipping response - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${minRequiredChunks})`);
         }
       }
     } catch (error) {
@@ -2823,8 +2850,8 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       return;
     }
 
-    // If AI is responding (OpenAI), queue the message for later
-    if (isAIResponding && (provider === Provider.OPENAI || provider === Provider.OPENAI_COMPATIBLE)) {
+    // If AI is responding (OpenAI/Ant-Ling), queue the message for later
+    if (isAIResponding && (provider === Provider.OPENAI || provider === Provider.OPENAI_COMPATIBLE || provider === Provider.ANT_LING)) {
       console.log('[MainPanel] AI is responding, queuing text message');
       pendingTextRef.current = text;
       return;
@@ -3444,9 +3471,18 @@ const MainPanel: React.FC<MainPanelProps> = () => {
    * Set up push-to-talk keyboard shortcut
    */
   useEffect(() => {
-    // Enable space hold-to-speak when session is active and we're in a PTT-like mode
-    // (Push-to-Talk, Push-to-Translate, or OpenAI's Disabled mode)
-    const isHoldToSpeakEnabled = isSessionActive && speakerChannelActive && canHoldToSpeak;
+    // Enable hold-to-speak whenever session is active with microphone active
+    const isHoldToSpeakEnabled = isSessionActive && speakerChannelActive;
+
+    const isShortcutMatch = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        return true;
+      }
+      if (speakShortcut === 'RightOption' || speakShortcut === 'AltRight') {
+        return e.code === 'AltRight' || (e.key === 'Alt' && e.location === 2);
+      }
+      return e.code === speakShortcut || e.key === speakShortcut;
+    };
 
     // Handle key down (start recording)
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -3457,7 +3493,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                              activeElement?.getAttribute('contenteditable') === 'true';
       if (isInputFocused) return;
 
-      if (!isHoldToSpeakEnabled || e.repeat || e.code !== 'Space') return;
+      if (!isHoldToSpeakEnabled || e.repeat || !isShortcutMatch(e)) return;
       e.preventDefault(); // Prevent page scrolling
       startRecording();
     };
@@ -3471,7 +3507,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                              activeElement?.getAttribute('contenteditable') === 'true';
       if (isInputFocused) return;
 
-      if (!isHoldToSpeakEnabled || e.code !== 'Space') return;
+      if (!isHoldToSpeakEnabled || !isShortcutMatch(e)) return;
       e.preventDefault(); // Prevent page scrolling
       stopRecording();
     };
@@ -3495,7 +3531,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [isSessionActive, speakerChannelActive, canHoldToSpeak, startRecording, stopRecording, isRecording]);
+  }, [isSessionActive, speakerChannelActive, canHoldToSpeak, speakShortcut, startRecording, stopRecording, isRecording]);
 
   // Session tracking for analytics
   useEffect(() => {
@@ -3554,6 +3590,26 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       }
     }
   }, [isSessionActive, sessionId, sessionStartTime, translationCount, getCurrentProviderSettings, setSessionId, setSessionStartTime, setTranslationCount, trackEvent, speakerChannelActive, participantChannelActive]);
+
+  // Sync live session to meeting store for Cicada-style history and live notes
+  useEffect(() => {
+    if (isSessionActive && sessionId && sessionStartTime) {
+      useMeetingStore.getState().syncLiveSession({
+        sessionId,
+        sessionStartTime,
+        combinedItems,
+        isLive: true,
+      });
+    }
+  }, [isSessionActive, sessionId, sessionStartTime, combinedItems]);
+
+  const prevActiveSessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isSessionActive && prevActiveSessionIdRef.current) {
+      void useMeetingStore.getState().finishLiveSession(prevActiveSessionIdRef.current);
+    }
+    prevActiveSessionIdRef.current = isSessionActive ? sessionId : null;
+  }, [isSessionActive, sessionId]);
 
   /**
    * Send anchor message if needed to prevent model drift
@@ -3790,516 +3846,388 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       <AudioSystemBanner />
       <UpdateDialog />
       <div className="main-panel">
-        {/* Conversation toolbar */}
-        {!showInterpreterLauncher && (isSessionActive || combinedItems.length > 0) && (
-          <>
-          <div className="conversation-toolbar">
-            {/*
-              Show each display-mode button when its channel is intent-active for
-              the (current or locked) session, OR when items already exist for that
-              channel — the items fallback keeps the buttons available after the
-              session ends so users can still reconfigure display of historical
-              conversation. Previously: speaker button always showed (wrong in
-              participant-only mode) and participant button was late-binding on
-              items (no preconfig before the first translation arrived).
-            */}
-            {(effectiveMode === 'speaker' || effectiveMode === 'both' || items.length > 0) && (
-              <DisplayModeButton
-                scope="speaker"
-                value={speakerDisplayMode}
-                onChange={setSpeakerDisplayMode}
-              />
-            )}
-            {(effectiveMode === 'participant' || effectiveMode === 'both' || participantItems.length > 0) && (
-              <DisplayModeButton
-                scope="participant"
-                value={participantDisplayMode}
-                onChange={setParticipantDisplayMode}
-              />
-            )}
-            <button
-              className="font-size-btn"
-              onClick={() => setConversationFontSize(Math.max(CONVERSATION_FONT_SIZE_MIN, conversationFontSize - 2))}
-              disabled={conversationFontSize <= CONVERSATION_FONT_SIZE_MIN}
-              title={t('mainPanel.decreaseFontSize', 'Decrease font size')}
-              aria-label={t('mainPanel.decreaseFontSize', 'Decrease font size')}
-              type="button"
-            >
-              <AArrowDown size={14} />
-            </button>
-            <button
-              className="font-size-btn"
-              onClick={() => setConversationFontSize(Math.min(CONVERSATION_FONT_SIZE_MAX, conversationFontSize + 2))}
-              disabled={conversationFontSize >= CONVERSATION_FONT_SIZE_MAX}
-              title={t('mainPanel.increaseFontSize', 'Increase font size')}
-              aria-label={t('mainPanel.increaseFontSize', 'Increase font size')}
-              type="button"
-            >
-              <AArrowUp size={14} />
-            </button>
-            <button
-              className="font-size-btn"
-              onClick={() => setConversationCompactMode(!conversationCompactMode)}
-              aria-pressed={conversationCompactMode}
-              title={
-                conversationCompactMode
-                  ? t('mainPanel.expandedView', 'Expanded view')
-                  : t('mainPanel.compactView', 'Compact view')
-              }
-              aria-label={
-                conversationCompactMode
-                  ? t('mainPanel.expandedView', 'Expanded view')
-                  : t('mainPanel.compactView', 'Compact view')
-              }
-              type="button"
-            >
-              {conversationCompactMode ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
-            </button>
-            {/* Export */}
-            <ExportButton
-              combinedItems={finalItems}
-              provider={provider}
-              currentProviderSettings={currentSettings}
-              localInferenceSettings={localInferenceSettings}
-              sourceLanguage={sourceLanguage}
-              targetLanguage={targetLanguage}
-            />
-            <button
-              className="font-size-btn"
-              ref={displayPopoverFloating.refs.setReference}
-              {...displayPopoverInteractions.getReferenceProps()}
-              title={t('mainPanel.displaySettings', 'Display settings')}
-              aria-label={t('mainPanel.displaySettings', 'Display settings')}
-              type="button"
-            >
-              <Settings size={14} />
-            </button>
-            <button
-              className="clear-conversation-btn"
-              onClick={requestClearConversation}
-              title={t('mainPanel.clearConversation', 'Clear conversation')}
-              aria-label={t('mainPanel.clearConversation', 'Clear conversation')}
-              type="button"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-          {displayPopoverOpen && (
-            <FloatingPortal>
-              <div
-                ref={displayPopoverFloating.refs.setFloating}
-                style={displayPopoverFloating.floatingStyles}
-                aria-label={t('mainPanel.displaySettings', 'Display settings')}
-                {...displayPopoverInteractions.getFloatingProps()}
-              >
-                <DisplaySettingsPopover source="conversation" />
-              </div>
-            </FloatingPortal>
-          )}
-          </>
-        )}
-        {/* Conversation Display */}
-        <div
-          className={`conversation-display${splitConversationView ? ' split-view' : ''}`}
-          ref={conversationContainerRef}
-          style={{ '--conversation-font-size': `${conversationFontSize}px` } as React.CSSProperties}
-        >
-          {subtitleTakeover ? (
+        {!isExtension() ? (
+          subtitleTakeover ? (
             <div className="empty-state">
               <Captions size={32} />
               <p>{t('mainPanel.subtitleTakeover', 'Translations are showing in the subtitle overlay')}</p>
             </div>
-          ) : showInterpreterLauncher ? (
-            <div className="interpreter-launcher">
-              <div className="interpreter-launcher__intro">
-                <span className="interpreter-launcher__eyebrow">
-                  <span className="interpreter-launcher__live-dot" />
-                  {t('mainPanel.extensionLive', '实时翻译')}
-                </span>
-                <h1>{t('mainPanel.extensionHeading', '边看视频，边出双语字幕')}</h1>
-                <p>{t('mainPanel.extensionDescription', '播放这个标签页里的视频、直播或电影，会实时给出双语字幕。')}</p>
+          ) : (
+            <div className="cicada-workspace-layout">
+              <SessionSidebar />
+              <CicadaMainDetail />
+            </div>
+          )
+        ) : (
+          <>
+            {/* Conversation toolbar */}
+            {!showInterpreterLauncher && (isSessionActive || combinedItems.length > 0) && (
+              <>
+                <div className="conversation-toolbar">
+                  {(effectiveMode === 'speaker' || effectiveMode === 'both' || items.length > 0) && (
+                    <DisplayModeButton
+                      scope="speaker"
+                      value={speakerDisplayMode}
+                      onChange={setSpeakerDisplayMode}
+                    />
+                  )}
+                  {(effectiveMode === 'participant' || effectiveMode === 'both' || participantItems.length > 0) && (
+                    <DisplayModeButton
+                      scope="participant"
+                      value={participantDisplayMode}
+                      onChange={setParticipantDisplayMode}
+                    />
+                  )}
+                  <button
+                    className="font-size-btn"
+                    onClick={() => setConversationFontSize(Math.max(CONVERSATION_FONT_SIZE_MIN, conversationFontSize - 2))}
+                    disabled={conversationFontSize <= CONVERSATION_FONT_SIZE_MIN}
+                    title={t('mainPanel.decreaseFontSize', 'Decrease font size')}
+                    aria-label={t('mainPanel.decreaseFontSize', 'Decrease font size')}
+                    type="button"
+                  >
+                    <AArrowDown size={14} />
+                  </button>
+                  <button
+                    className="font-size-btn"
+                    onClick={() => setConversationFontSize(Math.min(CONVERSATION_FONT_SIZE_MAX, conversationFontSize + 2))}
+                    disabled={conversationFontSize >= CONVERSATION_FONT_SIZE_MAX}
+                    title={t('mainPanel.increaseFontSize', 'Increase font size')}
+                    aria-label={t('mainPanel.increaseFontSize', 'Increase font size')}
+                    type="button"
+                  >
+                    <AArrowUp size={14} />
+                  </button>
+                  <button
+                    className="font-size-btn"
+                    onClick={() => setConversationCompactMode(!conversationCompactMode)}
+                    aria-pressed={conversationCompactMode}
+                    title={
+                      conversationCompactMode
+                        ? t('mainPanel.expandedView', 'Expanded view')
+                        : t('mainPanel.compactView', 'Compact view')
+                    }
+                    aria-label={
+                      conversationCompactMode
+                        ? t('mainPanel.expandedView', 'Expanded view')
+                        : t('mainPanel.compactView', 'Compact view')
+                    }
+                    type="button"
+                  >
+                    {conversationCompactMode ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+                  </button>
+                  <ExportButton
+                    combinedItems={finalItems}
+                    provider={provider}
+                    currentProviderSettings={currentSettings}
+                    localInferenceSettings={localInferenceSettings}
+                    sourceLanguage={sourceLanguage}
+                    targetLanguage={targetLanguage}
+                  />
+                  <button
+                    className="font-size-btn"
+                    ref={displayPopoverFloating.refs.setReference}
+                    {...displayPopoverInteractions.getReferenceProps()}
+                    title={t('mainPanel.displaySettings', 'Display settings')}
+                    aria-label={t('mainPanel.displaySettings', 'Display settings')}
+                    type="button"
+                  >
+                    <Settings size={14} />
+                  </button>
+                  <button
+                    className="clear-conversation-btn"
+                    onClick={requestClearConversation}
+                    title={t('mainPanel.clearConversation', 'Clear conversation')}
+                    aria-label={t('mainPanel.clearConversation', 'Clear conversation')}
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                {displayPopoverOpen && (
+                  <FloatingPortal>
+                    <div
+                      ref={displayPopoverFloating.refs.setFloating}
+                      style={displayPopoverFloating.floatingStyles}
+                      aria-label={t('mainPanel.displaySettings', 'Display settings')}
+                      {...displayPopoverInteractions.getFloatingProps()}
+                    >
+                      <DisplaySettingsPopover source="conversation" />
+                    </div>
+                  </FloatingPortal>
+                )}
+              </>
+            )}
+
+            {/* Conversation Display */}
+            <div
+              className={`conversation-display${splitConversationView ? ' split-view' : ''}`}
+              ref={conversationContainerRef}
+              style={{ '--conversation-font-size': `${conversationFontSize}px` } as React.CSSProperties}
+            >
+              {subtitleTakeover ? (
+                <div className="empty-state">
+                  <Captions size={32} />
+                  <p>{t('mainPanel.subtitleTakeover', 'Translations are showing in the subtitle overlay')}</p>
+                </div>
+              ) : showInterpreterLauncher ? (
+                <div className="interpreter-launcher">
+                  <div className="interpreter-launcher__intro">
+                    <span className="interpreter-launcher__eyebrow">
+                      <span className="interpreter-launcher__live-dot" />
+                      {t('mainPanel.extensionLive', '实时翻译')}
+                    </span>
+                    <h1>{t('mainPanel.extensionHeading', '边看视频，边出双语字幕')}</h1>
+                    <p>{t('mainPanel.extensionDescription', '播放这个标签页里的视频、直播或电影，会实时给出双语字幕。')}</p>
+                  </div>
+
+                  <div className="interpreter-launcher__language-row">
+                    <LanguagePairPicker
+                      disabled={isSessionActive || isInitializing}
+                      variant="launcher"
+                    />
+                  </div>
+
+                  <label className="interpreter-launcher__youtube">
+                    <input
+                      type="checkbox"
+                      checked={useYouTubeCaptions}
+                      disabled={isSessionActive || isInitializing}
+                      onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
+                    />
+                    <span>YouTube 字幕轨</span>
+                    <small>用视频自带字幕按句翻译。没有字幕才用语音识别</small>
+                  </label>
+
+                  <SegmentationModePicker
+                    variant="launcher"
+                    disabled={isSessionActive || isInitializing}
+                  />
+
+                  <button
+                    className="interpreter-launcher__start"
+                    type="button"
+                    onClick={connectConversation}
+                    disabled={!canStartSession}
+                    title={!canStartSession ? startBlockMessage : undefined}
+                  >
+                    {isInitializing ? <Loader className="spinning" size={20} /> : <span aria-hidden="true">▶</span>}
+                    {isInitializing
+                      ? t('simplePanel.connecting', '连接中...')
+                      : t('simplePanel.start', '开始')}
+                  </button>
+
+                  <div className="interpreter-launcher__source">
+                    <span className="interpreter-launcher__source-label">
+                      {t('mainPanel.extensionAudioSource', '音频来源')}
+                    </span>
+                    <ModePicker
+                      mode={effectiveMode}
+                      locked={isInitializing}
+                      missingDeviceForMode={missingDeviceForMode}
+                      extensionCaptureLabels
+                      onSegmentClick={(target, el) => {
+                        if (target === effectiveMode) {
+                          setModePopoverAnchor(el);
+                          setModePopoverOpen(!modePopoverOpen);
+                        } else {
+                          handleModeSwitch(target);
+                          setModePopoverOpen(false);
+                        }
+                      }}
+                    />
+                    <p>
+                      {effectiveMode === 'participant'
+                        ? t('mainPanel.extensionTabHint', '先在这个标签页打开视频，再点开始。')
+                        : effectiveMode === 'speaker'
+                          ? t('mainPanel.extensionMicHint', '对着麦克风说话，再点开始。')
+                          : t('mainPanel.extensionBothHint', '同时翻译这个标签页和你的麦克风。')}
+                    </p>
+                  </div>
+
+                  {combinedItems.some((item) => item.type === 'error') && (
+                    <div className="interpreter-launcher__errors" role="alert">
+                      {combinedItems
+                        .filter((item) => item.type === 'error')
+                        .slice(-2)
+                        .map((item, index) => (
+                          <div key={item.id || index}>
+                            <AlertCircle size={15} />
+                            <span>{item.formatted?.text || t('mainPanel.unknownError', 'Unknown error')}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : combinedItems.length === 0 ? (
+                <div className={`empty-state${isSessionActive ? ' listening' : ''}`}>
+                  {isSessionActive ? <Captions size={32} /> : <MessageSquare size={32} />}
+                  <p>
+                    {isSessionActive
+                      ? t('mainPanel.listeningForTabAudio', 'Listening to tab audio… Keep the video playing; subtitles will appear when speech is detected.')
+                      : t('simplePanel.startToBegin', 'Click Start to begin real-time translation')}
+                  </p>
+                </div>
+              ) : (
+                <div className={`conversation-list${splitConversationView ? ' split' : ''}`}>
+                  {splitConversationView && (
+                    <div
+                      className="conversation-list__col conversation-list__col--raw"
+                      ref={rawConversationColumnRef}
+                    >
+                      {renderConversationRows(rawColumnItems)}
+                    </div>
+                  )}
+                  <div className="conversation-list__col" ref={refinedConversationColumnRef}>
+                    {renderConversationRows(refinedColumnItems)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Text Input Section */}
+            {isSessionActive && supportsTextInput && (
+              <div className="text-input-section">
+                <div className="text-input-container">
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder={t('mainPanel.typeMessage', 'Text to translate...')}
+                    value={advancedTextInput}
+                    onChange={(e) => setAdvancedTextInput(e.target.value)}
+                    onKeyDown={handleAdvancedTextKeyDown}
+                    maxLength={1000}
+                  />
+                  <button
+                    className="tts-download-btn"
+                    onClick={handleDownloadLatestTts}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={!latestTtsAudioItemId}
+                    title={latestTtsAudioItemId
+                      ? t('mainPanel.downloadLatestVoice', 'Download latest generated voice')
+                      : t('mainPanel.noGeneratedVoice', 'No generated voice to download yet')}
+                    aria-label={t('mainPanel.downloadLatestVoice', 'Download latest generated voice')}
+                    type="button"
+                  >
+                    <Download size={16} />
+                  </button>
+                  <button
+                    className={`send-btn ${!advancedTextInput.trim() ? 'disabled' : ''}`}
+                    onClick={handleAdvancedTextSubmit}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={!advancedTextInput.trim() || isAdvancedSending}
+                    title={t('mainPanel.send', 'Send')}
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="interpreter-launcher__language-row">
-                <LanguagePairPicker
-                  disabled={isSessionActive || isInitializing}
-                  variant="launcher"
-                />
-              </div>
-
-              <label className="interpreter-launcher__youtube">
-                <input
-                  type="checkbox"
-                  checked={useYouTubeCaptions}
-                  disabled={isSessionActive || isInitializing}
-                  onChange={() => setUseYouTubeCaptions(!useYouTubeCaptions)}
-                />
-                <span>YouTube 字幕轨</span>
-                <small>用视频自带字幕按句翻译。没有字幕才用语音识别</small>
-              </label>
-
-              <SegmentationModePicker
-                variant="launcher"
-                disabled={isSessionActive || isInitializing}
-              />
-
-              <button
-                className="interpreter-launcher__start"
-                type="button"
-                onClick={connectConversation}
-                disabled={!canStartSession}
-                title={!canStartSession ? startBlockMessage : undefined}
-              >
-                {isInitializing ? <Loader className="spinning" size={20} /> : <span aria-hidden="true">▶</span>}
-                {isInitializing
-                  ? t('simplePanel.connecting', '连接中...')
-                  : t('simplePanel.start', '开始')}
-              </button>
-
-              <div className="interpreter-launcher__source">
-                <span className="interpreter-launcher__source-label">
-                  {t('mainPanel.extensionAudioSource', '音频来源')}
-                </span>
+            {/* Control Footer */}
+            {!showInterpreterLauncher && (
+              <div className="control-footer basic">
+                <span className={`status-dot ${isReconnecting ? 'reconnecting' : isSessionActive ? 'active' : ''}`} />
+                {isReconnecting && (
+                  <span className="reconnecting-label">
+                    {t('connectionStatus.reconnecting', 'Reconnecting...')}
+                  </span>
+                )}
                 <ModePicker
                   mode={effectiveMode}
-                  locked={isInitializing}
+                  locked={isSessionActive || isInitializing}
                   missingDeviceForMode={missingDeviceForMode}
-                  extensionCaptureLabels
+                  extensionCaptureLabels={extensionExperience}
+                  visibleModes={compactExtensionTabFooter ? ['participant'] : undefined}
                   onSegmentClick={(target, el) => {
                     if (target === effectiveMode) {
-                      setModePopoverAnchor(el);
-                      setModePopoverOpen(!modePopoverOpen);
+                      if (modePopoverOpen) {
+                        setModePopoverOpen(false);
+                      } else {
+                        setModePopoverAnchor(el);
+                        setModePopoverOpen(true);
+                      }
                     } else {
                       handleModeSwitch(target);
                       setModePopoverOpen(false);
                     }
                   }}
                 />
-                <p>
-                  {effectiveMode === 'participant'
-                    ? t('mainPanel.extensionTabHint', '先在这个标签页打开视频，再点开始。')
-                    : effectiveMode === 'speaker'
-                      ? t('mainPanel.extensionMicHint', '对着麦克风说话，再点开始。')
-                      : t('mainPanel.extensionBothHint', '同时翻译这个标签页和你的麦克风。')}
-                </p>
-              </div>
 
-              {combinedItems.some((item) => item.type === 'error') && (
-                <div className="interpreter-launcher__errors" role="alert">
-                  {combinedItems
-                    .filter((item) => item.type === 'error')
-                    .slice(-2)
-                    .map((item, index) => (
-                      <div key={item.id || index}>
-                        <AlertCircle size={15} />
-                        <span>{item.formatted?.text || t('mainPanel.unknownError', 'Unknown error')}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          ) : combinedItems.length === 0 ? (
-            <div className={`empty-state${isSessionActive ? ' listening' : ''}`}>
-              {isSessionActive ? <Captions size={32} /> : <MessageSquare size={32} />}
-              <p>
-                {isSessionActive
-                  ? t('mainPanel.listeningForTabAudio', 'Listening to tab audio… Keep the video playing; subtitles will appear when speech is detected.')
-                  : t('simplePanel.startToBegin', 'Click Start to begin real-time translation')}
-              </p>
-            </div>
-          ) : (
-            <div className={`conversation-list${splitConversationView ? ' split' : ''}`}>
-              {splitConversationView && (
-                <div
-                  className="conversation-list__col conversation-list__col--raw"
-                  ref={rawConversationColumnRef}
-                >
-                  {renderConversationRows(rawColumnItems)}
-                </div>
-              )}
-              <div className="conversation-list__col" ref={refinedConversationColumnRef}>
-                {renderConversationRows(refinedColumnItems)}
-              </div>
-            </div>
-          )}
-        </div>
+                <span className="footer-spacer" />
 
-        {/* Text Input Section */}
-        {isSessionActive && supportsTextInput && (
-          <div className="text-input-section">
-            <div className="text-input-container">
-              <input
-                type="text"
-                className="text-input"
-                placeholder={t('mainPanel.typeMessage', 'Text to translate...')}
-                value={advancedTextInput}
-                onChange={(e) => setAdvancedTextInput(e.target.value)}
-                onKeyDown={handleAdvancedTextKeyDown}
-                maxLength={1000}
-              />
-              <button
-                className="tts-download-btn"
-                onClick={handleDownloadLatestTts}
-                onMouseDown={(e) => e.preventDefault()}
-                disabled={!latestTtsAudioItemId}
-                title={latestTtsAudioItemId
-                  ? t('mainPanel.downloadLatestVoice', 'Download latest generated voice')
-                  : t('mainPanel.noGeneratedVoice', 'No generated voice to download yet')}
-                aria-label={t('mainPanel.downloadLatestVoice', 'Download latest generated voice')}
-                type="button"
-              >
-                <Download size={16} />
-              </button>
-              <button
-                className={`send-btn ${!advancedTextInput.trim() ? 'disabled' : ''}`}
-                onClick={handleAdvancedTextSubmit}
-                onMouseDown={(e) => e.preventDefault()}
-                disabled={!advancedTextInput.trim() || isAdvancedSending}
-                title={t('mainPanel.send', 'Send')}
-              >
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Control Footer — Basic Mode */}
-        {uiMode === 'basic' && !showInterpreterLauncher && (
-          <div className="control-footer basic">
-            <span className={`status-dot ${isReconnecting ? 'reconnecting' : isSessionActive ? 'active' : ''}`} />
-            {isReconnecting && (
-              <span className="reconnecting-label">
-                {t('connectionStatus.reconnecting', 'Reconnecting...')}
-              </span>
-            )}
-            <ModePicker
-              mode={effectiveMode}
-              locked={isSessionActive || isInitializing}
-              missingDeviceForMode={missingDeviceForMode}
-              extensionCaptureLabels={extensionExperience}
-              visibleModes={compactExtensionTabFooter ? ['participant'] : undefined}
-              onSegmentClick={(target, el) => {
-                if (target === effectiveMode) {
-                  // Toggle: clicking the active segment again closes the popover.
-                  if (modePopoverOpen) {
-                    setModePopoverOpen(false);
-                  } else {
-                    setModePopoverAnchor(el);
-                    setModePopoverOpen(true);
-                  }
-                } else {
-                  handleModeSwitch(target);
-                  setModePopoverOpen(false);
-                }
-              }}
-            />
-
-            <span className="footer-spacer" />
-
-            <div className="action-cluster">
-              {isSessionActive && speakerChannelActive && canHoldToSpeak && (
-                <button
-                  className={`push-to-talk-btn ${isRecording ? 'recording' : ''}`}
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  onTouchStart={startRecording}
-                  onTouchEnd={stopRecording}
-                >
-                  <Mic size={12} />
-                  <span className="btn-text">{isRecording ? t('simplePanel.release', 'Release') : t('simplePanel.holdToSpeak', 'Hold')}</span>
-                </button>
-              )}
-              <button
-                className={`main-action-btn ${isSessionActive ? 'stop' : 'start'}`}
-                onClick={isSessionActive ? disconnectConversation : connectConversation}
-                disabled={!canStartSession && !isSessionActive}
-                title={!isSessionActive ? startBlockMessage : undefined}
-              >
-                {isInitializing ? (
-                  <>
-                    <Loader className="spinning" size={16} />
-                    <span className="btn-text">
-                      {initProgress
-                        ? t('simplePanel.initProgress', 'Loading ({{completed}}/{{total}})...', { completed: initProgress.completed, total: initProgress.total })
-                        : nativeAsrLoading
-                          ? t('simplePanel.loadingModel', 'Loading model…')
-                          : t('simplePanel.connecting', 'Connecting...')}
-                    </span>
-                  </>
-                ) : isSessionActive ? (
-                  <>
-                    <span className="stop-icon">■</span>
-                    <span className="btn-text">{t('simplePanel.stop', 'Stop')}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="play-icon">▶</span>
-                    <span className="btn-text">{t('simplePanel.start', 'Start')}</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <span className="footer-spacer" />
-
-            <div className="footer-metadata">
-              <LanguagePairPicker
-                disabled={isSessionActive || isInitializing}
-                variant="footer"
-                showSettingsButton={false}
-              />
-              {isSessionActive && (
-                <span className="session-duration">{sessionDuration}</span>
-              )}
-              {isSessionActive && sonioxCountdown && (
-                <span className={`session-remaining-time${sonioxRemainingLow ? ' low' : ''}`}>
-                  {formatRemainingTime(sonioxCountdown.remainingMs)}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Control Footer — Advanced Mode */}
-        {uiMode === 'advanced' && !showInterpreterLauncher && (
-          <div className="control-footer advanced">
-            <span className={`status-dot ${isSessionActive ? 'active' : ''}`} />
-
-            <ModePicker
-              mode={effectiveMode}
-              locked={isSessionActive || isInitializing}
-              missingDeviceForMode={missingDeviceForMode}
-              extensionCaptureLabels={extensionExperience}
-              visibleModes={compactExtensionTabFooter ? ['participant'] : undefined}
-              onSegmentClick={(target, el) => {
-                if (target === effectiveMode) {
-                  // Toggle: clicking the active segment again closes the popover.
-                  if (modePopoverOpen) {
-                    setModePopoverOpen(false);
-                  } else {
-                    setModePopoverAnchor(el);
-                    setModePopoverOpen(true);
-                  }
-                } else {
-                  handleModeSwitch(target);
-                  setModePopoverOpen(false);
-                }
-              }}
-            />
-
-            {/* Input waveforms (mic + system) grouped with a tight gap so
-                they read as a pair, distinct from the wider footer rhythm. */}
-            {(effectiveMode === 'speaker' || effectiveMode === 'participant' || effectiveMode === 'both') && (
-              <div className="waveform-input-group">
-                {(effectiveMode === 'speaker' || effectiveMode === 'both') && (
-                  <WaveformStrip
-                    kind="mic"
-                    canvasRef={clientCanvasRef}
-                    width={effectiveMode === 'both' ? 'half' : 'full'}
-                    title={t('mainPanel.waveformMicTooltip', 'Your microphone — your voice being captured for translation')}
-                  />
-                )}
-                {(effectiveMode === 'participant' || effectiveMode === 'both') && (
-                  <WaveformStrip
-                    kind="system"
-                    canvasRef={systemCanvasRef}
-                    width={effectiveMode === 'both' ? 'half' : 'full'}
-                    title={t('mainPanel.waveformSystemTooltip', 'Participant audio captured for translation (browser tab / system audio)')}
-                  />
-                )}
-              </div>
-            )}
-
-            <span className="footer-spacer" />
-
-            <div className="action-cluster">
-              {isSessionActive && speakerChannelActive && canHoldToSpeak && (
-                <button
-                  className={`push-to-talk-button ${isRecording ? 'recording' : ''}`}
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  disabled={isMicMuted}
-                >
-                  <Mic size={14} />
-                  <span>
-                    {isRecording ? t('mainPanel.release') : !isMicMuted ? t('mainPanel.pushToTalk') : t('mainPanel.inputDeviceOff')}
-                  </span>
-                </button>
-              )}
-              <button
-                className={`session-button ${isSessionActive ? 'active' : ''}`}
-                onClick={() => {
-                  trackEvent('session_control_clicked', {
-                    action: isSessionActive ? 'stop' : 'start',
-                    method: 'button'
-                  });
-                  if (isSessionActive) {
-                    disconnectConversation();
-                  } else {
-                    connectConversation();
-                  }
-                }}
-                disabled={(!isSessionActive && !canStartSession) || isInitializing}
-              >
-                {isInitializing ? (
-                  <>
-                    <Loader size={14} className="spinner" />
-                    <span>
-                      {initProgress
-                        ? t('mainPanel.initProgress', 'Loading ({{completed}}/{{total}})...', { completed: initProgress.completed, total: initProgress.total })
-                        : t('mainPanel.initializing')}
-                    </span>
-                  </>
-                ) : isSessionActive ? (
-                  <>
-                    <X size={14} />
-                    <span>{t('mainPanel.endSession')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap size={14} />
-                    <span>{t('mainPanel.startSession')}</span>
-                    {startGate.reason && (
-                      <span className="tooltip">{startBlockMessage}</span>
+                <div className="action-cluster">
+                  {isSessionActive && speakerChannelActive && canHoldToSpeak && (
+                    <button
+                      className={`push-to-talk-btn ${isRecording ? 'recording' : ''}`}
+                      onMouseDown={startRecording}
+                      onMouseUp={stopRecording}
+                      onTouchStart={startRecording}
+                      onTouchEnd={stopRecording}
+                    >
+                      <Mic size={12} />
+                      <span className="btn-text">{isRecording ? t('simplePanel.release', 'Release') : t('simplePanel.holdToSpeak', 'Hold')}</span>
+                    </button>
+                  )}
+                  <button
+                    className={`main-action-btn ${isSessionActive ? 'stop' : 'start'}`}
+                    onClick={isSessionActive ? disconnectConversation : connectConversation}
+                    disabled={!canStartSession && !isSessionActive}
+                    title={!isSessionActive ? startBlockMessage : undefined}
+                  >
+                    {isInitializing ? (
+                      <>
+                        <Loader className="spinning" size={16} />
+                        <span className="btn-text">
+                          {initProgress
+                            ? t('simplePanel.initProgress', 'Loading ({{completed}}/{{total}})...', { completed: initProgress.completed, total: initProgress.total })
+                            : nativeAsrLoading
+                              ? t('simplePanel.loadingModel', 'Loading model…')
+                              : t('simplePanel.connecting', 'Connecting...')}
+                        </span>
+                      </>
+                    ) : isSessionActive ? (
+                      <>
+                        <span className="stop-icon">■</span>
+                        <span className="btn-text">{t('simplePanel.stop', 'Stop')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="play-icon">▶</span>
+                        <span className="btn-text">{t('simplePanel.start', 'Start')}</span>
+                      </>
                     )}
-                  </>
-                )}
-              </button>
+                  </button>
+                </div>
 
-              {isDevelopment() && (
-                <button
-                  className={`debug-button ${isTestTonePlaying ? 'active' : ''}`}
-                  onClick={playTestTone}
-                >
-                  <Wrench size={14} />
-                  <span>{isTestTonePlaying ? t('mainPanel.stopDebug') : t('mainPanel.debug')}</span>
-                </button>
-              )}
-            </div>
+                <span className="footer-spacer" />
 
-            {!compactExtensionTabFooter && <span className="footer-spacer" />}
-
-            {(!extensionExperience || effectiveMode === 'both') && (
-              <WaveformStrip kind="output" canvasRef={serverCanvasRef} width="full" title={t('mainPanel.waveformOutputTooltip', 'Audio sent to the virtual microphone (translation + passthrough)')} />
+                <div className="footer-metadata">
+                  <LanguagePairPicker
+                    disabled={isSessionActive || isInitializing}
+                    variant="footer"
+                    showSettingsButton={false}
+                  />
+                  {isSessionActive && (
+                    <span className="session-duration">{sessionDuration}</span>
+                  )}
+                  {isSessionActive && sonioxCountdown && (
+                    <span className={`session-remaining-time${sonioxRemainingLow ? ' low' : ''}`}>
+                      {formatRemainingTime(sonioxCountdown.remainingMs)}
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
-
-            <div className="footer-metadata">
-              <LanguagePairPicker
-                disabled={isSessionActive || isInitializing}
-                variant="footer"
-                showSettingsButton={false}
-              />
-              {isSessionActive && (
-                <span className="session-duration">{sessionDuration}</span>
-              )}
-              {isSessionActive && sonioxCountdown && (
-                <span className={`session-remaining-time${sonioxRemainingLow ? ' low' : ''}`}>
-                  {formatRemainingTime(sonioxCountdown.remainingMs)}
-                </span>
-              )}
-            </div>
-          </div>
+          </>
         )}
+
+        {/* Hidden audio canvasing refs keeping audio analysers running */}
+        <div style={{ display: 'none' }} aria-hidden="true">
+          <canvas ref={clientCanvasRef} />
+          <canvas ref={systemCanvasRef} />
+          <canvas ref={serverCanvasRef} />
+        </div>
 
         <AudioFeedbackWarning
           isVisible={showFeedbackWarning}

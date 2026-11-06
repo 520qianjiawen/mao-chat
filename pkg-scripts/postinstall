@@ -24,6 +24,8 @@ fi
 DRIVER_SOURCE=""
 if [ -n "$APP_PATH" ]; then
     for rel in \
+        "Contents/Resources/resources/drivers/MaoVirtualAudio.driver" \
+        "Contents/Resources/drivers/MaoVirtualAudio.driver" \
         "Contents/Resources/resources/drivers/SokujiVirtualAudio.driver" \
         "Contents/Resources/drivers/SokujiVirtualAudio.driver"
     do
@@ -34,7 +36,7 @@ if [ -n "$APP_PATH" ]; then
     done
 fi
 
-DRIVER_DEST="/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver"
+DRIVER_DEST="/Library/Audio/Plug-Ins/HAL/MaoVirtualAudio.driver"
 
 # Ensure HAL plugins directory exists
 HAL_DIR="/Library/Audio/Plug-Ins/HAL"
@@ -52,10 +54,14 @@ fi
 if [ -d "$DRIVER_SOURCE" ]; then
     echo "MAO Chat postinstall: Installing virtual audio driver from $DRIVER_SOURCE..."
 
-    # Remove old driver if it exists
+    # Remove old drivers if they exist
     if [ -d "$DRIVER_DEST" ]; then
-        echo "MAO Chat postinstall: Removing old driver..."
+        echo "MAO Chat postinstall: Removing old MaoVirtualAudio driver..."
         rm -rf "$DRIVER_DEST"
+    fi
+    if [ -d "/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver" ]; then
+        echo "MAO Chat postinstall: Removing legacy SokujiVirtualAudio driver..."
+        rm -rf "/Library/Audio/Plug-Ins/HAL/SokujiVirtualAudio.driver"
     fi
 
     # Copy the driver to the HAL plugins directory
@@ -68,7 +74,9 @@ if [ -d "$DRIVER_SOURCE" ]; then
     chmod -R 755 "$DRIVER_DEST"
 
     # Mark installed so the app can detect the driver more reliably
+    touch /Library/Audio/Plug-Ins/HAL/.mao_installed 2>/dev/null || true
     touch /Library/Audio/Plug-Ins/HAL/.sokuji_installed 2>/dev/null || true
+    chown root:wheel /Library/Audio/Plug-Ins/HAL/.mao_installed 2>/dev/null || true
     chown root:wheel /Library/Audio/Plug-Ins/HAL/.sokuji_installed 2>/dev/null || true
 
     # Restart CoreAudio to load the driver

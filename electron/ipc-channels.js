@@ -41,6 +41,15 @@ export const INVOKE_CHANNELS = [
   'check-vbcable',
   'install-vbcable',
   'check-sokuji-audio',
+  'check-mao-audio',
+  // Virtual microphone speech output & test
+  'speak-to-virtual-mic',
+  'play-file-to-virtual-mic',
+  'test-virtual-mic',
+  'list-system-voices',
+  // Local system speaker audio playback
+  'speak-local-audio',
+  'stop-local-audio',
   // System audio capture
   'supports-system-audio-capture',
   'list-system-audio-sources',
@@ -90,6 +99,9 @@ export const INVOKE_CHANNELS = [
   'subtitle:set-locked',
   'subtitle:set-fullscreen',
   'subtitle:get-screen-bounds',
+  'subtitle:set-ignore-mouse-events',
+  'subtitle:set-bounds',
+  'subtitle:reset-position',
   // Quick translation & Screenshot OCR
   'quick-translate:ocr-screenshot',
   'quick-translate:capture-selection',

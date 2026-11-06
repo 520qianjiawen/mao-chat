@@ -385,7 +385,7 @@ const useAudioStore = create<AudioStore>()(
         // live session, and initializeAudioService re-applies this same gate
         // at session start.
         if (state.audioService) {
-          state.audioService.setMonitorVolume(target === 'speaker' && !state.isMonitorMuted);
+          state.audioService.setMonitorVolume(!state.isMonitorMuted);
         }
 
         // Auto-pick first device for channels newly in scope without a selection.
@@ -781,17 +781,12 @@ const useAudioStore = create<AudioStore>()(
         // mode (mutex with participant). isMonitorMuted is the user's opt-in
         // preference within speaker mode; mode scope is the mutex.
         const { isMonitorMuted, mode } = get();
-        const monitorAudible = mode === 'speaker' && !isMonitorMuted;
+        const monitorAudible = !isMonitorMuted;
         audioService.setMonitorVolume(monitorAudible);
         await audioService.ensureVirtualSpeakerOutput();
         console.info(`[Sokuji] [AudioStore] Set initial monitor volume: ${monitorAudible ? '1.0' : '0.0'} (mode=${mode}, muted=${isMonitorMuted})`);
 
-        // Connect monitor device only when it's in scope (pure speaker mode).
-        // In participant/both mode the monitor is silenced above, so binding a
-        // device here would be pointless.
-        const deviceToConnect = mode === 'speaker'
-          ? (get().selectedMonitorDevice || devices?.defaultMonitorDevice)
-          : null;
+        const deviceToConnect = get().selectedMonitorDevice || devices?.defaultMonitorDevice;
         if (deviceToConnect) {
           console.info('[Sokuji] [AudioStore] Initialization complete, connecting monitor device:', deviceToConnect.deviceId);
           await get().connectMonitorDevice(deviceToConnect.deviceId, deviceToConnect.label);

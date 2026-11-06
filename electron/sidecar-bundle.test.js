@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import crypto from 'crypto';
@@ -201,9 +201,9 @@ describe('requiredSidecarVersion / bundleBaseUrl (spec S1/S4/S11)', () => {
     expect(requiredSidecarVersion({ env: {} })).toBe(req('../package.json').sidecarVersion);
     expect(() => requiredSidecarVersion({ env: {}, pkg: {} })).toThrow(/sidecarVersion/);
   });
-  it('derives the GitHub release URL from the version, env override replaces it', () => {
+  it('derives the bundle release URL from the version, env override replaces it', () => {
     expect(bundleBaseUrl('0.1.0', {}))
-      .toBe('https://github.com/kizuna-ai-lab/sokuji/releases/download/sidecar-v0.1.0');
+      .toBe('https://software.asg.li/mao-chat/sidecars/v0.1.0');
     expect(bundleBaseUrl('0.1.0', { SOKUJI_SIDECAR_BUNDLE_BASE_URL: 'http://localhost:8000/' }))
       .toBe('http://localhost:8000');
   });
@@ -384,6 +384,26 @@ describe('installBundle v2 pipeline (spec S4-S9)', () => {
       fsMod.createWriteStream = realCreateWriteStream;
       fsMod.renameSync = realRenameSync;
     }
+
+    expect(readFileSync(path.join(dest, 'app', 'hi.txt'), 'utf8')).toBe('hi');
+  });
+
+  it('overwrites an existing dangling symlink at dest without ENOTDIR', async () => {
+    const u = mkdtempSync(path.join(tmpdir(), 'sb-symlink-'));
+    const sku = 'mac';
+    const version = '9.9.9';
+    const name = archiveName(sku, version);
+    const dest = path.join(u, 'sidecar', sku);
+    mkdirSync(path.dirname(dest), { recursive: true });
+    // Create dangling symlink at dest
+    symlinkSync('/non/existent/path/sidecar-runtime', dest);
+
+    const manifest = manifestFor([{ name, size: fixture.length, sha256: sha(fixture) }]);
+    await expect(installBundle({
+      sku, version, userDataDir: u,
+      fetchImpl: fetchFor(manifest, { [name]: fixture }),
+      statfs: bigStatfs, env: {},
+    })).resolves.toEqual({ version });
 
     expect(readFileSync(path.join(dest, 'app', 'hi.txt'), 'utf8')).toBe('hi');
   });

@@ -6,7 +6,7 @@ import SubtitleStream from './SubtitleStream';
 import SubtitleIdle from './SubtitleIdle';
 import { deriveSubtitleIdleState } from './subtitleIdleState';
 import type { StartBlockReason, DeviceScope } from '../MainPanel/sessionStartGate';
-import { reasonToSettingsTarget } from '../MainPanel/sessionStartGate';
+import { reasonToSettingsTarget, reasonToI18n } from '../MainPanel/sessionStartGate';
 import useSettingsStore, {
   useExitSubtitleMode,
   useProvider,
@@ -149,6 +149,18 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
     hasRunSession: hasRunSessionRef.current,
     startRequestedAt: startRequestedAtRef.current,
   });
+
+  const disabledTooltip = useMemo(() => {
+    if (startGate.canStart) return undefined;
+    if (idleState.kind === 'blocked') {
+      const { key, defaultValue, values } = reasonToI18n(idleState.reason, idleState.balance);
+      return t(key, defaultValue, values);
+    }
+    if (idleState.kind === 'failed') {
+      return idleState.message;
+    }
+    return undefined;
+  }, [startGate.canStart, idleState, t]);
   // Mirrors isPttLikeMode in MainPanel — modes that send audio only while
   // the user holds Space.
   const canHoldToSpeak =
@@ -219,19 +231,27 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
   const [barVisible, setBarVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Reveal the bar and (re)arm an inactivity timer that hides it after
-  // AUTO_HIDE_MS. Driven by mouse MOVEMENT, not just enter/leave: in
-  // fullscreen the root fills the entire screen, so the pointer never
-  // "leaves" and a leave-only hide would keep the bar stuck visible.
-  // Movement-based inactivity hides correctly in both windowed and fullscreen.
+  // AUTO_HIDE_MS ONLY during active sessions. When idle, the bar stays visible
+  // so controls, timers, and indicators are permanently accessible.
   const revealBar = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setBarVisible(true);
-    hideTimer.current = setTimeout(() => setBarVisible(false), AUTO_HIDE_MS);
-  }, []);
+    if (isSessionActive) {
+      hideTimer.current = setTimeout(() => setBarVisible(false), AUTO_HIDE_MS);
+    }
+  }, [isSessionActive]);
   const onMouseLeave = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setBarVisible(false), AUTO_HIDE_MS);
+    if (isSessionActive) {
+      hideTimer.current = setTimeout(() => setBarVisible(false), AUTO_HIDE_MS);
+    }
   };
+  useEffect(() => {
+    if (!isSessionActive) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setBarVisible(true);
+    }
+  }, [isSessionActive]);
   // Clear the pending auto-hide timer on unmount so it can't fire after the
   // component is gone (movement-based revealBar arms one frequently).
   useEffect(() => () => {
@@ -286,11 +306,29 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
   // we double-guard: only persist while subtitle mode is still active. This
   // prevents the resize event triggered by exiting (setBounds(restore))
   // from being saved as subtitle bounds.
+  const [isSnapped, setIsSnapped] = useState(false);
   useEffect(() => {
     if (surface !== 'electron') return;
     if (!window.electron?.receive) return;
     let debounce: ReturnType<typeof setTimeout> | null = null;
     const handler = (bounds: { x: number; y: number; width: number; height: number }) => {
+      // Check center snapping on screen
+      void (async () => {
+        try {
+          const workArea = await window.electron?.invoke?.('subtitle:get-screen-bounds');
+          if (workArea && workArea.width) {
+            const screenCenter = workArea.x + workArea.width / 2;
+            const winCenter = bounds.x + bounds.width / 2;
+            if (Math.abs(winCenter - screenCenter) < 20) {
+              setIsSnapped(true);
+              setTimeout(() => setIsSnapped(false), 1200);
+            } else {
+              setIsSnapped(false);
+            }
+          }
+        } catch {}
+      })();
+
       if (debounce) clearTimeout(debounce);
       debounce = setTimeout(() => {
         if (!useSettingsStore.getState().subtitleModeActive) return;
@@ -343,11 +381,13 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
   // Record<string, string | number> lets us set CSS custom properties
   // without TS rejecting non-camelCase keys.
   const bgAlpha = subtitle.bgOpacity / 100;
+  const isTransparentSurface = !fullscreen;
   const rootStyle: React.CSSProperties & Record<string, string | number> = {
-    background: hexToRgba(subtitle.bgColor, bgAlpha),
+    background: isTransparentSurface ? 'transparent' : hexToRgba(subtitle.bgColor, bgAlpha),
     '--bar-opacity': barVisible ? 1 : 0,
     '--bar-pointer-events': barVisible ? 'auto' : 'none',
     '--subtitle-highlight-overlay': getHighlightOverlayForBg(subtitle.bgColor),
+    '--subtitle-capsule-bg': hexToRgba(subtitle.bgColor, Math.max(0.75, bgAlpha)),
   };
 
   // Expanded mode is a scrolling log; the floating bar overlays y[0,36], so
@@ -369,8 +409,8 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
     >
       <SubtitleBar
         sessionElapsedMs={elapsedMs}
-        sourceLanguageCode={getLanguageShortName(sourceLanguage, i18n.language)}
-        targetLanguageCode={getLanguageShortName(targetLanguage, i18n.language)}
+        sourceLanguageCode={getLanguageShortName(sourceLanguage, i18n?.language || 'en')}
+        targetLanguageCode={getLanguageShortName(targetLanguage, i18n?.language || 'en')}
         onClearConversation={requestClearConversation}
         speakerActive={speakerActive}
         participantActive={participantActive}
@@ -388,6 +428,7 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
           isSessionActive,
           isInitializing: sessionInitializing,
           canStart: startGate.canStart,
+          disabledTooltip,
           onStart: handleStart,
           onStop: requestSessionStop,
         }}
@@ -409,6 +450,9 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
             sourceTextColor={subtitle.sourceTextColor}
             translationTextColor={subtitle.translationTextColor}
             newItemHighlightEnabled={newItemHighlightEnabled}
+            autoCollapse={subtitle.autoCollapse}
+            surface={surface}
+            isSnapped={isSnapped}
           />
         )
       ) : (

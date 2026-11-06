@@ -346,19 +346,19 @@ describe('audioStore — monitor volume mode-gating', () => {
     } as any);
   });
 
-  it('setMode("both") silences the monitor (leaves speaker scope) without touching the flag', () => {
+  it('setMode("both") keeps the monitor audible when unmuted without touching the flag', () => {
     useAudioStore.setState({ mode: 'speaker', isMonitorMuted: false } as any);
     const calls = withMockService();
     useAudioStore.getState().setMode('both');
-    expect(calls[calls.length - 1]).toBe(false);
+    expect(calls[calls.length - 1]).toBe(true);
     expect(useAudioStore.getState().isMonitorMuted).toBe(false); // preference preserved
   });
 
-  it('setMode("participant") silences the monitor', () => {
+  it('setMode("participant") keeps the monitor audible when unmuted', () => {
     useAudioStore.setState({ mode: 'speaker', isMonitorMuted: false } as any);
     const calls = withMockService();
     useAudioStore.getState().setMode('participant');
-    expect(calls[calls.length - 1]).toBe(false);
+    expect(calls[calls.length - 1]).toBe(true);
   });
 
   it('setMode("speaker") restores the monitor to the saved preference (unmuted -> audible)', () => {

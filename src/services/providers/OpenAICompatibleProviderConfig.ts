@@ -1,3 +1,4 @@
+import i18n from '../../locales';
 import { ProviderConfig } from './ProviderConfig';
 import { OpenAIProviderConfig, OpenAICompatibleSettingsBase, defaultOpenAICompatibleSettingsBase } from './OpenAIProviderConfig';
 import { Provider } from '../../types/Provider';
@@ -57,11 +58,41 @@ export class OpenAICompatibleProviderConfig extends OpenAIProviderConfig {
         models: [],
       };
     }
-    return OpenAIClient.validateApiKeyAndFetchModels(creds.primary, creds.endpoint);
+
+    const host = OpenAIClient.normalizeApiHost(creds.endpoint);
+    const { models, error } = await OpenAIClient.fetchOpenAIModelsList(creds.primary, host);
+    if (error) {
+      return { validation: error, models: [] };
+    }
+
+    // Map all models returned by the OpenAI-compatible endpoint (e.g. Ling-3.1-flash, DeepSeek, etc.)
+    const filteredModels: FilteredModel[] = models.map((m: any) => ({
+      id: m.id,
+      type: (m.id.toLowerCase().includes('realtime') || m.id.toLowerCase().includes('audio')) ? 'realtime' : 'chat',
+      created: m.created,
+    }));
+
+    const message = i18n.t('settings.apiKeyValidationCompleted', 'API Key 验证成功') +
+      (filteredModels.length > 0 ? ` (发现 ${filteredModels.length} 个可用模型)` : '');
+
+    return {
+      validation: {
+        valid: true,
+        message,
+        validating: false,
+        hasRealtimeModel: filteredModels.some(m => m.type === 'realtime'),
+      },
+      models: filteredModels,
+    };
   }
 
   latestRealtimeModel(models: FilteredModel[]): string {
-    return OpenAIClient.getLatestRealtimeModel(models);
+    if (models.length === 0) return 'Ling-3.1-flash';
+    const rt = models.find(m => m.type === 'realtime');
+    if (rt) return rt.id;
+    const flash = models.find(m => m.id.toLowerCase().includes('flash'));
+    if (flash) return flash.id;
+    return models[0].id;
   }
 
   getConfig(): ProviderConfig {

@@ -16,6 +16,7 @@ interface SubtitleState {
   // Typography
   fontSize: number;            // clamped [FONT_SIZE_MIN, FONT_SIZE_MAX]
   compactMode: boolean;
+  autoCollapse: boolean;
   // Background
   bgOpacity: number;           // clamped [BG_OPACITY_MIN, BG_OPACITY_MAX]
   bgColor: string;             // hex
@@ -36,6 +37,7 @@ interface SubtitleState {
   // Actions (all async because persistence is async — matches existing pattern in settingsStore)
   setFontSize: (n: number) => Promise<void>;
   setCompactMode: (b: boolean) => Promise<void>;
+  setAutoCollapse: (b: boolean) => Promise<void>;
   setBgOpacity: (n: number) => Promise<void>;
   setBgColor: (s: string) => Promise<void>;
   setSourceTextColor: (s: string) => Promise<void>;
@@ -59,6 +61,7 @@ export const SUBTITLE_DEFAULT_TRANSLATION_TEXT_COLOR = '#9ad0ff';
 const DEFAULTS = {
   fontSize: 24,
   compactMode: true,
+  autoCollapse: true,
   bgOpacity: 80,
   bgColor: SUBTITLE_DEFAULT_BG_COLOR,
   sourceTextColor: SUBTITLE_DEFAULT_SOURCE_TEXT_COLOR,
@@ -113,6 +116,12 @@ export const useSubtitleStore = create<SubtitleState>()(
       set({ compactMode: b });
       const { ok } = await persist('compactMode', b, 'compactMode');
       if (!ok) set({ compactMode: previous });
+    },
+    setAutoCollapse: async (b) => {
+      const previous = get().autoCollapse;
+      set({ autoCollapse: b });
+      const { ok } = await persist('autoCollapse', b, 'autoCollapse');
+      if (!ok) set({ autoCollapse: previous });
     },
     setBgOpacity: async (n) => {
       const clamped = clamp(Math.round(n), BG_OPACITY_MIN, BG_OPACITY_MAX);
@@ -191,13 +200,14 @@ export const useSubtitleStore = create<SubtitleState>()(
     hydrate: async () => {
       const svc = ServiceFactory.getSettingsService();
       const [
-        fontSize, compactMode, bgOpacity, bgColor,
+        fontSize, compactMode, autoCollapse, bgOpacity, bgColor,
         sourceTextColor, translationTextColor, newItemHighlightEnabled,
         alwaysOnTop, positionLocked, windowBounds,
         speakerDisplayMode, participantDisplayMode,
       ] = await Promise.all([
         svc.getSetting(KEY('fontSize'), DEFAULTS.fontSize),
         svc.getSetting(KEY('compactMode'), DEFAULTS.compactMode),
+        svc.getSetting(KEY('autoCollapse'), DEFAULTS.autoCollapse),
         svc.getSetting(KEY('bgOpacity'), DEFAULTS.bgOpacity),
         svc.getSetting(KEY('bgColor'), DEFAULTS.bgColor),
         svc.getSetting(KEY('sourceTextColor'), DEFAULTS.sourceTextColor),
@@ -212,6 +222,7 @@ export const useSubtitleStore = create<SubtitleState>()(
       set({
         fontSize: clamp(Math.round(fontSize), FONT_SIZE_MIN, FONT_SIZE_MAX),
         compactMode,
+        autoCollapse,
         bgOpacity: clamp(Math.round(bgOpacity), BG_OPACITY_MIN, BG_OPACITY_MAX),
         bgColor,
         sourceTextColor,
@@ -230,6 +241,7 @@ export const useSubtitleStore = create<SubtitleState>()(
 // ──────────── Selector hooks ────────────
 export const useSubtitleFontSize = () => useSubtitleStore((s) => s.fontSize);
 export const useSubtitleCompactMode = () => useSubtitleStore((s) => s.compactMode);
+export const useSubtitleAutoCollapse = () => useSubtitleStore((s) => s.autoCollapse);
 export const useSubtitleBgOpacity = () => useSubtitleStore((s) => s.bgOpacity);
 export const useSubtitleBgColor = () => useSubtitleStore((s) => s.bgColor);
 export const useSubtitleSourceTextColor = () => useSubtitleStore((s) => s.sourceTextColor);
@@ -250,6 +262,7 @@ export const useSubtitleSettings = () =>
     useShallow((s) => ({
       fontSize: s.fontSize,
       compactMode: s.compactMode,
+      autoCollapse: s.autoCollapse,
       bgOpacity: s.bgOpacity,
       bgColor: s.bgColor,
       sourceTextColor: s.sourceTextColor,
@@ -263,6 +276,7 @@ export const useSubtitleSettings = () =>
 // Action hooks
 export const useSetSubtitleFontSize = () => useSubtitleStore((s) => s.setFontSize);
 export const useSetSubtitleCompactMode = () => useSubtitleStore((s) => s.setCompactMode);
+export const useSetSubtitleAutoCollapse = () => useSubtitleStore((s) => s.setAutoCollapse);
 export const useSetSubtitleBgOpacity = () => useSubtitleStore((s) => s.setBgOpacity);
 export const useSetSubtitleBgColor = () => useSubtitleStore((s) => s.setBgColor);
 export const useSetSubtitleSourceTextColor = () => useSubtitleStore((s) => s.setSourceTextColor);

@@ -7,11 +7,13 @@ import {
   useSubtitleSourceTextColor,
   useSubtitleTranslationTextColor,
   useSubtitleNewItemHighlightEnabled,
+  useSubtitleAutoCollapse,
   useSetSubtitleBgOpacity,
   useSetSubtitleBgColor,
   useSetSubtitleSourceTextColor,
   useSetSubtitleTranslationTextColor,
   useSetSubtitleNewItemHighlightEnabled,
+  useSetSubtitleAutoCollapse,
   SUBTITLE_DEFAULT_BG_COLOR,
   SUBTITLE_DEFAULT_SOURCE_TEXT_COLOR,
   SUBTITLE_DEFAULT_TRANSLATION_TEXT_COLOR,
@@ -56,11 +58,13 @@ interface InnerBindings {
   // newItemHighlightEnabled is subtitle-only. Conversation-mode bindings
   // leave it undefined so the toggle row is suppressed.
   newItemHighlightEnabled: boolean | undefined;
+  autoCollapse: boolean | undefined;
   setBgOpacity: ((n: number) => Promise<void>) | undefined;
   setBgColor: (s: string) => Promise<void>;
   setSourceTextColor: (s: string) => Promise<void>;
   setTranslationTextColor: (s: string) => Promise<void>;
   setNewItemHighlightEnabled: ((b: boolean) => Promise<void>) | undefined;
+  setAutoCollapse: ((b: boolean) => Promise<void>) | undefined;
   defaultBgColor: string;
   defaultSourceTextColor: string;
   defaultTranslationTextColor: string;
@@ -83,11 +87,13 @@ const SubtitleBoundPopover: React.FC = () => {
     sourceTextColor: useSubtitleSourceTextColor(),
     translationTextColor: useSubtitleTranslationTextColor(),
     newItemHighlightEnabled: useSubtitleNewItemHighlightEnabled(),
+    autoCollapse: useSubtitleAutoCollapse(),
     setBgOpacity: useSetSubtitleBgOpacity(),
     setBgColor: useSetSubtitleBgColor(),
     setSourceTextColor: useSetSubtitleSourceTextColor(),
     setTranslationTextColor: useSetSubtitleTranslationTextColor(),
     setNewItemHighlightEnabled: useSetSubtitleNewItemHighlightEnabled(),
+    setAutoCollapse: useSetSubtitleAutoCollapse(),
     defaultBgColor: SUBTITLE_DEFAULT_BG_COLOR,
     defaultSourceTextColor: SUBTITLE_DEFAULT_SOURCE_TEXT_COLOR,
     defaultTranslationTextColor: SUBTITLE_DEFAULT_TRANSLATION_TEXT_COLOR,
@@ -102,11 +108,13 @@ const ConversationBoundPopover: React.FC = () => {
     sourceTextColor: useConversationDisplaySourceTextColor(),
     translationTextColor: useConversationDisplayTranslationTextColor(),
     newItemHighlightEnabled: undefined,
+    autoCollapse: undefined,
     setBgOpacity: undefined,
     setBgColor: useSetConversationDisplayBgColor(),
     setSourceTextColor: useSetConversationDisplaySourceTextColor(),
     setTranslationTextColor: useSetConversationDisplayTranslationTextColor(),
     setNewItemHighlightEnabled: undefined,
+    setAutoCollapse: undefined,
     defaultBgColor: CONVERSATION_DISPLAY_DEFAULT_BG_COLOR,
     defaultSourceTextColor: CONVERSATION_DISPLAY_DEFAULT_SOURCE_TEXT_COLOR,
     defaultTranslationTextColor: CONVERSATION_DISPLAY_DEFAULT_TRANSLATION_TEXT_COLOR,
@@ -123,6 +131,9 @@ const DisplaySettingsPopoverInner: React.FC<{ bindings: InnerBindings }> = ({ bi
   const includeHighlightToggle =
     bindings.newItemHighlightEnabled !== undefined &&
     bindings.setNewItemHighlightEnabled !== undefined;
+  const includeAutoCollapseToggle =
+    bindings.autoCollapse !== undefined &&
+    bindings.setAutoCollapse !== undefined;
 
   // Note: role="dialog" + accessible name are intentionally NOT set on this
   // root. They live on the floating wrapper in SubtitleBar / MainPanel via
@@ -171,6 +182,22 @@ const DisplaySettingsPopoverInner: React.FC<{ bindings: InnerBindings }> = ({ bi
             label={t(
               'subtitle.settings.newItemHighlight',
               'Highlight newly-arrived text',
+            )}
+          />
+        </div>
+      )}
+      {includeAutoCollapseToggle && (
+        <div className="field">
+          <ToggleSwitch
+            checked={bindings.autoCollapse!}
+            onChange={() =>
+              void bindings.setAutoCollapse!(
+                !bindings.autoCollapse,
+              )
+            }
+            label={t(
+              'subtitle.settings.autoCollapse',
+              'Auto-collapse into mini-pill when quiet (Cicada style)',
             )}
           />
         </div>
