@@ -29,6 +29,7 @@
   let currentDisplayMode = 'bilingual'; // 'bilingual' | 'target_only' | 'source_only'
   let currentEngine = 'google';         // 'google' | 'bing' | 'deepl'
   let currentTargetLang = 'zh-CN';      // 'zh-CN' | 'zh-TW' | 'en' | 'ja' | 'ko' | ...
+  let currentFontSize = 'medium';       // 'small' | 'medium' | 'large'
 
   const activeButtons = new Set();
   const activeVideoManagers = new Map(); // videoEl -> InVideoSubtitleManager
@@ -37,13 +38,15 @@
 
   // Load persisted user preferences
   try {
-    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_target_lang'], (res) => {
+    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_target_lang', 'mao_sub_font_size'], (res) => {
       if (res) {
         if (res.mao_sub_display_mode) currentDisplayMode = res.mao_sub_display_mode;
         if (res.mao_sub_engine) currentEngine = res.mao_sub_engine;
         if (res.mao_sub_target_lang) currentTargetLang = res.mao_sub_target_lang;
+        if (res.mao_sub_font_size) currentFontSize = res.mao_sub_font_size;
       }
       updateAllPopoversUI();
+      updateAllSubtitleStyles();
     });
   } catch { /* ignore */ }
 
@@ -236,9 +239,9 @@
         'position: absolute',
         'left: 50%',
         'transform: translateX(-50%)',
-        'width: 90%',
-        'max-width: 960px',
-        'bottom: 46px',
+        'width: 92%',
+        'max-width: 900px',
+        'bottom: 18px',
         'text-align: center',
         'display: none',
         'flex-direction: column',
@@ -259,27 +262,30 @@
         'align-items: center',
         'justify-content: center',
         'pointer-events: none',
-        'max-width: 100%',
+        'width: max-content',
+        'max-width: 96%',
       ].join(' !important;') + ' !important;';
 
       // Original text (top, secondary)
       const origEl = document.createElement('div');
       origEl.className = 'mao-sub-orig';
       origEl.style.cssText = [
-        'margin: 0 0 5px 0',
-        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
-        'font-size: clamp(11px, 1.4vw, 13px)',
+        'margin: 0 0 3px 0',
+        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        'font-size: clamp(10px, 1.1vw, 12px)',
         'font-weight: 400',
-        'line-height: 1.3',
-        'color: rgba(255, 255, 255, 0.90)',
+        'line-height: 1.25',
+        'color: rgba(255, 255, 255, 0.85)',
         'background: rgba(14, 12, 22, 0.75)',
         'backdrop-filter: blur(8px)',
         '-webkit-backdrop-filter: blur(8px)',
-        'border-radius: 6px',
-        'padding: 3px 12px',
-        'text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95)',
+        'border-radius: 4px',
+        'padding: 2px 8px',
+        'text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95)',
         'display: none',
-        'max-width: 95%',
+        'width: max-content',
+        'max-width: 92%',
+        'word-break: break-word',
         'box-sizing: border-box',
       ].join(' !important;') + ' !important;';
 
@@ -288,22 +294,25 @@
       transEl.className = 'mao-sub-trans';
       transEl.style.cssText = [
         'margin: 0',
-        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
-        'font-size: clamp(14px, 2.2vw, 19px)',
-        'font-weight: 600',
-        'line-height: 1.35',
+        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        'font-size: clamp(12px, 1.4vw, 15px)',
+        'font-weight: 500',
+        'line-height: 1.3',
         'color: #ffffff',
-        'background: rgba(18, 14, 26, 0.88)',
-        'backdrop-filter: blur(12px)',
-        '-webkit-backdrop-filter: blur(12px)',
-        'border: 1px solid rgba(255, 255, 255, 0.18)',
-        'box-shadow: 0 4px 20px rgba(0, 0, 0, 0.50)',
-        'padding: 6px 18px',
-        'border-radius: 10px',
-        'text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9)',
-        'letter-spacing: 0.3px',
+        'background: rgba(18, 14, 26, 0.85)',
+        'backdrop-filter: blur(10px)',
+        '-webkit-backdrop-filter: blur(10px)',
+        'border: 1px solid rgba(255, 255, 255, 0.15)',
+        'box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45)',
+        'padding: 4px 12px',
+        'border-radius: 6px',
+        'text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9)',
+        'letter-spacing: 0.2px',
         'display: none',
-        'max-width: 95%',
+        'width: max-content',
+        'max-width: 92%',
+        'word-break: break-word',
+        'text-wrap: balance',
         'box-sizing: border-box',
       ].join(' !important;') + ' !important;';
 
@@ -318,7 +327,29 @@
       this.origEl = origEl;
       this.transEl = transEl;
 
+      this.applySubtitleStyles();
       this.setupControlBarAvoidance();
+    }
+
+    applySubtitleStyles() {
+      if (!this.origEl || !this.transEl) return;
+      if (currentFontSize === 'small') {
+        this.origEl.style.setProperty('font-size', 'clamp(9px, 1.0vw, 11px)', 'important');
+        this.origEl.style.setProperty('padding', '2px 6px', 'important');
+        this.transEl.style.setProperty('font-size', 'clamp(11px, 1.2vw, 13px)', 'important');
+        this.transEl.style.setProperty('padding', '3px 10px', 'important');
+      } else if (currentFontSize === 'large') {
+        this.origEl.style.setProperty('font-size', 'clamp(11px, 1.3vw, 13px)', 'important');
+        this.origEl.style.setProperty('padding', '3px 10px', 'important');
+        this.transEl.style.setProperty('font-size', 'clamp(14px, 1.8vw, 18px)', 'important');
+        this.transEl.style.setProperty('padding', '5px 14px', 'important');
+      } else {
+        // 'medium' (standard sleek default)
+        this.origEl.style.setProperty('font-size', 'clamp(10px, 1.1vw, 12px)', 'important');
+        this.origEl.style.setProperty('padding', '2px 8px', 'important');
+        this.transEl.style.setProperty('font-size', 'clamp(12px, 1.4vw, 15px)', 'important');
+        this.transEl.style.setProperty('padding', '4px 12px', 'important');
+      }
     }
 
     setupControlBarAvoidance() {
@@ -326,17 +357,17 @@
         const updateOffset = () => {
           if (!this.paperEl) return;
           const isAutohide = this.container.classList.contains('ytp-autohide');
-          this.paperEl.style.setProperty('bottom', isAutohide ? '24px' : '62px', 'important');
+          this.paperEl.style.setProperty('bottom', isAutohide ? '18px' : '56px', 'important');
         };
         const obs = new MutationObserver(updateOffset);
         obs.observe(this.container, { attributes: true, attributeFilter: ['class'] });
         updateOffset();
       } else {
         const onEnter = () => {
-          if (this.paperEl) this.paperEl.style.setProperty('bottom', '54px', 'important');
+          if (this.paperEl) this.paperEl.style.setProperty('bottom', '36px', 'important');
         };
         const onLeave = () => {
-          if (this.paperEl) this.paperEl.style.setProperty('bottom', '22px', 'important');
+          if (this.paperEl) this.paperEl.style.setProperty('bottom', '16px', 'important');
         };
         this.container.addEventListener('mouseenter', onEnter, { passive: true });
         this.container.addEventListener('mouseleave', onLeave, { passive: true });
@@ -1021,15 +1052,17 @@
       letter-spacing: 0.3px;
     }
 
-    /* Segmented Control for Display Mode */
-    .mode-segmented {
+    /* Segmented Control for Display Mode & Font Size */
+    .mode-segmented,
+    .size-segmented {
       display: flex;
       background: rgba(255, 255, 255, 0.07);
       border-radius: 8px;
       padding: 2px;
       gap: 2px;
     }
-    .mode-seg-btn {
+    .mode-seg-btn,
+    .size-seg-btn {
       flex: 1;
       border: none;
       background: transparent;
@@ -1043,11 +1076,13 @@
       text-align: center;
       outline: none;
     }
-    .mode-seg-btn:hover {
+    .mode-seg-btn:hover,
+    .size-seg-btn:hover {
       color: #ffffff;
       background: rgba(255, 255, 255, 0.06);
     }
-    .mode-seg-btn.active {
+    .mode-seg-btn.active,
+    .size-seg-btn.active {
       background: #7C3AED;
       color: #ffffff;
       font-weight: 600;
@@ -1204,6 +1239,30 @@
       const langSelect = popover.querySelector('.lang-select');
       if (langSelect && langSelect.value !== currentTargetLang) {
         langSelect.value = currentTargetLang;
+      }
+
+      // 4. Update Font Size buttons
+      const sizeBtns = popover.querySelectorAll('.size-seg-btn');
+      sizeBtns.forEach((btn) => {
+        const size = btn.dataset.size;
+        btn.classList.toggle('active', size === currentFontSize);
+      });
+    }
+  }
+
+  function setFontSize(size) {
+    currentFontSize = size;
+    try {
+      chrome.storage.local.set({ mao_sub_font_size: size });
+    } catch { /* ignore */ }
+    updateAllPopoversUI();
+    updateAllSubtitleStyles();
+  }
+
+  function updateAllSubtitleStyles() {
+    for (const m of activeVideoManagers.values()) {
+      if (typeof m.applySubtitleStyles === 'function') {
+        m.applySubtitleStyles();
       }
     }
   }
@@ -1383,6 +1442,16 @@
           </select>
         </div>
       </div>
+
+      <!-- 4. Subtitle Size -->
+      <div class="popover-section">
+        <div class="popover-section-label">字幕大小</div>
+        <div class="size-segmented">
+          <button type="button" class="size-seg-btn ${currentFontSize === 'small' ? 'active' : ''}" data-size="small">小</button>
+          <button type="button" class="size-seg-btn ${currentFontSize === 'medium' ? 'active' : ''}" data-size="medium">中 (标准)</button>
+          <button type="button" class="size-seg-btn ${currentFontSize === 'large' ? 'active' : ''}" data-size="large">大</button>
+        </div>
+      </div>
     `;
     wrap.appendChild(popover);
     shadow.appendChild(wrap);
@@ -1461,6 +1530,15 @@
         setTargetLanguage(langSelect.value);
       });
     }
+
+    // Size buttons clicked
+    popover.querySelectorAll('.size-seg-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const size = btn.dataset.size;
+        if (size) setFontSize(size);
+      });
+    });
 
     // Auto-fade timer
     let hideTimer = null;
