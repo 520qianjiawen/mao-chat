@@ -240,6 +240,60 @@ async function startSubtitleTakeover() {
   return { success: true, tabId };
 }
 
+async function startInVideoAsrSession(tabId) {
+  try {
+    console.info('[MAO] [Background] Starting in-video ASR session for tab:', tabId);
+    subtitleHostTabId = tabId;
+    subtitleHostPhase = 'starting';
+
+    await ensureSubtitleSessionHost();
+
+    const response = await sendRuntimeMessage({
+      type: 'START_SUBTITLE_SESSION_HOST',
+      tabId,
+      inVideoOnly: true,
+    });
+
+    if (response?.success) {
+      console.info('[MAO] [Background] In-video ASR session started successfully for tab:', tabId);
+      chrome.tabs.sendMessage(tabId, {
+        type: 'MAO_ASR_STATUS',
+        status: 'active',
+      }).catch(() => {});
+    } else {
+      console.warn('[MAO] [Background] Subtitle session host start returned error:', response?.error);
+      chrome.tabs.sendMessage(tabId, {
+        type: 'MAO_ASR_STATUS',
+        status: 'error',
+        error: response?.error || 'Failed to start ASR session',
+      }).catch(() => {});
+    }
+  } catch (error) {
+    console.error('[MAO] [Background] Failed to start in-video ASR session:', error);
+    chrome.tabs.sendMessage(tabId, {
+      type: 'MAO_ASR_STATUS',
+      status: 'error',
+      error: error?.message || String(error),
+    }).catch(() => {});
+  }
+}
+
+async function stopInVideoAsrSession(tabId) {
+  try {
+    console.info('[MAO] [Background] Stopping in-video ASR session for tab:', tabId);
+    await stopSubtitleSessionHost();
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'MAO_ASR_STATUS',
+        status: 'inactive',
+      }).catch(() => {});
+    }
+  } catch (error) {
+    console.warn('[MAO] [Background] Failed to stop in-video ASR session cleanly:', error);
+    await shutdownSubtitleSessionHost();
+  }
+}
+
 /**
  * Restore the browser side panel when the user closes the in-page subtitle
  * overlay. Keep `chrome.sidePanel.open()` as the first asynchronous browser
@@ -738,6 +792,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.sendMessage(tabId, {
         type: message.active ? 'MAO_SUBTITLE_ACTIVE' : 'MAO_SUBTITLE_INACTIVE',
       }).catch(() => {});
+
+      if (message.active) {
+        if (message.needASR) {
+          void startInVideoAsrSession(tabId);
+        }
+      } else {
+        void stopInVideoAsrSession(tabId);
+      }
     }
     sendResponse({ success: true, active: message.active });
     return false;

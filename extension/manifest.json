@@ -36,6 +36,8 @@
     "declarativeNetRequest"
   ],
   "host_permissions": [
+    "http://*/*",
+    "https://*/*",
     "https://sokuji-api.kizuna.ai/*",
     "https://sokuji.kizuna.ai/*",
     "wss://openspeech.bytedance.com/*",
@@ -152,6 +154,18 @@
         "video-button-content.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "subtitle-overlay-content.js",
+        "video-button-content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [

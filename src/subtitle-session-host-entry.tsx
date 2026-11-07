@@ -149,6 +149,7 @@ async function bootstrap() {
     if (message?.type === 'START_SUBTITLE_SESSION_HOST') {
       requestedTabId = Number(message.tabId) || null;
       (globalThis as any).__SOKUJI_SUBTITLE_TARGET_TAB_ID__ = requestedTabId;
+      (globalThis as any).__MAO_IN_VIDEO_ONLY__ = Boolean(message.inVideoOnly);
       window.dispatchEvent(new Event(HOST_START_EVENT));
       sendResponse({ success: true });
       return false;

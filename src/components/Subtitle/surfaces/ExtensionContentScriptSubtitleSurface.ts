@@ -146,6 +146,7 @@ async function sendTabMessage(tabId: number, message: Record<string, unknown>): 
 export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
   private targetTabId: number | null = null;
   private port: any = null;
+  private ports = new Set<any>();
   private subscriptions: (() => void)[] = [];
   // Trailing throttle state for items forwarding (see ITEMS_THROTTLE_MS).
   private itemsThrottleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -154,9 +155,13 @@ export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
   private handleConnect = (p: any) => {
     if (p.name !== 'sokuji-subtitle') return;
     this.port = p;
+    this.ports.add(p);
     p.onMessage.addListener(this.handlePortMessage);
     p.onDisconnect.addListener(() => {
-      if (this.port === p) this.port = null;
+      this.ports.delete(p);
+      if (this.port === p) {
+        this.port = this.ports.values().next().value ?? null;
+      }
       // NOTE: do NOT call tearDown — disconnects also fire on page reload.
     });
     // Initial push happens via store subscriptions installed lazily on first connect.
@@ -166,7 +171,17 @@ export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
   /** Single typed egress for the wire — every downstream message shape is
    *  checked against the shared contract in src/types/subtitleWire.ts. */
   private postWire(msg: SubtitleWireMessage): void {
-    this.port?.postMessage(msg);
+    if (this.ports.size > 0) {
+      for (const p of this.ports) {
+        try {
+          p.postMessage(msg);
+        } catch {
+          this.ports.delete(p);
+        }
+      }
+    } else {
+      this.port?.postMessage(msg);
+    }
   }
 
   private handlePortMessage = (msg: SubtitleControlMessage | { type?: string }) => {
@@ -215,8 +230,9 @@ export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
       chrome.tabs.onRemoved.addListener(this.handleTabRemoved);
       chrome.tabs.onUpdated.addListener(this.handleTabUpdated);
     }
+    const inVideoOnly = Boolean((globalThis as any).__MAO_IN_VIDEO_ONLY__);
     try {
-      await sendTabMessage(tab.id, { type: 'subtitle:enter' });
+      await sendTabMessage(tab.id, inVideoOnly ? { type: 'subtitle:enter', inVideoOnly: true } : { type: 'subtitle:enter' });
     } catch (rawError) {
       // The most common cause is a stale meeting tab — the extension was
       // reloaded after the tab was opened, so the new content script was
@@ -270,6 +286,10 @@ export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
     this.pendingItems = null;
     this.subscriptions.forEach((u) => u());
     this.subscriptions = [];
+    for (const p of this.ports) {
+      try { p.disconnect(); } catch { /* ignore */ }
+    }
+    this.ports.clear();
     this.port?.disconnect();
     this.port = null;
     this.targetTabId = null;

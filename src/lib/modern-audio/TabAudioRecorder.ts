@@ -130,6 +130,9 @@ export class TabAudioRecorder extends ParticipantRecorder {
   }
 
   private async getTabIdFromContext(): Promise<number | null> {
+    const globalTabId = Number((globalThis as any).__SOKUJI_SUBTITLE_TARGET_TAB_ID__);
+    if (Number.isFinite(globalTabId) && globalTabId > 0) return globalTabId;
+
     const urlParams = new URLSearchParams(window.location.search);
     const tabIdParam = urlParams.get('tabId');
     if (tabIdParam) {

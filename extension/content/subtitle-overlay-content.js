@@ -48,6 +48,8 @@
   let dragOverlay = null;
   let keepVisibleInFullscreen = false;
 
+  const isTopWindow = window === window.top;
+
   document.addEventListener('fullscreenchange', syncFullscreenParent, true);
   document.addEventListener('webkitfullscreenchange', syncFullscreenParent, true);
 
@@ -55,9 +57,13 @@
     if (msg?.type === 'subtitle:probe') {
       sendResponse({ success: true });
     } else if (msg?.type === 'subtitle:enter') {
-      mountHost();
+      if (isTopWindow && !msg?.inVideoOnly) {
+        mountHost();
+      }
+      sendResponse({ success: true });
     } else if (msg?.type === 'subtitle:exit') {
       unmountHost();
+      sendResponse({ success: true });
     }
   });
 

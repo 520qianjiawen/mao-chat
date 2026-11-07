@@ -26,6 +26,8 @@
 
   // Global subtitle state
   let isSubtitlesActive = false;
+  let isAsrActive = false;
+  let isAsrEnabled = true;              // Auto-link ASR for videos without native subtitles
   let currentDisplayMode = 'bilingual'; // 'bilingual' | 'target_only' | 'source_only'
   let currentEngine = 'google';         // 'google' | 'bing' | 'deepl'
   let currentTargetLang = 'zh-CN';      // 'zh-CN' | 'zh-TW' | 'en' | 'ja' | 'ko' | ...
@@ -38,12 +40,13 @@
 
   // Load persisted user preferences
   try {
-    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_target_lang', 'mao_sub_font_size'], (res) => {
+    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_target_lang', 'mao_sub_font_size', 'mao_sub_asr_enabled'], (res) => {
       if (res) {
         if (res.mao_sub_display_mode) currentDisplayMode = res.mao_sub_display_mode;
         if (res.mao_sub_engine) currentEngine = res.mao_sub_engine;
         if (res.mao_sub_target_lang) currentTargetLang = res.mao_sub_target_lang;
         if (res.mao_sub_font_size) currentFontSize = res.mao_sub_font_size;
+        if (typeof res.mao_sub_asr_enabled === 'boolean') isAsrEnabled = res.mao_sub_asr_enabled;
       }
       updateAllPopoversUI();
       updateAllSubtitleStyles();
@@ -861,6 +864,15 @@
       this.onTimeUpdate();
     }
 
+    hasActiveTextTracks() {
+      if (!this.videoEl || !this.videoEl.textTracks) return false;
+      for (let i = 0; i < this.videoEl.textTracks.length; i++) {
+        const t = this.videoEl.textTracks[i];
+        if (t.cues && t.cues.length > 0) return true;
+      }
+      return false;
+    }
+
     destroy() {
       this.videoEl.removeEventListener('timeupdate', this.onTimeUpdate);
       this.videoEl.removeEventListener('seeking', this.onSeeking);
@@ -1052,9 +1064,10 @@
       letter-spacing: 0.3px;
     }
 
-    /* Segmented Control for Display Mode & Font Size */
+    /* Segmented Control for Display Mode, Font Size & ASR */
     .mode-segmented,
-    .size-segmented {
+    .size-segmented,
+    .asr-segmented {
       display: flex;
       background: rgba(255, 255, 255, 0.07);
       border-radius: 8px;
@@ -1062,7 +1075,8 @@
       gap: 2px;
     }
     .mode-seg-btn,
-    .size-seg-btn {
+    .size-seg-btn,
+    .asr-seg-btn {
       flex: 1;
       border: none;
       background: transparent;
@@ -1077,12 +1091,14 @@
       outline: none;
     }
     .mode-seg-btn:hover,
-    .size-seg-btn:hover {
+    .size-seg-btn:hover,
+    .asr-seg-btn:hover {
       color: #ffffff;
       background: rgba(255, 255, 255, 0.06);
     }
     .mode-seg-btn.active,
-    .size-seg-btn.active {
+    .size-seg-btn.active,
+    .asr-seg-btn.active {
       background: #7C3AED;
       color: #ffffff;
       font-weight: 600;
@@ -1154,7 +1170,8 @@
     const label = group.querySelector('.label-text');
     if (active) {
       group.classList.add('active');
-      if (label) label.textContent = 'MAO 字幕 (开启)';
+      const text = isAsrActive ? 'MAO 听翻 (开启)' : 'MAO 字幕 (开启)';
+      if (label) label.textContent = text;
       group.querySelector('.mao-pill-toggle-btn')?.setAttribute('title', 'MAO 字幕已开启 · 点击关闭');
     } else {
       group.classList.remove('active');
@@ -1205,11 +1222,32 @@
     const nextState = !isSubtitlesActive;
     setAllButtonsState(nextState);
 
-    // Notify background script (NO side panel will open)
+    let hasNative = false;
+    for (const m of activeVideoManagers.values()) {
+      if ((m.formattedSubtitles && m.formattedSubtitles.length > 0) || m.hasActiveTextTracks()) {
+        hasNative = true;
+        break;
+      }
+    }
+
+    if (nextState) {
+      ensureSokujiPort();
+    } else {
+      isAsrActive = false;
+      if (sokujiPort) {
+        try { sokujiPort.disconnect(); } catch {}
+        sokujiPort = null;
+      }
+    }
+
+    const needASR = !hasNative && isAsrEnabled;
+
     chrome.runtime.sendMessage({
       type: 'MAO_VIDEO_BUTTON_CLICK',
       active: nextState,
       url: window.location.href,
+      needASR,
+      hasNativeCaptions: hasNative,
     }).catch(() => {});
   }
 
@@ -1247,6 +1285,47 @@
         const size = btn.dataset.size;
         btn.classList.toggle('active', size === currentFontSize);
       });
+
+      // 5. Update ASR buttons
+      const asrBtns = popover.querySelectorAll('.asr-seg-btn');
+      asrBtns.forEach((btn) => {
+        const asr = btn.dataset.asr === 'true';
+        btn.classList.toggle('active', asr === isAsrEnabled);
+      });
+    }
+  }
+
+  function setAsrEnabled(enabled) {
+    isAsrEnabled = enabled;
+    try {
+      chrome.storage.local.set({ mao_sub_asr_enabled: enabled });
+    } catch { /* ignore */ }
+    updateAllPopoversUI();
+
+    if (isSubtitlesActive) {
+      let hasNative = false;
+      for (const m of activeVideoManagers.values()) {
+        if ((m.formattedSubtitles && m.formattedSubtitles.length > 0) || m.hasActiveTextTracks()) {
+          hasNative = true;
+          break;
+        }
+      }
+      if (!hasNative) {
+        if (enabled) {
+          ensureSokujiPort();
+          chrome.runtime.sendMessage({
+            type: 'START_IN_VIDEO_ASR',
+          }).catch(() => {});
+        } else {
+          isAsrActive = false;
+          chrome.runtime.sendMessage({
+            type: 'STOP_IN_VIDEO_ASR',
+          }).catch(() => {});
+          for (const group of activeButtons) {
+            updateVisuals(group, isSubtitlesActive);
+          }
+        }
+      }
     }
   }
 
@@ -1452,6 +1531,15 @@
           <button type="button" class="size-seg-btn ${currentFontSize === 'large' ? 'active' : ''}" data-size="large">大</button>
         </div>
       </div>
+
+      <!-- 5. Real-time ASR Translation -->
+      <div class="popover-section">
+        <div class="popover-section-label">实时语音听翻 (无字幕视频)</div>
+        <div class="asr-segmented">
+          <button type="button" class="asr-seg-btn ${isAsrEnabled ? 'active' : ''}" data-asr="true">自动听翻</button>
+          <button type="button" class="asr-seg-btn ${!isAsrEnabled ? 'active' : ''}" data-asr="false">仅原片字幕</button>
+        </div>
+      </div>
     `;
     wrap.appendChild(popover);
     shadow.appendChild(wrap);
@@ -1537,6 +1625,15 @@
         e.stopPropagation();
         const size = btn.dataset.size;
         if (size) setFontSize(size);
+      });
+    });
+
+    // ASR buttons clicked
+    popover.querySelectorAll('.asr-seg-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const enabled = btn.dataset.asr === 'true';
+        setAsrEnabled(enabled);
       });
     });
 
@@ -1644,13 +1741,22 @@
       // Skip YouTube as handled above
       if (video.closest('#movie_player') || video.closest('.html5-video-player')) continue;
 
-      // Find the best player container (Twitter videoComponent, tweetPhoto, tweet, or positioned parent)
+      // Find the best player container (.plyr, .video-js, .dplayer, .artplayer, Twitter, or parent)
       const container =
+        video.closest('.plyr') ||
+        video.closest('.video-js') ||
+        video.closest('.dplayer') ||
+        video.closest('.artplayer-app') ||
+        video.closest('#player') ||
+        video.closest('.player') ||
+        video.closest('[id*="player"]') ||
         video.closest('div[data-testid="videoComponent"]') ||
         video.closest('div[data-testid="videoPlayer"]') ||
         video.closest('div[data-testid="tweetPhoto"]') ||
         video.closest('article[data-testid="tweet"]') ||
-        video.parentElement;
+        (video.parentElement && video.parentElement !== document.body && video.parentElement !== document.documentElement
+          ? video.parentElement
+          : video);
 
       if (container) {
         registerVideo(video, container);
@@ -1658,32 +1764,69 @@
     }
   }
 
-  // Live session stream connection (for ASR / Tab audio capture if desktop app/sidepanel is running)
-  try {
-    const port = chrome.runtime.connect({ name: 'sokuji-subtitle' });
-    port.onMessage.addListener((msg) => {
-      if (!msg || typeof msg !== 'object' || !isSubtitlesActive) return;
-      if (msg.type === 'items' && Array.isArray(msg.items) && msg.items.length > 0) {
-        const lastAssistant = [...msg.items].reverse().find((it) => it.role === 'assistant' && it.formatted?.transcript);
-        const lastUser = [...msg.items].reverse().find((it) => it.role === 'user' && it.formatted?.transcript);
-        if (lastAssistant) {
-          const trans = lastAssistant.formatted.transcript.trim();
-          const orig = lastUser ? lastUser.formatted.transcript.trim() : '';
-          for (const m of activeVideoManagers.values()) {
-            m.displaySubtitle(orig, trans);
+  // Live session stream connection (for real-time ASR / Tab audio capture)
+  let sokujiPort = null;
+  let sokujiReconnectTimer = null;
+
+  function ensureSokujiPort() {
+    if (sokujiPort) return sokujiPort;
+    try {
+      sokujiPort = chrome.runtime.connect({ name: 'sokuji-subtitle' });
+      sokujiPort.onMessage.addListener(handleSokujiMessage);
+      sokujiPort.onDisconnect.addListener(() => {
+        sokujiPort = null;
+        if (isSubtitlesActive) {
+          if (!sokujiReconnectTimer) {
+            sokujiReconnectTimer = setTimeout(() => {
+              sokujiReconnectTimer = null;
+              if (isSubtitlesActive) ensureSokujiPort();
+            }, 1200);
           }
         }
-      }
-    });
-  } catch { /* optional */ }
+      });
+      return sokujiPort;
+    } catch {
+      sokujiPort = null;
+      return null;
+    }
+  }
 
-  // Listen for subtitle status updates from extension
+  function handleSokujiMessage(msg) {
+    if (!msg || typeof msg !== 'object' || !isSubtitlesActive) return;
+    if (msg.type === 'items' && Array.isArray(msg.items) && msg.items.length > 0) {
+      const lastAssistant = [...msg.items].reverse().find((it) => it.role === 'assistant' && it.formatted?.transcript);
+      const lastUser = [...msg.items].reverse().find((it) => it.role === 'user' && it.formatted?.transcript);
+      if (lastAssistant || lastUser) {
+        const trans = lastAssistant ? lastAssistant.formatted.transcript.trim() : '';
+        const orig = lastUser ? lastUser.formatted.transcript.trim() : '';
+        for (const m of activeVideoManagers.values()) {
+          m.displaySubtitle(orig, trans);
+        }
+      }
+    }
+  }
+
+  // Listen for subtitle and ASR status updates from background
   chrome.runtime.onMessage.addListener((msg) => {
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'MAO_SUBTITLE_ACTIVE') {
       setAllButtonsState(true);
+      ensureSokujiPort();
     } else if (msg.type === 'MAO_SUBTITLE_INACTIVE') {
       setAllButtonsState(false);
+      isAsrActive = false;
+      if (sokujiPort) {
+        try { sokujiPort.disconnect(); } catch {}
+        sokujiPort = null;
+      }
+    } else if (msg.type === 'MAO_ASR_STATUS') {
+      isAsrActive = msg.status === 'active';
+      if (isAsrActive) {
+        ensureSokujiPort();
+      }
+      for (const group of activeButtons) {
+        updateVisuals(group, isSubtitlesActive);
+      }
     }
   });
 
