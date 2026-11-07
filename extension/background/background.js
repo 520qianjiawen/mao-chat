@@ -240,6 +240,43 @@ async function startSubtitleTakeover() {
   return { success: true, tabId };
 }
 
+async function syncLanguagesToSettings(sourceLang, targetLang) {
+  if (!chrome.storage?.sync) return;
+  const updates = {};
+  const providers = ['gemini', 'openai', 'soniox', 'volcengineast2', 'palabraai', 'antling', 'localllm', 'localinference'];
+
+  const geminiSource = sourceLang === 'ja' ? 'ja-JP' : (sourceLang === 'en' ? 'en-US' : (sourceLang === 'zh' || sourceLang === 'zh-CN' ? 'zh-CN' : sourceLang));
+  const geminiTarget = targetLang === 'zh-CN' ? 'zh-CN' : (targetLang === 'ja' ? 'ja-JP' : (targetLang === 'en' ? 'en-US' : targetLang));
+  const standardSource = sourceLang === 'zh-CN' ? 'zh' : sourceLang;
+  const standardTarget = targetLang === 'zh-CN' ? 'zh' : targetLang;
+
+  for (const p of providers) {
+    if (p === 'gemini') {
+      if (sourceLang && sourceLang !== 'auto') updates[`settings.${p}.sourceLanguage`] = geminiSource;
+      if (targetLang) updates[`settings.${p}.targetLanguage`] = geminiTarget;
+    } else {
+      if (sourceLang && sourceLang !== 'auto') updates[`settings.${p}.sourceLanguage`] = standardSource;
+      if (targetLang) updates[`settings.${p}.targetLanguage`] = standardTarget;
+    }
+  }
+
+  try {
+    await chrome.storage.sync.set(updates);
+    console.info('[MAO] [Background] Synced languages to provider settings:', { sourceLang, targetLang });
+  } catch (err) {
+    console.warn('[MAO] [Background] Failed to sync languages to provider settings:', err);
+  }
+
+  // Also broadcast to subtitle session host if active
+  if (subtitleHostPhase === 'active') {
+    void sendRuntimeMessage({
+      type: 'UPDATE_SUBTITLE_LANGUAGES',
+      sourceLanguage: sourceLang,
+      targetLanguage: targetLang,
+    });
+  }
+}
+
 async function startInVideoAsrSession(tabId) {
   try {
     console.info('[MAO] [Background] Starting in-video ASR session for tab:', tabId);
@@ -795,13 +832,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (message.active) {
         if (message.needASR) {
-          void startInVideoAsrSession(tabId);
+          (async () => {
+            if (message.sourceLanguage || message.targetLanguage) {
+              await syncLanguagesToSettings(message.sourceLanguage, message.targetLanguage);
+            }
+            await startInVideoAsrSession(tabId);
+          })();
         }
       } else {
         void stopInVideoAsrSession(tabId);
       }
     }
     sendResponse({ success: true, active: message.active });
+    return false;
+  }
+
+  if (message.type === 'MAO_SET_LANGUAGES') {
+    void syncLanguagesToSettings(message.sourceLanguage, message.targetLanguage);
+    sendResponse({ success: true });
     return false;
   }
 

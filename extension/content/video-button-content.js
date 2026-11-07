@@ -30,6 +30,8 @@
   let isAsrEnabled = true;              // Auto-link ASR for videos without native subtitles
   let currentDisplayMode = 'bilingual'; // 'bilingual' | 'target_only' | 'source_only'
   let currentEngine = 'google';         // 'google' | 'bing' | 'deepl'
+  const defaultSourceLang = window.location.hostname.includes('jable') ? 'ja' : 'auto';
+  let currentSourceLang = defaultSourceLang; // 'auto' | 'ja' | 'en' | 'zh' | 'ko' | ...
   let currentTargetLang = 'zh-CN';      // 'zh-CN' | 'zh-TW' | 'en' | 'ja' | 'ko' | ...
   let currentFontSize = 'medium';       // 'small' | 'medium' | 'large'
 
@@ -40,10 +42,11 @@
 
   // Load persisted user preferences
   try {
-    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_target_lang', 'mao_sub_font_size', 'mao_sub_asr_enabled'], (res) => {
+    chrome.storage.local.get(['mao_sub_display_mode', 'mao_sub_engine', 'mao_sub_source_lang', 'mao_sub_target_lang', 'mao_sub_font_size', 'mao_sub_asr_enabled'], (res) => {
       if (res) {
         if (res.mao_sub_display_mode) currentDisplayMode = res.mao_sub_display_mode;
         if (res.mao_sub_engine) currentEngine = res.mao_sub_engine;
+        if (res.mao_sub_source_lang) currentSourceLang = res.mao_sub_source_lang;
         if (res.mao_sub_target_lang) currentTargetLang = res.mao_sub_target_lang;
         if (res.mao_sub_font_size) currentFontSize = res.mao_sub_font_size;
         if (typeof res.mao_sub_asr_enabled === 'boolean') isAsrEnabled = res.mao_sub_asr_enabled;
@@ -73,10 +76,11 @@
   `;
 
   // Translation helper via background multi-engine service
-  async function translateText(text, targetLang = currentTargetLang, engine = currentEngine) {
+  async function translateText(text, targetLang = currentTargetLang, engine = currentEngine, sourceLang = currentSourceLang) {
     const raw = (text || '').trim();
     if (!raw) return '';
-    const cacheKey = `${engine}:${targetLang}:${raw.toLowerCase()}`;
+    const from = sourceLang === 'auto' ? 'auto' : sourceLang;
+    const cacheKey = `${engine}:${from}:${targetLang}:${raw.toLowerCase()}`;
     if (translationCache.has(cacheKey)) {
       return translationCache.get(cacheKey);
     }
@@ -88,7 +92,7 @@
       const timer = setTimeout(() => resolve(raw), 4500);
       try {
         chrome.runtime.sendMessage(
-          { type: 'TRANSLATE_TEXT', text: raw, to: targetLang, engine: engine },
+          { type: 'TRANSLATE_TEXT', text: raw, from, to: targetLang, engine: engine },
           (res) => {
             clearTimeout(timer);
             if (chrome.runtime.lastError) {
@@ -1248,6 +1252,8 @@
       url: window.location.href,
       needASR,
       hasNativeCaptions: hasNative,
+      sourceLanguage: currentSourceLang,
+      targetLanguage: currentTargetLang,
     }).catch(() => {});
   }
 
@@ -1272,6 +1278,12 @@
         const eng = item.dataset.engine;
         item.classList.toggle('active', eng === currentEngine);
       });
+
+      // 2.5 Update Source Language select
+      const sourceLangSelect = popover.querySelector('.source-lang-select');
+      if (sourceLangSelect && sourceLangSelect.value !== currentSourceLang) {
+        sourceLangSelect.value = currentSourceLang;
+      }
 
       // 3. Update Language select
       const langSelect = popover.querySelector('.lang-select');
@@ -1378,6 +1390,30 @@
     }
   }
 
+  function setSourceLanguage(lang) {
+    currentSourceLang = lang;
+    try {
+      chrome.storage.local.set({ mao_sub_source_lang: lang });
+    } catch { /* ignore */ }
+    translationCache.clear();
+    updateAllPopoversUI();
+    chrome.runtime.sendMessage({
+      type: 'MAO_SET_LANGUAGES',
+      sourceLanguage: currentSourceLang,
+      targetLanguage: currentTargetLang,
+    }).catch(() => {});
+    for (const m of activeVideoManagers.values()) {
+      if (m.formattedSubtitles) {
+        for (const s of m.formattedSubtitles) {
+          s.translation = null;
+          s.isTranslating = false;
+        }
+      }
+      m.lastExternalText = '';
+      m.onTimeUpdate();
+    }
+  }
+
   function setTargetLanguage(lang) {
     currentTargetLang = lang;
     try {
@@ -1385,6 +1421,11 @@
     } catch { /* ignore */ }
     translationCache.clear();
     updateAllPopoversUI();
+    chrome.runtime.sendMessage({
+      type: 'MAO_SET_LANGUAGES',
+      sourceLanguage: currentSourceLang,
+      targetLanguage: currentTargetLang,
+    }).catch(() => {});
     for (const m of activeVideoManagers.values()) {
       if (m.formattedSubtitles) {
         for (const s of m.formattedSubtitles) {
@@ -1504,9 +1545,27 @@
         </div>
       </div>
 
+      <!-- 2.5 Source Language / 视频原声 (识别语言) -->
+      <div class="popover-section">
+        <div class="popover-section-label">视频原声 (识别语言)</div>
+        <div class="lang-select-wrap">
+          <select class="source-lang-select">
+            <option value="auto">🌐 自动检测 (Auto)</option>
+            <option value="ja">🇯🇵 日语 (日本語)</option>
+            <option value="en">🇺🇸 英语 (English)</option>
+            <option value="zh">🇨🇳 中文 (普通话)</option>
+            <option value="ko">🇰🇷 韩语 (한국어)</option>
+            <option value="es">🇪🇸 西班牙语 (Español)</option>
+            <option value="fr">🇫🇷 法语 (Français)</option>
+            <option value="de">🇩🇪 德语 (Deutsch)</option>
+            <option value="ru">🇷🇺 俄语 (Русский)</option>
+          </select>
+        </div>
+      </div>
+
       <!-- 3. Target Language -->
       <div class="popover-section">
-        <div class="popover-section-label">目标语言</div>
+        <div class="popover-section-label">目标语言 (翻译为)</div>
         <div class="lang-select-wrap">
           <select class="lang-select">
             <option value="zh-CN">🇨🇳 中文 (简体)</option>
@@ -1609,7 +1668,17 @@
       });
     });
 
-    // Language select changed
+    // Source Language select changed
+    const sourceLangSelect = popover.querySelector('.source-lang-select');
+    if (sourceLangSelect) {
+      sourceLangSelect.value = currentSourceLang;
+      sourceLangSelect.addEventListener('change', (e) => {
+        e.stopPropagation();
+        setSourceLanguage(sourceLangSelect.value);
+      });
+    }
+
+    // Target Language select changed
     const langSelect = popover.querySelector('.lang-select');
     if (langSelect) {
       langSelect.value = currentTargetLang;

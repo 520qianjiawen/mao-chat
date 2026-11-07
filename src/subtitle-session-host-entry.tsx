@@ -5,7 +5,7 @@ import MainPanel from './components/MainPanel/MainPanel';
 import { SettingsInitializer } from './components/SettingsInitializer/SettingsInitializer';
 import { UserProfileProvider } from './contexts/UserProfileContext';
 import { useInitializeAudioService } from './stores/audioStore';
-import {
+import useSessionStore, {
   useIsSessionActive,
   useRequestSessionStart,
   useRequestSessionStop,
@@ -17,6 +17,7 @@ import useSettingsStore, {
   useSettingsLoaded,
   useSubtitleModeActive,
 } from './stores/settingsStore';
+import { Provider } from './types/Provider';
 import { useSubtitleStore } from './stores/subtitleStore';
 import { useConversationDisplayStore } from './stores/conversationDisplayStore';
 
@@ -156,6 +157,34 @@ async function bootstrap() {
     }
     if (message?.type === 'STOP_SUBTITLE_SESSION_HOST') {
       void useSettingsStore.getState().exitSubtitleMode();
+      sendResponse({ success: true });
+      return false;
+    }
+    if (message?.type === 'UPDATE_SUBTITLE_LANGUAGES') {
+      const { sourceLanguage, targetLanguage } = message;
+      const store = useSettingsStore.getState();
+      const prov = store.provider;
+      const sLang = sourceLanguage === 'auto' ? undefined : (sourceLanguage === 'ja' ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja') : (sourceLanguage === 'zh-CN' ? 'zh' : sourceLanguage));
+      const tLang = targetLanguage === 'zh-CN' ? (prov === Provider.OPENAI ? 'zh_CN' : 'zh-CN') : (targetLanguage === 'ja' ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja') : targetLanguage);
+      const patch: any = {};
+      if (sLang) patch.sourceLanguage = sLang;
+      if (tLang) patch.targetLanguage = tLang;
+
+      if (prov === Provider.GEMINI) store.updateGemini(patch);
+      else if (prov === Provider.OPENAI) store.updateOpenAI(patch);
+      else if (prov === Provider.SONIOX) store.updateSoniox(patch);
+      else if (prov === Provider.VOLCENGINE_AST2) store.updateVolcengineAST2(patch);
+      else if (prov === Provider.PALABRA_AI) store.updatePalabraAI(patch);
+      else if (prov === Provider.ANT_LING) store.updateAntLing(patch);
+      else if (prov === Provider.LOCAL_INFERENCE) store.updateLocalInference(patch);
+
+      if (useSessionStore.getState().isSessionActive) {
+        useSessionStore.getState().requestSessionStop();
+        setTimeout(() => {
+          useSessionStore.getState().requestSessionStart();
+        }, 300);
+      }
+
       sendResponse({ success: true });
       return false;
     }
