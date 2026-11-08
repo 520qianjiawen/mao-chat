@@ -238,12 +238,15 @@
       this.paperEl = null;
       this.transEl = null;
       this.origEl = null;
+      this.autoHideTimer = null;
       this.isYouTube = container.id === 'movie_player' || container.classList.contains('html5-video-player');
       this.isTwitter = Boolean(container.closest('[data-testid="videoComponent"], [data-testid="videoPlayer"], article[data-testid="tweet"]'));
 
       this.onTimeUpdate = this.onTimeUpdate.bind(this);
       this.onSeeked = this.onSeeked.bind(this);
       this.onSeeking = this.onSeeking.bind(this);
+      this.onVideoPause = this.onVideoPause.bind(this);
+      this.onVideoPlay = this.onVideoPlay.bind(this);
 
       this.createSubtitleElements();
       this.attachVideoListeners();
@@ -421,6 +424,8 @@
       this.videoEl.addEventListener('timeupdate', this.onTimeUpdate, { passive: true });
       this.videoEl.addEventListener('seeking', this.onSeeking, { passive: true });
       this.videoEl.addEventListener('seeked', this.onSeeked, { passive: true });
+      this.videoEl.addEventListener('pause', this.onVideoPause, { passive: true });
+      this.videoEl.addEventListener('play', this.onVideoPlay, { passive: true });
 
       // Handle textTracks (Twitter / HLS.js / HTML5 <track>)
       const setupTrack = (track) => {
@@ -862,12 +867,18 @@
       });
     }
 
-    displaySubtitle(origText, transText) {
+    displaySubtitle(origText, transText, options = {}) {
       if (!this.paperEl || !isSubtitlesActive) return;
       if (!origText && !transText) {
         this.hideSubtitles();
         return;
       }
+
+      if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+      }
+
       this.paperEl.style.setProperty('display', 'flex', 'important');
       this.paperEl.style.setProperty('opacity', '1', 'important');
       this.paperEl.style.setProperty('visibility', 'visible', 'important');
@@ -892,21 +903,74 @@
       } else {
         this.transEl.style.setProperty('display', 'none', 'important');
       }
+
+      // Auto-dismiss subtitles when speech completes or during silence/background music:
+      // For live ASR or un-timed tracks, fade out after a dynamic reading window (4.5s - 8s)
+      const isLiveAsr = options.isLiveAsr ?? (this.formattedSubtitles.length === 0);
+      const isStreaming = Boolean(options.isStreaming);
+
+      if (isLiveAsr && !isStreaming) {
+        const textToRead = (showTrans ? transText : '') || (showOrig ? origText : '');
+        const holdMs = Math.min(8000, Math.max(4500, 3800 + textToRead.length * 120));
+        this.autoHideTimer = setTimeout(() => {
+          this.fadeOutSubtitle();
+        }, holdMs);
+      }
+    }
+
+    fadeOutSubtitle() {
+      if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+      }
+      if (!this.paperEl) return;
+      this.paperEl.style.setProperty('opacity', '0', 'important');
+      this.autoHideTimer = setTimeout(() => {
+        if (this.paperEl && this.paperEl.style.opacity === '0') {
+          this.paperEl.style.setProperty('display', 'none', 'important');
+        }
+        this.autoHideTimer = null;
+      }, 250);
     }
 
     hideSubtitles() {
+      if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+      }
       if (this.paperEl) {
+        this.paperEl.style.setProperty('opacity', '0', 'important');
         this.paperEl.style.setProperty('display', 'none', 'important');
       }
       this.currentIndex = -1;
     }
 
     onSeeking() {
-      // Scrubbing
+      // Clear live subtitles immediately on seek/scrub
+      if (this.formattedSubtitles.length === 0) {
+        this.hideSubtitles();
+      }
     }
 
     onSeeked() {
       this.onTimeUpdate();
+    }
+
+    onVideoPause() {
+      // Pause auto-hide timer when user pauses video so they can read at leisure
+      if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+      }
+    }
+
+    onVideoPlay() {
+      // Resume auto-hide timer when video resumes playing
+      if (this.paperEl && this.paperEl.style.display !== 'none' && this.paperEl.style.opacity !== '0' && this.formattedSubtitles.length === 0) {
+        this.autoHideTimer = setTimeout(() => {
+          this.fadeOutSubtitle();
+        }, 3500);
+      }
     }
 
     hasActiveTextTracks() {
@@ -919,9 +983,15 @@
     }
 
     destroy() {
+      if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+      }
       this.videoEl.removeEventListener('timeupdate', this.onTimeUpdate);
       this.videoEl.removeEventListener('seeking', this.onSeeking);
       this.videoEl.removeEventListener('seeked', this.onSeeked);
+      this.videoEl.removeEventListener('pause', this.onVideoPause);
+      this.videoEl.removeEventListener('play', this.onVideoPlay);
       this.containerEl?.remove();
     }
   }
@@ -2012,8 +2082,13 @@
       latestSokujiSubtitle = { orig: finalOrig, trans: finalTrans };
 
       if (isSubtitlesActive) {
+        const isStreaming = (latestAssistant && latestAssistant.status === 'in_progress')
+          || (latestUser && latestUser.status === 'in_progress');
         for (const m of activeVideoManagers.values()) {
-          m.displaySubtitle(finalOrig, finalTrans);
+          m.displaySubtitle(finalOrig, finalTrans, {
+            isLiveAsr: true,
+            isStreaming,
+          });
         }
       }
     }
