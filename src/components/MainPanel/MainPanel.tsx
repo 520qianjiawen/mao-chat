@@ -1119,6 +1119,38 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     setStoreParticipantItems(participantItems);
   }, [participantItems, setStoreParticipantItems]);
 
+  // In extension mode, broadcast conversation items to background/tabs
+  // so in-video overlays and content scripts receive real-time subtitles
+  // even when the side panel is running normally without entering popout subtitle mode.
+  useEffect(() => {
+    if (!isExtension() || typeof (window as any).chrome === 'undefined' || !(window as any).chrome?.runtime?.sendMessage) return;
+    if (!isSessionActive && items.length === 0 && participantItems.length === 0) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const stripItems = (arr: ConversationItem[]) =>
+          (arr || []).slice(-15).map(({ formatted, ...rest }) => {
+            if (!formatted) return rest;
+            const { audio, ...fRest } = formatted;
+            return { ...rest, formatted: fRest };
+          });
+
+        (window as any).chrome.runtime.sendMessage({
+          type: 'BROADCAST_SUBTITLE_ITEMS',
+          payload: {
+            type: 'items',
+            items: stripItems(items),
+            participantItems: stripItems(participantItems),
+          },
+        }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [items, participantItems, isSessionActive]);
+
   const clearConversation = useCallback(() => {
     // Cancel pending throttled update that would re-populate items
     if (throttleTimerRef.current) {

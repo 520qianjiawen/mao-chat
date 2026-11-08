@@ -54,6 +54,17 @@ const tabsWithSidePanelOpen = new Set();
 // Track active tab audio captures
 const activeTabCaptures = new Map(); // tabId -> { streamId, active }
 
+// Connected subtitle ports (from in-video content scripts and floating overlay)
+const connectedSubtitlePorts = new Set();
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'sokuji-subtitle') {
+    connectedSubtitlePorts.add(port);
+    port.onDisconnect.addListener(() => {
+      connectedSubtitlePorts.delete(port);
+    });
+  }
+});
+
 // Chrome destroys a side-panel document when the panel closes. Keep the live
 // ASR/translation engine in an offscreen extension document so the user can
 // reclaim the full browser width while the in-page subtitle overlay continues.
@@ -840,6 +851,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     }
     sendResponse({ success: true, active: message.active });
+    return false;
+  }
+
+  if (message.type === 'BROADCAST_SUBTITLE_ITEMS' && message.payload) {
+    // 1. Forward to all open tabs with content scripts
+    try {
+      chrome.tabs.query({}, (tabs) => {
+        if (!tabs || !Array.isArray(tabs)) return;
+        for (const tab of tabs) {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'sokuji-wire-message',
+              payload: message.payload,
+            }).catch(() => {});
+          }
+        }
+      });
+    } catch { /* ignore */ }
+
+    // 2. Forward to all connected subtitle ports
+    for (const p of connectedSubtitlePorts) {
+      try {
+        p.postMessage(message.payload);
+      } catch {
+        connectedSubtitlePorts.delete(p);
+      }
+    }
+    sendResponse({ success: true });
     return false;
   }
 

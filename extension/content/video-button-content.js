@@ -835,6 +835,8 @@
         return;
       }
       this.paperEl.style.setProperty('display', 'flex', 'important');
+      this.paperEl.style.setProperty('opacity', '1', 'important');
+      this.paperEl.style.setProperty('visibility', 'visible', 'important');
 
       // Check display modes:
       // 'bilingual': show both orig and trans
@@ -1219,6 +1221,9 @@
           }
         } else if (manager.isTwitter) {
           enableTwitterCaptions(manager.container);
+        }
+        if (latestSokujiSubtitle && (!manager.formattedSubtitles || manager.formattedSubtitles.length === 0)) {
+          manager.displaySubtitle(latestSokujiSubtitle.orig, latestSokujiSubtitle.trans);
         }
         manager.onTimeUpdate();
       } else {
@@ -1900,8 +1905,10 @@
     }
   }
 
+  let latestSokujiSubtitle = null;
+
   function handleSokujiMessage(msg) {
-    if (!msg || typeof msg !== 'object' || !isSubtitlesActive) return;
+    if (!msg || typeof msg !== 'object') return;
 
     let items = [];
     let participantItems = [];
@@ -1917,7 +1924,7 @@
     }
 
     // Video tab audio capture puts items in participantItems; microphone puts them in items.
-    const pool = participantItems.length > 0 ? participantItems : items;
+    const pool = (participantItems.length > 0 ? participantItems : items).filter(Boolean);
     if (pool.length === 0) return;
 
     const getItemText = (it) => {
@@ -1925,18 +1932,33 @@
       return (it.formatted.transcript || it.formatted.text || '').trim();
     };
 
-    const lastAssistant = [...pool].reverse().find((it) => it.role === 'assistant' && getItemText(it));
-    const lastUser = [...pool].reverse().find((it) => it.role === 'user' && getItemText(it));
+    let latestAssistant = null;
+    let latestUser = null;
+    for (let i = pool.length - 1; i >= 0; i--) {
+      const it = pool[i];
+      const text = getItemText(it);
+      if (!text) continue;
+      if (it.role === 'assistant' && !latestAssistant) {
+        latestAssistant = it;
+      } else if (it.role === 'user' && !latestUser) {
+        latestUser = it;
+      }
+      if (latestAssistant && latestUser) break;
+    }
 
-    if (lastAssistant || lastUser) {
-      const trans = lastAssistant ? getItemText(lastAssistant) : '';
-      const orig = lastUser ? getItemText(lastUser) : '';
+    if (latestAssistant || latestUser) {
+      const trans = latestAssistant ? getItemText(latestAssistant) : '';
+      const orig = latestUser ? getItemText(latestUser) : '';
 
       const finalTrans = trans || orig;
       const finalOrig = orig || trans;
 
-      for (const m of activeVideoManagers.values()) {
-        m.displaySubtitle(finalOrig, finalTrans);
+      latestSokujiSubtitle = { orig: finalOrig, trans: finalTrans };
+
+      if (isSubtitlesActive) {
+        for (const m of activeVideoManagers.values()) {
+          m.displaySubtitle(finalOrig, finalTrans);
+        }
       }
     }
   }
