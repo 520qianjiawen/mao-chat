@@ -1805,27 +1805,37 @@
       const video = videos[i];
       if (activeVideoManagers.has(video)) continue;
       const rect = video.getBoundingClientRect();
-      if (rect.width < 100 || rect.height < 60) continue;
+      const parentRect = video.parentElement ? video.parentElement.getBoundingClientRect() : rect;
+      const hasSize = (rect.width >= 80 && rect.height >= 50) || (parentRect.width >= 80 && parentRect.height >= 50);
+      const isMediaReady = video.videoWidth > 0 || video.readyState > 0 || !video.paused;
+      if (!hasSize && !isMediaReady) continue;
 
       // Skip YouTube as handled above
       if (video.closest('#movie_player') || video.closest('.html5-video-player')) continue;
 
       // Find the best player container (.plyr, .video-js, .dplayer, .artplayer, Twitter, or parent)
-      const container =
+      let container =
         video.closest('.plyr') ||
         video.closest('.video-js') ||
         video.closest('.dplayer') ||
         video.closest('.artplayer-app') ||
         video.closest('#player') ||
         video.closest('.player') ||
-        video.closest('[id*="player"]') ||
+        video.closest('[id*="player" i]') ||
+        video.closest('[class*="player" i]') ||
+        video.closest('[class*="video" i]') ||
+        video.closest('[id*="video" i]') ||
         video.closest('div[data-testid="videoComponent"]') ||
         video.closest('div[data-testid="videoPlayer"]') ||
         video.closest('div[data-testid="tweetPhoto"]') ||
         video.closest('article[data-testid="tweet"]') ||
         (video.parentElement && video.parentElement !== document.body && video.parentElement !== document.documentElement
           ? video.parentElement
-          : video);
+          : (document.body || document.documentElement));
+
+      if (container === video) {
+        container = video.parentElement || document.body || document.documentElement;
+      }
 
       if (container) {
         registerVideo(video, container);
@@ -1862,15 +1872,41 @@
 
   function handleSokujiMessage(msg) {
     if (!msg || typeof msg !== 'object' || !isSubtitlesActive) return;
-    if (msg.type === 'items' && Array.isArray(msg.items) && msg.items.length > 0) {
-      const lastAssistant = [...msg.items].reverse().find((it) => it.role === 'assistant' && it.formatted?.transcript);
-      const lastUser = [...msg.items].reverse().find((it) => it.role === 'user' && it.formatted?.transcript);
-      if (lastAssistant || lastUser) {
-        const trans = lastAssistant ? lastAssistant.formatted.transcript.trim() : '';
-        const orig = lastUser ? lastUser.formatted.transcript.trim() : '';
-        for (const m of activeVideoManagers.values()) {
-          m.displaySubtitle(orig, trans);
-        }
+
+    let items = [];
+    let participantItems = [];
+
+    if (msg.type === 'items') {
+      items = Array.isArray(msg.items) ? msg.items : [];
+      participantItems = Array.isArray(msg.participantItems) ? msg.participantItems : [];
+    } else if (msg.type === 'state-init' && msg.payload) {
+      items = Array.isArray(msg.payload.items) ? msg.payload.items : [];
+      participantItems = Array.isArray(msg.payload.participantItems) ? msg.payload.participantItems : [];
+    } else {
+      return;
+    }
+
+    // Video tab audio capture puts items in participantItems; microphone puts them in items.
+    const pool = participantItems.length > 0 ? participantItems : items;
+    if (pool.length === 0) return;
+
+    const getItemText = (it) => {
+      if (!it || !it.formatted) return '';
+      return (it.formatted.transcript || it.formatted.text || '').trim();
+    };
+
+    const lastAssistant = [...pool].reverse().find((it) => it.role === 'assistant' && getItemText(it));
+    const lastUser = [...pool].reverse().find((it) => it.role === 'user' && getItemText(it));
+
+    if (lastAssistant || lastUser) {
+      const trans = lastAssistant ? getItemText(lastAssistant) : '';
+      const orig = lastUser ? getItemText(lastUser) : '';
+
+      const finalTrans = trans || orig;
+      const finalOrig = orig || trans;
+
+      for (const m of activeVideoManagers.values()) {
+        m.displaySubtitle(finalOrig, finalTrans);
       }
     }
   }
@@ -1878,6 +1914,10 @@
   // Listen for subtitle and ASR status updates from background
   chrome.runtime.onMessage.addListener((msg) => {
     if (!msg || typeof msg !== 'object') return;
+    if (msg.type === 'sokuji-wire-message' && msg.payload) {
+      handleSokujiMessage(msg.payload);
+      return;
+    }
     if (msg.type === 'MAO_SUBTITLE_ACTIVE') {
       setAllButtonsState(true);
       ensureSokujiPort();
@@ -1917,6 +1957,21 @@
     });
   }
 
-  // Initial scan
+  // Hook media lifecycle & fullscreen events so late-injected players are caught immediately
+  document.addEventListener('play', () => scanAndMount(), true);
+  document.addEventListener('playing', () => scanAndMount(), true);
+  document.addEventListener('loadedmetadata', () => scanAndMount(), true);
+  document.addEventListener('canplay', () => scanAndMount(), true);
+  document.addEventListener('fullscreenchange', () => scanAndMount(), true);
+  document.addEventListener('webkitfullscreenchange', () => scanAndMount(), true);
+  window.addEventListener('resize', () => scanAndMount(), { passive: true });
+
+  // Initial and periodic scan for slow/async loading players
   scanAndMount();
+  let periodicScanCount = 0;
+  const pollTimer = setInterval(() => {
+    periodicScanCount++;
+    scanAndMount();
+    if (periodicScanCount >= 10) clearInterval(pollTimer);
+  }, 1500);
 })();

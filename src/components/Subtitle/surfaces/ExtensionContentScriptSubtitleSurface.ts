@@ -182,6 +182,12 @@ export class ExtensionContentScriptSubtitleSurface implements SubtitleSurface {
     } else {
       this.port?.postMessage(msg);
     }
+    if (this.targetTabId != null) {
+      void sendTabMessage(this.targetTabId, {
+        type: 'sokuji-wire-message',
+        payload: msg,
+      }).catch(() => {});
+    }
   }
 
   private handlePortMessage = (msg: SubtitleControlMessage | { type?: string }) => {
