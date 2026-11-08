@@ -24,8 +24,8 @@ export const defaultGeminiSettings: GeminiSettings = {
   apiKey: '',
   model: '',
   voice: 'Aoede',
-  sourceLanguage: 'en-US',
-  targetLanguage: 'ja-JP',
+  sourceLanguage: 'ja-JP',
+  targetLanguage: 'zh-CN',
   temperature: 0.8,
   maxTokens: 'inf',
   turnDetectionMode: 'Auto',
@@ -74,6 +74,8 @@ export class GeminiProviderConfig extends BaseProviderDescriptor {
   }
 
   private static readonly LANGUAGES: LanguageOption[] = [
+    { name: '中文 (简体)', value: 'zh-CN', englishName: 'Chinese (Simplified)' },
+    { name: '中文 (繁體)', value: 'zh-TW', englishName: 'Chinese (Traditional)' },
     { name: 'English (United States)', value: 'en-US', englishName: 'English (United States)' },
     { name: 'English (Australia)', value: 'en-AU', englishName: 'English (Australia)' },
     { name: 'English (United Kingdom)', value: 'en-GB', englishName: 'English (United Kingdom)' },
@@ -102,6 +104,7 @@ export class GeminiProviderConfig extends BaseProviderDescriptor {
     { name: 'Nederlands (Nederland)', value: 'nl-NL', englishName: 'Dutch (Netherlands)' },
     { name: '한국어 (대한민국)', value: 'ko-KR', englishName: 'Korean (South Korea)' },
     { name: '普通话 (中国)', value: 'cmn-CN', englishName: 'Mandarin Chinese (China)' },
+    { name: '粤语 (香港)', value: 'yue-HK', englishName: 'Cantonese (Hong Kong)' },
     { name: 'Polski (Polska)', value: 'pl-PL', englishName: 'Polish (Poland)' },
     { name: 'Русский (Россия)', value: 'ru-RU', englishName: 'Russian (Russia)' },
     { name: 'Kiswahili (Kenya)', value: 'sw-KE', englishName: 'Swahili (Kenya)' },

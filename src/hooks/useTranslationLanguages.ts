@@ -37,6 +37,42 @@ import { useNativeModelStore } from '../stores/nativeModelStore';
 import { preferLanguageSpecificStreamingAsr } from '../lib/local-inference/native/nativeCatalog';
 import { isElectron, isExtension } from '../utils/environment';
 
+function findMatchingLanguageCode(code: string | undefined, list: { value: string }[]): string | undefined {
+  if (!code || !list || list.length === 0) return code;
+  if (list.some((item) => item.value === code)) return code;
+  const norm = code.toLowerCase().replace(/_/g, '-');
+  const matched = list.find((item) => {
+    const itemNorm = item.value.toLowerCase().replace(/_/g, '-');
+    if (itemNorm === norm) return true;
+    if (
+      (norm === 'zh' || norm === 'zh-cn' || norm === 'cmn-cn' || norm === 'zh-hans') &&
+      (itemNorm === 'zh' || itemNorm === 'zh-cn' || itemNorm === 'cmn-cn' || itemNorm === 'zh-hans')
+    ) {
+      return true;
+    }
+    if (
+      (norm === 'zh-tw' || norm === 'zh-hk' || norm === 'zh-hant') &&
+      (itemNorm === 'zh-tw' || itemNorm === 'zh-hk' || itemNorm === 'zh-hant')
+    ) {
+      return true;
+    }
+    if (
+      (norm === 'ja' || norm === 'ja-jp') &&
+      (itemNorm === 'ja' || itemNorm === 'ja-jp')
+    ) {
+      return true;
+    }
+    if (
+      (norm === 'en' || norm === 'en-us') &&
+      (itemNorm === 'en' || itemNorm === 'en-us')
+    ) {
+      return true;
+    }
+    return false;
+  });
+  return matched ? matched.value : code;
+}
+
 /** Shared source/target language read+write used by Settings and the main page picker. */
 export function useTranslationLanguages() {
   const { t } = useTranslation();
@@ -90,8 +126,29 @@ export function useTranslationLanguages() {
     (s) => s[ProviderConfigFactory.getDescriptor(s.provider).settingsSliceKey as keyof SettingsStore],
   ) as Record<string, any>;
 
-  const sourceLanguage = currentProviderSettings?.sourceLanguage || 'auto';
-  const targetLanguage = currentProviderSettings?.targetLanguage || 'en';
+  const rawSourceLanguage = currentProviderSettings?.sourceLanguage || 'auto';
+  const rawTargetLanguage = currentProviderSettings?.targetLanguage || 'en';
+
+  const sourceLanguages = providerConfig.languages;
+
+  const targetLanguages = useMemo(() => {
+    if (provider === Provider.LOCAL_INFERENCE || provider === Provider.LOCAL_NATIVE) {
+      return getTranslationTargetLanguages(rawSourceLanguage || 'ja');
+    }
+    if (provider === Provider.ZOOM_AI) {
+      return ProviderConfigFactory.getDescriptor(provider).resolveTargetLanguages(rawSourceLanguage || 'ja-JP');
+    }
+    return providerConfig.targetLanguages ?? providerConfig.languages;
+  }, [provider, providerConfig.languages, providerConfig.targetLanguages, rawSourceLanguage]);
+
+  const sourceLanguage = useMemo(() => {
+    if (rawSourceLanguage === 'auto') return 'auto';
+    return findMatchingLanguageCode(rawSourceLanguage, sourceLanguages) || rawSourceLanguage;
+  }, [rawSourceLanguage, sourceLanguages]);
+
+  const targetLanguage = useMemo(() => {
+    return findMatchingLanguageCode(rawTargetLanguage, targetLanguages) || rawTargetLanguage;
+  }, [rawTargetLanguage, targetLanguages]);
 
   const translationLanguagesDescription = audioMode === 'both'
     ? t('modePicker.descBoth', 'Two-way. Your mic language and the computer-audio language translate into each other. Both must be set — automatic detection cannot be used.')
@@ -343,16 +400,6 @@ export function useTranslationLanguages() {
       updateTargetLanguage(newTarget);
     }
   };
-
-  const targetLanguages = useMemo(() => {
-    if (provider === Provider.LOCAL_INFERENCE || provider === Provider.LOCAL_NATIVE) {
-      return getTranslationTargetLanguages(sourceLanguage || 'ja');
-    }
-    if (provider === Provider.ZOOM_AI) {
-      return ProviderConfigFactory.getDescriptor(provider).resolveTargetLanguages(sourceLanguage || 'ja-JP');
-    }
-    return providerConfig.targetLanguages ?? providerConfig.languages;
-  }, [provider, providerConfig.languages, providerConfig.targetLanguages, sourceLanguage]);
 
   const showAutoSourceOption = provider !== Provider.LOCAL_INFERENCE
     && (provider !== Provider.LOCAL_NATIVE || localNativeSettings.asrModel === 'hayamimi-asr')

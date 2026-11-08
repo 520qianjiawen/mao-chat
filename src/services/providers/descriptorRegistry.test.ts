@@ -236,6 +236,16 @@ describe('descriptor language rules', () => {
     const d = ProviderConfigFactory.getDescriptor(Provider.GEMINI);
     expect(d.resolveSourceLanguages()).toBe(d.getConfig().languages);
   });
+
+  it('gemini includes zh-CN, zh-TW, and cmn-CN in supported languages', () => {
+    const d = ProviderConfigFactory.getDescriptor(Provider.GEMINI);
+    const langValues = d.getConfig().languages.map((l) => l.value);
+    expect(langValues).toContain('zh-CN');
+    expect(langValues).toContain('zh-TW');
+    expect(langValues).toContain('cmn-CN');
+    expect(langValues).toContain('ja-JP');
+    expect(langValues).toContain('en-US');
+  });
 });
 
 describe('descriptor i18n keys', () => {

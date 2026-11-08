@@ -198,8 +198,14 @@ async function bootstrap() {
       const { sourceLanguage, targetLanguage } = message;
       const store = useSettingsStore.getState();
       const prov = store.provider;
-      const sLang = sourceLanguage === 'auto' ? undefined : (sourceLanguage === 'ja' ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja') : (sourceLanguage === 'zh-CN' ? 'zh' : sourceLanguage));
-      const tLang = targetLanguage === 'zh-CN' ? (prov === Provider.OPENAI ? 'zh_CN' : 'zh-CN') : (targetLanguage === 'ja' ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja') : targetLanguage);
+      const sLang = sourceLanguage === 'auto'
+        ? undefined
+        : (sourceLanguage === 'ja'
+          ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja')
+          : (sourceLanguage === 'zh-CN' ? (prov === Provider.GEMINI ? 'zh-CN' : 'zh') : sourceLanguage));
+      const tLang = (targetLanguage === 'zh-CN' || targetLanguage === 'zh')
+        ? (prov === Provider.OPENAI ? 'zh_CN' : 'zh-CN')
+        : (targetLanguage === 'ja' ? (prov === Provider.GEMINI ? 'ja-JP' : 'ja') : targetLanguage);
       const patch: any = {};
       if (sLang) patch.sourceLanguage = sLang;
       if (tLang) patch.targetLanguage = tLang;

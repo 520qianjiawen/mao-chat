@@ -257,7 +257,7 @@ async function syncLanguagesToSettings(sourceLang, targetLang) {
   const providers = ['gemini', 'openai', 'soniox', 'volcengineast2', 'palabraai', 'antling', 'localllm', 'localinference'];
 
   const geminiSource = sourceLang === 'ja' ? 'ja-JP' : (sourceLang === 'en' ? 'en-US' : (sourceLang === 'zh' || sourceLang === 'zh-CN' ? 'zh-CN' : sourceLang));
-  const geminiTarget = targetLang === 'zh-CN' ? 'zh-CN' : (targetLang === 'ja' ? 'ja-JP' : (targetLang === 'en' ? 'en-US' : targetLang));
+  const geminiTarget = (targetLang === 'zh-CN' || targetLang === 'zh' || targetLang === 'cmn-CN') ? 'zh-CN' : (targetLang === 'ja' ? 'ja-JP' : (targetLang === 'en' ? 'en-US' : targetLang));
   const standardSource = sourceLang === 'zh-CN' ? 'zh' : sourceLang;
   const standardTarget = targetLang === 'zh-CN' ? 'zh' : targetLang;
 

@@ -62,6 +62,7 @@ import {
 import {
   AntLingSettings, defaultAntLingSettings,
 } from '../services/providers/AntLingProviderConfig';
+import { getLanguageOption } from '../utils/languages';
 
 /** Map a native readiness reason to its user-facing message. Verbatim port of
  * the messages the inline LOCAL_NATIVE gate produced. */
@@ -1355,6 +1356,19 @@ const useSettingsStore = create<SettingsStore>()(
           ] as const),
         )) as Partial<SettingsStore>;
 
+        // Migrate legacy Gemini language code 'cmn-CN' -> 'zh-CN'
+        const geminiSlice = loadedSlices.gemini as GeminiSettings | undefined;
+        if (geminiSlice) {
+          if (geminiSlice.targetLanguage === 'cmn-CN') {
+            geminiSlice.targetLanguage = 'zh-CN';
+            await service.setSetting('settings.gemini.targetLanguage', 'zh-CN').catch(() => {});
+          }
+          if (geminiSlice.sourceLanguage === 'cmn-CN') {
+            geminiSlice.sourceLanguage = 'zh-CN';
+            await service.setSetting('settings.gemini.sourceLanguage', 'zh-CN').catch(() => {});
+          }
+        }
+
         // One-time extension preset for video/live/movie subtitles. Persisting a
         // migration flag means later user choices remain untouched.
         // V3 re-applies the preset once after fixing the streaming runtime's
@@ -1625,16 +1639,35 @@ const useSettingsStore = create<SettingsStore>()(
         const providerConfig = state.getCurrentProviderConfig();
         const currentSettings = state.getCurrentProviderSettings();
 
-        const sourceLang = providerConfig.languages.find(l => l.value === currentSettings.sourceLanguage);
-        // Resolve the target name from the target list when the provider declares
-        // one — `languages` is the source list, so a target-only code (region
-        // variants like en-us, or az/fil/zh-hant) finds nothing there and the
-        // template renders the raw code instead of a display name.
-        const targetLang = (providerConfig.targetLanguages ?? providerConfig.languages)
-          .find(l => l.value === currentSettings.targetLanguage);
+        const resolveLang = (code: string | undefined, list: { value: string; englishName?: string }[] | undefined) => {
+          if (!code || !list) return undefined;
+          const direct = list.find(l => l.value === code);
+          if (direct) return direct;
+          const norm = code.toLowerCase().replace(/_/g, '-');
+          return list.find(l => {
+            const lNorm = l.value.toLowerCase().replace(/_/g, '-');
+            if (lNorm === norm) return true;
+            if (
+              (norm === 'zh' || norm.startsWith('zh-') || norm.startsWith('cmn')) &&
+              (lNorm === 'zh' || lNorm.startsWith('zh-') || lNorm.startsWith('cmn'))
+            ) {
+              return true;
+            }
+            if ((norm === 'ja' || norm.startsWith('ja-')) && (lNorm === 'ja' || lNorm.startsWith('ja-'))) {
+              return true;
+            }
+            if ((norm === 'en' || norm.startsWith('en-')) && (lNorm === 'en' || lNorm.startsWith('en-'))) {
+              return true;
+            }
+            return false;
+          });
+        };
 
-        const sourceLangName = sourceLang?.englishName || currentSettings.sourceLanguage || 'SOURCE_LANGUAGE';
-        const targetLangName = targetLang?.englishName || currentSettings.targetLanguage || 'TARGET_LANGUAGE';
+        const sourceLang = resolveLang(currentSettings.sourceLanguage, providerConfig.languages);
+        const targetLang = resolveLang(currentSettings.targetLanguage, providerConfig.targetLanguages ?? providerConfig.languages);
+
+        const sourceLangName = sourceLang?.englishName || getLanguageOption(currentSettings.sourceLanguage).englishName || currentSettings.sourceLanguage || 'SOURCE_LANGUAGE';
+        const targetLangName = targetLang?.englishName || getLanguageOption(currentSettings.targetLanguage).englishName || currentSettings.targetLanguage || 'TARGET_LANGUAGE';
 
         // If forParticipant is true, swap source and target (for participant audio translation)
         const effectiveSource = forParticipant ? targetLangName : sourceLangName;
