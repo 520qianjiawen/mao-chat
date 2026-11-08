@@ -733,15 +733,15 @@ async function bingTranslatorClearDNRHeaders() {
 // with 403 "Invalid CORS request". We inject Origin: https://api.ant-ling.com and
 // override CORS headers so extension fetch requests succeed cleanly.
 const ANT_LING_DNR_RULE_ID = 3003;
+const ANT_LING_DNR_PREFLIGHT_RULE_ID = 3004;
 const ANT_LING_HOST = 'api.ant-ling.com';
 
 async function antLingSetDNRHeaders() {
   try {
-    const extOrigin = `chrome-extension://${chrome.runtime.id}`;
     const rules = [
       {
         id: ANT_LING_DNR_RULE_ID,
-        priority: 2,
+        priority: 10,
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
@@ -749,21 +749,43 @@ async function antLingSetDNRHeaders() {
             { header: 'Referer', operation: 'set', value: 'https://api.ant-ling.com/' },
           ],
           responseHeaders: [
-            { header: 'Access-Control-Allow-Origin', operation: 'set', value: extOrigin },
-            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'OPTIONS,HEAD,GET,POST,PUT,DELETE,TRACE' },
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'GET,POST,PUT,DELETE,OPTIONS,HEAD' },
             { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' },
-            { header: 'Access-Control-Allow-Credentials', operation: 'set', value: 'true' },
+            { header: 'Access-Control-Allow-Credentials', operation: 'remove' },
           ],
         },
         condition: {
-          urlFilter: `||${ANT_LING_HOST}`,
+          urlFilter: `||${ANT_LING_HOST}*`,
+          resourceTypes: ['xmlhttprequest', 'other'],
+        },
+      },
+      {
+        id: ANT_LING_DNR_PREFLIGHT_RULE_ID,
+        priority: 20,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Origin', operation: 'set', value: 'https://api.ant-ling.com' },
+            { header: 'Referer', operation: 'set', value: 'https://api.ant-ling.com/' },
+          ],
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'GET,POST,PUT,DELETE,OPTIONS,HEAD' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Credentials', operation: 'remove' },
+          ],
+        },
+        condition: {
+          urlFilter: `||${ANT_LING_HOST}*`,
+          requestMethods: ['options'],
           resourceTypes: ['xmlhttprequest', 'other'],
         },
       },
     ];
 
     const existingRuleIds = (await chrome.declarativeNetRequest.getDynamicRules())
-      .filter(r => r.id === ANT_LING_DNR_RULE_ID)
+      .filter(r => r.id === ANT_LING_DNR_RULE_ID || r.id === ANT_LING_DNR_PREFLIGHT_RULE_ID)
       .map(r => r.id);
 
     await chrome.declarativeNetRequest.updateDynamicRules({

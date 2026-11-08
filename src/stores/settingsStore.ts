@@ -337,7 +337,7 @@ export interface SettingsStore {
   updateAntLing: (settings: Partial<AntLingSettings>) => void;
 
   // Async actions
-  validateApiKey: (getAuthToken?: () => Promise<string | null>) => Promise<ApiKeyValidationResult>;
+  validateApiKey: (getAuthToken?: () => Promise<string | null>, bypassCache?: boolean) => Promise<ApiKeyValidationResult>;
   fetchAvailableModels: (getAuthToken?: () => Promise<string | null>) => Promise<void>;
   ensureKizunaApiKey: (getToken: () => Promise<string | null>, isSignedIn: boolean) => Promise<boolean>;
   loadSettings: () => Promise<void>;
@@ -1050,7 +1050,7 @@ const useSettingsStore = create<SettingsStore>()(
     updateAntLing: (settings) => updateProviderSlice(set, 'antLing', settings),
 
     // === Async Actions ===
-    validateApiKey: async (getAuthToken) => {
+    validateApiKey: async (getAuthToken, bypassCache = false) => {
       const state = get();
       const provider = state.provider;
 
@@ -1151,11 +1151,11 @@ const useSettingsStore = create<SettingsStore>()(
         return {valid: false, message: '', validating: false};
       }
 
-      // Check cache
+      // Check cache (only reuse if valid and bypassCache is false)
       const cacheKey = `${provider}:${creds.primary}:${creds.secret ?? ''}:${creds.endpoint ?? ''}`;
 
       const cached = state.validationCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      if (!bypassCache && cached && cached.validation.valid && Date.now() - cached.timestamp < 5 * 60 * 1000) {
         set({
           isApiKeyValid: Boolean(cached.validation.valid),
           availableModels: cached.models,
@@ -1181,13 +1181,17 @@ const useSettingsStore = create<SettingsStore>()(
           creds.endpoint  // Pass custom endpoint for OpenAI Compatible
         );
 
-        // Cache result
+        // Cache result only if valid; delete failed entries so retries aren't locked
         const newCache = new Map(state.validationCache);
-        newCache.set(cacheKey, {
-          validation: result.validation,
-          models: result.models,
-          timestamp: Date.now()
-        });
+        if (result.validation.valid) {
+          newCache.set(cacheKey, {
+            validation: result.validation,
+            models: result.models,
+            timestamp: Date.now()
+          });
+        } else {
+          newCache.delete(cacheKey);
+        }
 
         set({
           isApiKeyValid: Boolean(result.validation.valid),

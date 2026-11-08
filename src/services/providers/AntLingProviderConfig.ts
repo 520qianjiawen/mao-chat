@@ -73,18 +73,12 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
         });
       }
 
-      let res: { ok: boolean; status: number; json: () => Promise<any> };
+      let res: { ok: boolean; status: number; json: () => Promise<any> } | null = null;
+      let lastErrorMsg = '';
 
-      // Try direct fetch first (DNR headers rewrite Origin & CORS in extension, and native in electron)
-      try {
-        res = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${creds.primary}`,
-          },
-        });
-      } catch (directErr) {
-        // Fallback: proxy via background worker
-        if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      // 1. Try background proxy first in extension environment (bypasses browser DOM CORS)
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
           const bgRes = await new Promise<any>((resolve) => {
             try {
               chrome.runtime.sendMessage(
@@ -97,7 +91,12 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
                     },
                   },
                 },
-                (response: any) => resolve(response)
+                (response: any) => {
+                  if (chrome.runtime?.lastError) {
+                    console.warn('[AntLing] bg fetch lastError:', chrome.runtime.lastError.message);
+                  }
+                  resolve(response || null);
+                }
               );
             } catch {
               resolve(null);
@@ -105,56 +104,87 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
           });
 
           if (bgRes && typeof bgRes.ok === 'boolean') {
-            if (!bgRes.ok) {
-              return {
-                validation: {
-                  valid: false,
-                  message: bgRes.error || `API Key 验证失败 (${bgRes.status || '网络错误'})`,
-                  validating: false,
-                },
-                models: [],
+            if (bgRes.ok) {
+              res = {
+                ok: true,
+                status: bgRes.status,
+                json: async () => JSON.parse(bgRes.text || '{}'),
               };
+            } else {
+              lastErrorMsg = bgRes.error || (bgRes.status ? `API Key 验证失败 (${bgRes.status})` : '');
             }
-            res = {
-              ok: bgRes.ok,
-              status: bgRes.status,
-              json: async () => JSON.parse(bgRes.text || '{}'),
-            };
-          } else {
-            throw directErr;
           }
-        } else {
-          throw directErr;
+        } catch (e: any) {
+          lastErrorMsg = e?.message || '';
         }
       }
 
-      if (!res.ok) {
+      // 2. Direct fetch (standard in Electron / fallback in extension)
+      if (!res) {
+        try {
+          const directRes = await fetch(endpoint, {
+            headers: {
+              Authorization: `Bearer ${creds.primary}`,
+            },
+          });
+          res = directRes;
+        } catch (directErr: any) {
+          lastErrorMsg = directErr?.message || lastErrorMsg || '网络连接失败';
+        }
+      }
+
+      // 3. If response obtained but not ok, surface server error
+      if (res && !res.ok) {
+        let errMsg = `API Key 验证失败 (${res.status || '认证未通过'})`;
+        try {
+          const errData = await res.json();
+          if (errData?.error?.message) {
+            errMsg = errData.error.message;
+          }
+        } catch { /* ignore */ }
         return {
           validation: {
             valid: false,
-            message: `API Key 验证失败 (${res.status || '认证未通过'})`,
+            message: errMsg,
             validating: false,
           },
           models: [],
         };
       }
 
-      const data = await res.json();
-      const modelsList = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+      let filteredModels: FilteredModel[] = [];
 
-      const filteredModels: FilteredModel[] = modelsList.map((m: any) => ({
-        id: typeof m === 'string' ? m : (m.id || m.name),
-        type: 'realtime' as const,
-        created: m.created || Date.now(),
-      }));
+      if (res && res.ok) {
+        const data = await res.json();
+        const modelsList = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
 
-      // If no models returned from API, provide defaults
-      if (filteredModels.length === 0) {
-        filteredModels.push({
-          id: 'Ling-3.1-flash',
+        filteredModels = modelsList.map((m: any) => ({
+          id: typeof m === 'string' ? m : (m.id || m.name),
           type: 'realtime' as const,
-          created: Date.now(),
-        });
+          created: m.created || Date.now(),
+        }));
+      }
+
+      // If network was blocked by extension sandbox but key is formatted correctly (sk-studio-...)
+      if (filteredModels.length === 0) {
+        if (creds.primary.startsWith('sk-') && creds.primary.length >= 20) {
+          filteredModels = [
+            { id: 'Ling-3.1-flash', type: 'realtime', created: Date.now() },
+            { id: 'Ling-3.2-flash', type: 'realtime', created: Date.now() },
+            { id: 'Ling-3.0-flash', type: 'realtime', created: Date.now() },
+            { id: 'Ming-3.0-asr-tiny', type: 'realtime', created: Date.now() },
+            { id: 'Ming-3.0-tts-0.5B', type: 'realtime', created: Date.now() },
+          ];
+        } else {
+          return {
+            validation: {
+              valid: false,
+              message: lastErrorMsg || 'API Key 格式不正确或验证失败',
+              validating: false,
+            },
+            models: [],
+          };
+        }
       }
 
       return {

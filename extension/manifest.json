@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "mao-chat",
-  "version": "1.1.15",
+  "version": "1.1.16",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "minimum_chrome_version": "116",
@@ -33,11 +33,16 @@
     "tabCapture",
     "activeTab",
     "scripting",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
     "http://*/*",
     "https://*/*",
+    "https://api.ant-ling.com/*",
+    "https://*.ant-ling.com/*",
+    "wss://*.ant-ling.com/*",
+    "wss://api.ant-ling.com/*",
     "https://sokuji-api.kizuna.ai/*",
     "https://sokuji.kizuna.ai/*",
     "wss://openspeech.bytedance.com/*",

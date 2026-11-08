@@ -301,7 +301,7 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
     const getAuthToken = isKizunaManagedProvider(provider) && isSignedIn && getToken ?
       () => getToken() : undefined;
 
-    const result = await validateApiKey(getAuthToken);
+    const result = await validateApiKey(getAuthToken, true);
 
     trackEvent('api_key_validated', {
       provider: provider,
