@@ -182,6 +182,9 @@
     if (!text || typeof text !== 'string') return '';
     return text
       .replace(/\r\n/g, '\n')
+      // Remove thoughts / think tags if any
+      .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
       // Remove linebreaks between CJK characters from ASR/LLM output
       .replace(/([\u3000-\u9fff\uac00-\ud7af])\n+([\u3000-\u9fff\uac00-\ud7af])/gu, '$1$2')
       // Replace remaining linebreaks with a space

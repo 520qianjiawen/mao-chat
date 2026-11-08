@@ -793,11 +793,11 @@ export class GeminiClient implements IClient {
       });
       const parts = serverContent.modelTurn.parts || [];
       
-      // Separate audio and text parts
+      // Separate audio and text parts (explicitly exclude internal reasoning / thought parts)
       const audioParts = parts.filter(p => 
         p.inlineData && p.inlineData.mimeType?.startsWith('audio/pcm')
       );
-      const textParts = parts.filter(p => p.text);
+      const textParts = parts.filter(p => p.text && !p.thought);
 
       // Track if we have new audio or text in this message
       let hasNewAudio = false;
