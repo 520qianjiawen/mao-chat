@@ -177,6 +177,19 @@
     return false;
   }
 
+  // Normalizes subtitle text by removing unwanted linebreaks and extra spaces
+  function normalizeSubtitleText(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+      .replace(/\r\n/g, '\n')
+      // Remove linebreaks between CJK characters from ASR/LLM output
+      .replace(/([\u3000-\u9fff\uac00-\ud7af])\n+([\u3000-\u9fff\uac00-\ud7af])/gu, '$1$2')
+      // Replace remaining linebreaks with a space
+      .replace(/\n+/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+  }
+
   // Auto-enable Twitter closed captions if available
   function enableTwitterCaptions(container) {
     if (!container) return;
@@ -248,8 +261,8 @@
         'position: absolute',
         'left: 50%',
         'transform: translateX(-50%)',
-        'width: 92%',
-        'max-width: 900px',
+        'width: max-content',
+        'max-width: 90%',
         'bottom: 18px',
         'text-align: center',
         'display: none',
@@ -272,30 +285,34 @@
         'justify-content: center',
         'pointer-events: none',
         'width: max-content',
-        'max-width: 96%',
+        'max-width: 100%',
       ].join(' !important;') + ' !important;';
 
       // Original text (top, secondary)
       const origEl = document.createElement('div');
       origEl.className = 'mao-sub-orig';
       origEl.style.cssText = [
-        'margin: 0 0 3px 0',
+        'margin: 0 0 4px 0',
         'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         'font-size: clamp(10px, 1.1vw, 12px)',
         'font-weight: 400',
-        'line-height: 1.25',
-        'color: rgba(255, 255, 255, 0.85)',
-        'background: rgba(14, 12, 22, 0.75)',
+        'line-height: 1.35',
+        'color: rgba(255, 255, 255, 0.88)',
+        'background: rgba(14, 12, 22, 0.78)',
         'backdrop-filter: blur(8px)',
         '-webkit-backdrop-filter: blur(8px)',
         'border-radius: 4px',
-        'padding: 2px 8px',
+        'padding: 3px 10px',
         'text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95)',
         'display: none',
         'width: max-content',
-        'max-width: 92%',
-        'word-break: break-word',
+        'max-width: 100%',
         'box-sizing: border-box',
+        'white-space: normal',
+        'word-break: break-word',
+        'overflow-wrap: break-word',
+        'line-break: loose',
+        'text-align: center',
       ].join(' !important;') + ' !important;';
 
       // Translated text (bottom, prominent)
@@ -306,23 +323,26 @@
         'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         'font-size: clamp(12px, 1.4vw, 15px)',
         'font-weight: 500',
-        'line-height: 1.3',
+        'line-height: 1.35',
         'color: #ffffff',
-        'background: rgba(18, 14, 26, 0.85)',
+        'background: rgba(18, 14, 26, 0.88)',
         'backdrop-filter: blur(10px)',
         '-webkit-backdrop-filter: blur(10px)',
         'border: 1px solid rgba(255, 255, 255, 0.15)',
         'box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45)',
-        'padding: 4px 12px',
+        'padding: 5px 14px',
         'border-radius: 6px',
         'text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9)',
         'letter-spacing: 0.2px',
         'display: none',
         'width: max-content',
-        'max-width: 92%',
-        'word-break: break-word',
-        'text-wrap: balance',
+        'max-width: 100%',
         'box-sizing: border-box',
+        'white-space: normal',
+        'word-break: break-word',
+        'overflow-wrap: break-word',
+        'line-break: loose',
+        'text-align: center',
       ].join(' !important;') + ' !important;';
 
       windowEl.appendChild(origEl);
@@ -846,14 +866,14 @@
       const showTrans = (currentDisplayMode === 'bilingual' || currentDisplayMode === 'target_only') && Boolean(transText);
 
       if (showOrig) {
-        this.origEl.textContent = origText;
+        this.origEl.textContent = normalizeSubtitleText(origText);
         this.origEl.style.setProperty('display', 'inline-block', 'important');
       } else {
         this.origEl.style.setProperty('display', 'none', 'important');
       }
 
       if (showTrans) {
-        this.transEl.textContent = transText;
+        this.transEl.textContent = normalizeSubtitleText(transText);
         this.transEl.style.setProperty('display', 'inline-block', 'important');
       } else {
         this.transEl.style.setProperty('display', 'none', 'important');
