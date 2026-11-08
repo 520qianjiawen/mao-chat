@@ -124,6 +124,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: path.resolve(__dirname, '../out/mao-chat'),
       emptyOutDir: true,
+      modulePreload: false,
       sourcemap: isDevMode ? 'inline' as const : false,
       minify: !isDevMode ? 'esbuild' as const : false,
       rollupOptions: {
