@@ -404,17 +404,15 @@ describe('GeminiClient — reconnection state machine', () => {
     expect(handlers.onReconnected).toHaveBeenCalled();
   });
 
-  // ── Test 15: handle-less goAway WITH local conversation state → permanent disconnect ──
-  // Guards against silent client/server divergence: if a client lost its handle
-  // (e.g., right after a successful resume) but still has local conversationItems,
-  // a fresh reconnect would open a brand-new server session with no context while
-  // the UI keeps showing the old conversation. We treat this as a permanent
-  // disconnect instead so the user sees the session end.
-  it('does NOT fresh-reconnect when local conversation state is present', async () => {
+  // ── Test 15: fresh reconnect proceeds even when local state is present ────
+  // For simultaneous interpretation / video live captioning, turns are
+  // independent and Gemini Live API models often do not issue resumption handles.
+  // When a disconnect occurs (e.g. idle timeout during background music or turn end),
+  // the client must fresh-reconnect so subsequent speech is translated, while
+  // preserving existing conversationItems for the UI display.
+  it('fresh-reconnects when local conversation state is present (preserving UI conversation items)', async () => {
     await client.connect(baseConfig);
     // Add a fake conversation item to simulate "client has had turns" state.
-    // Use any-cast because conversationItems is private — this test exercises
-    // the public observable behaviour (no fresh reconnect, onClose fires).
     (client as any).conversationItems = [
       { id: 'fake-1', role: 'user', type: 'message', status: 'completed', createdAt: Date.now() },
     ];
@@ -423,11 +421,51 @@ describe('GeminiClient — reconnection state machine', () => {
     sendGoAway();
     await vi.runAllTimersAsync();
 
-    // Fresh reconnect path should NOT have run
-    expect(handlers.onReconnecting).not.toHaveBeenCalled();
-    expect(handlers.onReconnected).not.toHaveBeenCalled();
-    // Permanent disconnect should have fired exactly once
-    expect(handlers.onClose).toHaveBeenCalledTimes(1);
+    // Fresh reconnect path SHOULD run so live simultaneous translation continues
+    expect(handlers.onReconnecting).toHaveBeenCalled();
+    expect(handlers.onReconnected).toHaveBeenCalled();
+    expect(handlers.onClose).not.toHaveBeenCalled();
+    // UI conversation items must remain preserved
+    expect(client.getConversationItems()).toHaveLength(1);
+  });
+
+  it('buffers audio during reconnection and flushes it upon reconnect', async () => {
+    await client.connect(baseConfig);
+    const mockSendRealtimeInput = vi.fn();
+    (mockSession as any).sendRealtimeInput = mockSendRealtimeInput;
+
+    // Trigger reconnect by sending close
+    // Setup connect to delay/hang until we trigger it
+    let resumeConnect: () => void = () => {};
+    mockLiveConnect.mockImplementationOnce(({ callbacks }: any) => {
+      capturedCallbacks = callbacks;
+      return new Promise((resolve) => {
+        resumeConnect = () => {
+          callbacks.onopen();
+          resolve(mockSession);
+        };
+      });
+    });
+
+    sendClose();
+    // Verify client is reconnecting
+    expect(handlers.onReconnecting).toHaveBeenCalled();
+
+    // While reconnecting, appendInputAudio should buffer the audio rather than dropping it
+    const testPcm = new Int16Array([100, 200, 300, 400]);
+    client.appendInputAudio(testPcm);
+
+    // Complete the reconnect
+    resumeConnect();
+    await vi.runAllTimersAsync();
+
+    expect(handlers.onReconnected).toHaveBeenCalled();
+    // Buffered audio should have been flushed to the new session
+    expect(mockSendRealtimeInput).toHaveBeenCalledWith({
+      audio: expect.objectContaining({
+        mimeType: 'audio/pcm;rate=24000',
+      }),
+    });
   });
 
   // ── Test 16: stale onclose from a superseded session is ignored ───────────

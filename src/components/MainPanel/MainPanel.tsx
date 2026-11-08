@@ -730,6 +730,24 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       const pItems = client.getConversationItems().map(it => it.source ? it : { ...it, source: 'participant' as const });
       setParticipantItems(pItems);
     },
+    onReconnecting: () => {
+      console.info('[Sokuji] [MainPanel] Participant session reconnecting...');
+      addRealtimeEvent(
+        { type: 'session.reconnecting', data: { timestamp: Date.now() } },
+        'client',
+        'session.reconnecting',
+        'participant'
+      );
+    },
+    onReconnected: () => {
+      console.info('[Sokuji] [MainPanel] Participant session reconnected successfully');
+      addRealtimeEvent(
+        { type: 'session.reconnected', data: { timestamp: Date.now() } },
+        'client',
+        'session.reconnected',
+        'participant'
+      );
+    },
     onClose: async () => {
       // Bail out if the session is already inactive. This handler can be invoked
       // by some clients (e.g. OpenAIClient) synchronously from disconnect() during

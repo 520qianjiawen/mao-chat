@@ -1970,20 +1970,28 @@
 
     let latestAssistant = null;
     let latestUser = null;
+    let assistantIndex = -1;
+    let userIndex = -1;
     for (let i = pool.length - 1; i >= 0; i--) {
       const it = pool[i];
       const text = getItemText(it);
       if (!text) continue;
       if (it.role === 'assistant' && !latestAssistant) {
         latestAssistant = it;
+        assistantIndex = i;
       } else if (it.role === 'user' && !latestUser) {
         latestUser = it;
+        userIndex = i;
       }
       if (latestAssistant && latestUser) break;
     }
 
     if (latestAssistant || latestUser) {
-      const trans = latestAssistant ? getItemText(latestAssistant) : '';
+      // If userIndex > assistantIndex, a new user utterance is speaking/transcribing
+      // and its translation has not arrived yet. Don't show the stale previous sentence's translation!
+      const trans = (latestAssistant && (userIndex === -1 || assistantIndex > userIndex))
+        ? getItemText(latestAssistant)
+        : '';
       const orig = latestUser ? getItemText(latestUser) : '';
 
       let finalOrig = orig;

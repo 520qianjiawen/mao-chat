@@ -44,6 +44,9 @@ export class GeminiClient implements IClient {
   private savedResumptionHandle: string | undefined = undefined;
   private isReconnecting = false;
   private lastConfig: SessionConfig | null = null;
+  // Audio buffer held during reconnection so speech during reconnect is not dropped
+  private pendingAudioQueue: Int16Array[] = [];
+  private readonly maxPendingAudioSamples = 72000; // ~3 seconds at 24kHz
   // Monotonically incremented per connect() call. Captured by each connect()'s
   // callbacks so they can detect when they belong to a superseded session and
   // ignore late-arriving events from sockets that have been replaced.
@@ -929,6 +932,7 @@ export class GeminiClient implements IClient {
     this.isReconnecting = false;
     this.savedResumptionHandle = undefined;
     this.lastConfig = null;  // Marks user-initiated disconnect — onclose must not reconnect
+    this.pendingAudioQueue = [];
     if (this.session) {
       this.session.close();
       this.session = null;
@@ -946,13 +950,9 @@ export class GeminiClient implements IClient {
   }
 
   /**
-   * True when the client has local conversation state that would be lost if we
-   * opened a brand-new server session. Used to gate the fresh-connect path: if
-   * we have a handle, we resume; if we have no handle and no state, we may
-   * fresh-connect; if we have no handle but DO have state, we treat it as a
-   * permanent disconnect rather than silently diverging from the server.
+   * True when the client has local conversation state.
    */
-  private hasLocalSessionState(): boolean {
+  hasLocalSessionState(): boolean {
     if (this.conversationItems.length > 0) return true;
     const turn = this.currentTurn;
     return (
@@ -962,6 +962,35 @@ export class GeminiClient implements IClient {
       turn.textParts.length > 0 ||
       turn.modelTurnParts.length > 0
     );
+  }
+
+  private bufferPendingAudio(audioData: Int16Array): void {
+    this.pendingAudioQueue.push(audioData.slice());
+    let totalSamples = this.pendingAudioQueue.reduce((sum, chunk) => sum + chunk.length, 0);
+    while (totalSamples > this.maxPendingAudioSamples && this.pendingAudioQueue.length > 0) {
+      const dropped = this.pendingAudioQueue.shift();
+      if (dropped) {
+        totalSamples -= dropped.length;
+      }
+    }
+  }
+
+  private flushPendingAudio(): void {
+    if (!this.session || this.pendingAudioQueue.length === 0) {
+      this.pendingAudioQueue = [];
+      return;
+    }
+    console.info(`[Sokuji] [GeminiClient] Flushing ${this.pendingAudioQueue.length} buffered audio chunks after reconnect`);
+    for (const chunk of this.pendingAudioQueue) {
+      const base64Audio = this.int16ToBase64(chunk);
+      this.session.sendRealtimeInput({
+        audio: {
+          mimeType: 'audio/pcm;rate=24000',
+          data: base64Audio,
+        },
+      });
+    }
+    this.pendingAudioQueue = [];
   }
 
   private async reconnect(): Promise<void> {
@@ -975,20 +1004,12 @@ export class GeminiClient implements IClient {
     // we never hand a null config to connect() in any race window.
     const configToReconnect = this.lastConfig;
 
-    // Decide whether a fresh connect (without a resumption handle) is safe.
-    // - With a handle: always safe — we can resume the existing server session.
-    // - Without a handle AND no local state: safe — there's nothing to lose,
-    //   so a brand-new server session is functionally equivalent to a resume.
-    // - Without a handle but WITH local state: NOT safe. The new server session
-    //   would have zero context while the UI keeps the old conversationItems,
-    //   silently diverging client and server. This window opens briefly after
-    //   every successful resume (we clear the consumed handle and wait for a
-    //   new sessionResumptionUpdate). Treat it as a permanent disconnect so the
-    //   user knows the session ended instead of getting garbled translations.
-    if (!this.savedResumptionHandle && this.hasLocalSessionState()) {
-      console.warn('[Sokuji] [GeminiClient] Cannot fresh-reconnect: local state present, no handle. Treating as disconnect.');
-      this.firePermanentDisconnect('lost handle with active local state');
-      return;
+    if (!this.savedResumptionHandle) {
+      console.info(
+        `[Sokuji] [GeminiClient] Reconnecting with fresh session (resumption handle not available; preserving ${this.conversationItems.length} items in UI)`
+      );
+    } else {
+      console.info('[Sokuji] [GeminiClient] Resuming session with saved handle');
     }
 
     this.isReconnecting = true;
@@ -1026,6 +1047,7 @@ export class GeminiClient implements IClient {
         // and wait for a future sessionResumptionUpdate to provide a new one.
         this.savedResumptionHandle = undefined;
         this.isReconnecting = false;
+        this.flushPendingAudio();
         this.eventHandlers.onReconnected?.();
         return;
       } catch (error) {
@@ -1046,6 +1068,7 @@ export class GeminiClient implements IClient {
     }
 
     // All retries failed — treat as real disconnect
+    this.pendingAudioQueue = [];
     this.firePermanentDisconnect(
       `Reconnection failed after ${maxRetries} attempts`,
       lastReconnectError,
@@ -1103,6 +1126,7 @@ export class GeminiClient implements IClient {
   reset(): void {
     this.conversationItems = [];
     this.resetCurrentTurn();
+    this.pendingAudioQueue = [];
     if (this.session) {
       // Reset conversation state
       this.session = null;
@@ -1112,7 +1136,11 @@ export class GeminiClient implements IClient {
 
   appendInputAudio(audioData: Int16Array): void {
     if (!this.session) {
-      console.warn('[GeminiClient] No active session for audio input');
+      if (this.isReconnecting) {
+        this.bufferPendingAudio(audioData);
+      } else {
+        console.warn('[GeminiClient] No active session for audio input');
+      }
       return;
     }
 
@@ -1123,9 +1151,7 @@ export class GeminiClient implements IClient {
       console.debug('[GeminiClient] PTT: sent activityStart');
     }
 
-    // Convert Int16Array to base64 PCM format for Gemini
-    // Use the buffer property to get the underlying ArrayBuffer
-    const base64Audio = this.arrayBufferToBase64(audioData.buffer);
+    const base64Audio = this.int16ToBase64(audioData);
 
     this.session.sendRealtimeInput({
       audio: {
@@ -1190,9 +1216,8 @@ export class GeminiClient implements IClient {
     return result;
   }
 
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    // Optimized base64 encoding - avoid string concatenation in loop
-    const bytes = new Uint8Array(buffer);
+  private int16ToBase64(audioData: Int16Array): string {
+    const bytes = new Uint8Array(audioData.buffer, audioData.byteOffset, audioData.byteLength);
     const chunkSize = 0x8000; // 32KB chunks to avoid call stack size issues
     let binary = '';
 
@@ -1202,6 +1227,10 @@ export class GeminiClient implements IClient {
     }
 
     return btoa(binary);
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    return this.int16ToBase64(new Int16Array(buffer));
   }
 
   private delay(ms: number): Promise<void> {
