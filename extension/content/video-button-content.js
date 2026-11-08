@@ -180,11 +180,22 @@
   // Normalizes subtitle text by removing unwanted linebreaks and extra spaces
   function normalizeSubtitleText(text) {
     if (!text || typeof text !== 'string') return '';
-    return text
-      .replace(/\r\n/g, '\n')
+    let cleaned = text
       // Remove thoughts / think tags if any
       .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .trim();
+
+    // Guard against Gemini internal thinking process leaked into subtitle
+    if (cleaned.startsWith('**') && (cleaned.includes("I'm working on") || cleaned.includes("translating") || cleaned.includes("Translating"))) {
+      return '';
+    }
+    if (/^I'm working on translating/i.test(cleaned)) {
+      return '';
+    }
+
+    return cleaned
+      .replace(/\r\n/g, '\n')
       // Remove linebreaks between CJK characters from ASR/LLM output
       .replace(/([\u3000-\u9fff\uac00-\ud7af])\n+([\u3000-\u9fff\uac00-\ud7af])/gu, '$1$2')
       // Replace remaining linebreaks with a space
@@ -1952,7 +1963,9 @@
 
     const getItemText = (it) => {
       if (!it || !it.formatted) return '';
-      return (it.formatted.transcript || it.formatted.text || '').trim();
+      // Prefer transcript (actual spoken output translation) over raw text (which might contain thinking trace)
+      const raw = (it.formatted.transcript || it.formatted.text || '').trim();
+      return normalizeSubtitleText(raw);
     };
 
     let latestAssistant = null;

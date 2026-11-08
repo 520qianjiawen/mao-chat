@@ -797,7 +797,19 @@ export class GeminiClient implements IClient {
       const audioParts = parts.filter(p => 
         p.inlineData && p.inlineData.mimeType?.startsWith('audio/pcm')
       );
-      const textParts = parts.filter(p => p.text && !p.thought);
+      const textParts = parts.filter(p => {
+        if (!p.text || typeof p.text !== 'string') return false;
+        if (p.thought) return false;
+        const trimmed = p.text.trim();
+        // Guard against internal thinking monologue leaked into text parts (e.g. Gemini 2.5 Flash thinking)
+        if (trimmed.startsWith('**') && (trimmed.includes("I'm working on") || trimmed.includes("Translating") || trimmed.includes("translating") || trimmed.includes("Thinking"))) {
+          return false;
+        }
+        if (/^I'm working on translating/i.test(trimmed)) {
+          return false;
+        }
+        return true;
+      });
 
       // Track if we have new audio or text in this message
       let hasNewAudio = false;
