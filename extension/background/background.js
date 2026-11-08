@@ -737,6 +737,7 @@ const ANT_LING_HOST = 'api.ant-ling.com';
 
 async function antLingSetDNRHeaders() {
   try {
+    const extOrigin = `chrome-extension://${chrome.runtime.id}`;
     const rules = [
       {
         id: ANT_LING_DNR_RULE_ID,
@@ -748,7 +749,7 @@ async function antLingSetDNRHeaders() {
             { header: 'Referer', operation: 'set', value: 'https://api.ant-ling.com/' },
           ],
           responseHeaders: [
-            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: extOrigin },
             { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'OPTIONS,HEAD,GET,POST,PUT,DELETE,TRACE' },
             { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' },
             { header: 'Access-Control-Allow-Credentials', operation: 'set', value: 'true' },
@@ -1229,9 +1230,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           text,
         });
       } catch (err) {
+        console.error('[Sokuji] [Background] ANT_LING_FETCH error:', err);
         sendResponse({
           ok: false,
-          error: String(err),
+          status: 0,
+          error: err instanceof Error ? err.message : String(err),
         });
       }
     })();

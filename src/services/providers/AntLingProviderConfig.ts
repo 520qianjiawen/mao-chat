@@ -62,55 +62,77 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
     const endpoint = host.endsWith('/v1') ? `${host}/models` : `${host}/v1/models`;
 
     try {
-      let res: { ok: boolean; status: number; json: () => Promise<any> };
-
+      // If in Chrome extension, ensure DNR headers are set first
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        // In extension, proxy through background worker to guarantee CORS bypass with Ant-Ling Spanner gateway
-        const bgRes = await new Promise<any>((resolve) => {
+        await new Promise<void>((resolve) => {
           try {
-            chrome.runtime.sendMessage(
-              {
-                type: 'ANT_LING_FETCH',
-                url: endpoint,
-                options: {
-                  headers: {
-                    Authorization: `Bearer ${creds.primary}`,
-                  },
-                },
-              },
-              (response: any) => resolve(response)
-            );
+            chrome.runtime.sendMessage({ type: 'ANT_LING_ENSURE_HEADERS' }, () => resolve());
           } catch {
-            resolve(null);
+            resolve();
           }
         });
+      }
 
-        if (bgRes && typeof bgRes.ok === 'boolean') {
-          res = {
-            ok: bgRes.ok,
-            status: bgRes.status,
-            json: async () => JSON.parse(bgRes.text || '{}'),
-          };
-        } else {
-          res = await fetch(endpoint, {
-            headers: {
-              Authorization: `Bearer ${creds.primary}`,
-            },
-          });
-        }
-      } else {
+      let res: { ok: boolean; status: number; json: () => Promise<any> };
+
+      // Try direct fetch first (DNR headers rewrite Origin & CORS in extension, and native in electron)
+      try {
         res = await fetch(endpoint, {
           headers: {
             Authorization: `Bearer ${creds.primary}`,
           },
         });
+      } catch (directErr) {
+        // Fallback: proxy via background worker
+        if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+          const bgRes = await new Promise<any>((resolve) => {
+            try {
+              chrome.runtime.sendMessage(
+                {
+                  type: 'ANT_LING_FETCH',
+                  url: endpoint,
+                  options: {
+                    headers: {
+                      Authorization: `Bearer ${creds.primary}`,
+                    },
+                  },
+                },
+                (response: any) => resolve(response)
+              );
+            } catch {
+              resolve(null);
+            }
+          });
+
+          if (bgRes && typeof bgRes.ok === 'boolean') {
+            if (!bgRes.ok) {
+              return {
+                validation: {
+                  valid: false,
+                  message: bgRes.error || `API Key 验证失败 (${bgRes.status || '网络错误'})`,
+                  validating: false,
+                },
+                models: [],
+              };
+            }
+            res = {
+              ok: bgRes.ok,
+              status: bgRes.status,
+              json: async () => JSON.parse(bgRes.text || '{}'),
+            };
+          } else {
+            throw directErr;
+          }
+        } else {
+          throw directErr;
+        }
       }
 
       if (!res.ok) {
         return {
           validation: {
             valid: false,
-            message: `API Key 验证失败 (${res.status})`,
+            message: `API Key 验证失败 (${res.status || '认证未通过'})`,
             validating: false,
           },
           models: [],
