@@ -419,6 +419,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
 
     await updateUninstallURL();
+    await antLingSetDNRHeaders();
   } catch (error) {
     console.error('[Sokuji] [Background] Error initializing configuration:', error);
   }
@@ -726,6 +727,57 @@ async function bingTranslatorClearDNRHeaders() {
     console.debug('[Sokuji] [Background] Bing Translator DNR rules cleared');
   }
 }
+
+// ─── Ant-Ling (蚂蚁灵动) declarativeNetRequest header injection ────────────────
+// api.ant-ling.com strictly checks Origin headers and rejects non-ant-ling origins
+// with 403 "Invalid CORS request". We inject Origin: https://api.ant-ling.com and
+// override CORS headers so extension fetch requests succeed cleanly.
+const ANT_LING_DNR_RULE_ID = 3003;
+const ANT_LING_HOST = 'api.ant-ling.com';
+
+async function antLingSetDNRHeaders() {
+  try {
+    const rules = [
+      {
+        id: ANT_LING_DNR_RULE_ID,
+        priority: 2,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Origin', operation: 'set', value: 'https://api.ant-ling.com' },
+            { header: 'Referer', operation: 'set', value: 'https://api.ant-ling.com/' },
+          ],
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'OPTIONS,HEAD,GET,POST,PUT,DELETE,TRACE' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Credentials', operation: 'set', value: 'true' },
+          ],
+        },
+        condition: {
+          urlFilter: `||${ANT_LING_HOST}`,
+          resourceTypes: ['xmlhttprequest', 'other'],
+        },
+      },
+    ];
+
+    const existingRuleIds = (await chrome.declarativeNetRequest.getDynamicRules())
+      .filter(r => r.id === ANT_LING_DNR_RULE_ID)
+      .map(r => r.id);
+
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: existingRuleIds,
+      addRules: rules,
+    });
+
+    console.debug('[Sokuji] [Background] Ant-Ling DNR rules registered');
+  } catch (err) {
+    console.warn('[Sokuji] [Background] Failed to register Ant-Ling DNR rules:', err);
+  }
+}
+
+// Auto-register Ant-Ling rules on service worker startup
+antLingSetDNRHeaders().catch(() => {});
 
 // ─── Multi-Engine Translation Service ──────────────────────────────────────────
 let bingScrapeSession = null;
@@ -1149,6 +1201,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('[Sokuji] [Background] Failed to clear Bing Translator DNR headers:', error);
         sendResponse({ success: false, error: error.message });
       });
+    return true;
+  }
+
+  // Handle Ant-Ling DNR headers & fetch proxy
+  if (message.type === 'ANT_LING_ENSURE_HEADERS') {
+    antLingSetDNRHeaders()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => {
+        console.error('[Sokuji] [Background] Failed to set Ant-Ling DNR headers:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (message.type === 'ANT_LING_FETCH') {
+    (async () => {
+      try {
+        await antLingSetDNRHeaders();
+        const { url, options } = message;
+        const res = await fetch(url, options);
+        const text = await res.text();
+        sendResponse({
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+          text,
+        });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: String(err),
+        });
+      }
+    })();
     return true;
   }
 

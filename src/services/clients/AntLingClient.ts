@@ -85,6 +85,12 @@ export class AntLingClient implements IClient {
     this.activeConsecutiveChunks = 0;
     this.isSpeaking = false;
 
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage({ type: 'ANT_LING_ENSURE_HEADERS' }, () => {});
+      } catch {}
+    }
+
     this.eventHandlers.onRealtimeEvent?.({
       source: 'client',
       event: {

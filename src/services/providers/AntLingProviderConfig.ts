@@ -62,11 +62,49 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
     const endpoint = host.endsWith('/v1') ? `${host}/models` : `${host}/v1/models`;
 
     try {
-      const res = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${creds.primary}`,
-        },
-      });
+      let res: { ok: boolean; status: number; json: () => Promise<any> };
+
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        // In extension, proxy through background worker to guarantee CORS bypass with Ant-Ling Spanner gateway
+        const bgRes = await new Promise<any>((resolve) => {
+          try {
+            chrome.runtime.sendMessage(
+              {
+                type: 'ANT_LING_FETCH',
+                url: endpoint,
+                options: {
+                  headers: {
+                    Authorization: `Bearer ${creds.primary}`,
+                  },
+                },
+              },
+              (response: any) => resolve(response)
+            );
+          } catch {
+            resolve(null);
+          }
+        });
+
+        if (bgRes && typeof bgRes.ok === 'boolean') {
+          res = {
+            ok: bgRes.ok,
+            status: bgRes.status,
+            json: async () => JSON.parse(bgRes.text || '{}'),
+          };
+        } else {
+          res = await fetch(endpoint, {
+            headers: {
+              Authorization: `Bearer ${creds.primary}`,
+            },
+          });
+        }
+      } else {
+        res = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${creds.primary}`,
+          },
+        });
+      }
 
       if (!res.ok) {
         return {
@@ -80,13 +118,22 @@ export class AntLingProviderConfig extends BaseProviderDescriptor {
       }
 
       const data = await res.json();
-      const modelsList = Array.isArray(data.data) ? data.data : [];
+      const modelsList = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
 
       const filteredModels: FilteredModel[] = modelsList.map((m: any) => ({
-        id: m.id,
+        id: typeof m === 'string' ? m : (m.id || m.name),
         type: 'realtime' as const,
         created: m.created || Date.now(),
       }));
+
+      // If no models returned from API, provide defaults
+      if (filteredModels.length === 0) {
+        filteredModels.push({
+          id: 'Ling-3.1-flash',
+          type: 'realtime' as const,
+          created: Date.now(),
+        });
+      }
 
       return {
         validation: {
