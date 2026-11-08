@@ -74,9 +74,20 @@ function SessionHostController() {
   }, [settingsLoaded]);
 
   useEffect(() => {
-    if (!startRequested || isSessionActive || !startGate.canStart) return;
+    if (!startRequested || isSessionActive) return;
+    if (!startGate.canStart) {
+      if (startGate.reason) {
+        console.warn('[Sokuji] [SubtitleHost] startGate blocked start:', startGate.reason);
+        send({
+          type: 'SUBTITLE_SESSION_HOST_ERROR',
+          error: startGate.reason,
+          balance: startGate.balance,
+        });
+      }
+      return;
+    }
     requestSessionStart();
-  }, [startRequested, isSessionActive, startGate.canStart, requestSessionStart]);
+  }, [startRequested, isSessionActive, startGate.canStart, startGate.reason, startGate.balance, requestSessionStart]);
 
   useEffect(() => {
     if (!startRequested || !isSessionActive || subtitleActive || announcedActiveRef.current) return;

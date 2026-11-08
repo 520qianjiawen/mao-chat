@@ -164,14 +164,16 @@
     if (!text || typeof text !== 'string') return true;
     const t = text.trim();
     if (t.length === 0) return true;
+    // Pure numbers, view counts, ratings e.g. "234 854 428", "12,345", "99%"
+    if (/^[\d\s,.\-+%]+$/.test(t)) return true;
     // Time indicators e.g. "0:05", "0:05 / 0:11"
     if (/^\d{1,2}:\d{2}/.test(t)) return true;
     // Common media badges & resolutions
     if (/^(LIVE|CC|HD|4K|1080p|720p|AD)$/i.test(t)) return true;
     // Tooltips and player control labels (Chinese)
-    if (/隐藏字幕|显示字幕|开启字幕|关闭字幕|静音|取消静音|播放|暂停|全屏|退出全屏|播放速度|自动播放|画中画/i.test(t)) return true;
+    if (/隐藏字幕|显示字幕|开启字幕|关闭字幕|静音|取消静音|播放|暂停|全屏|退出全屏|播放速度|自动播放|画中画|次观看|播放量|浏览|点赞/i.test(t)) return true;
     // Tooltips and player control labels (English)
-    if (/hide captions?|show captions?|closed captions?|toggle captions?|mute|unmute|play|pause|fullscreen|playback speed|auto-?play|picture in picture/i.test(t)) return true;
+    if (/hide captions?|show captions?|closed captions?|toggle captions?|mute|unmute|play|pause|fullscreen|playback speed|auto-?play|picture in picture|views?|plays?|likes?/i.test(t)) return true;
     return false;
   }
 
@@ -536,7 +538,10 @@
       if (containerRect.width < 80 || containerRect.height < 60) return null;
 
       // Check candidate text elements inside container
-      const candidates = this.container.querySelectorAll('span, div[dir="auto"], p');
+      // Twitter/X uses unclassed spans in div[dir="auto"]; generic sites only match explicit subtitle elements
+      const candidates = this.isTwitter
+        ? this.container.querySelectorAll('span, div[dir="auto"], p')
+        : this.container.querySelectorAll('[class*="caption" i], [class*="subtitle" i], [id*="caption" i], [id*="subtitle" i], .vjs-text-track-display, .plyr__captions');
       let bestMatch = null;
       let maxLen = 0;
 
@@ -1813,6 +1818,31 @@
       // Skip YouTube as handled above
       if (video.closest('#movie_player') || video.closest('.html5-video-player')) continue;
 
+      const isTwitter = Boolean(video.closest('article[data-testid="tweet"], div[data-testid="videoComponent"], div[data-testid="videoPlayer"]'));
+      if (!isTwitter) {
+        // Exclude recommendation lists, related videos, preview cards, sidebars
+        if (
+          video.closest('aside') ||
+          video.closest('.sidebar') ||
+          video.closest('[class*="sidebar" i]') ||
+          video.closest('[class*="related" i]') ||
+          video.closest('[class*="recommend" i]') ||
+          video.closest('[id*="related" i]') ||
+          video.closest('[class*="preview" i]') ||
+          video.closest('[class*="thumb" i]') ||
+          video.closest('.video-img-box') ||
+          video.closest('.posts-list') ||
+          video.closest('.video-list')
+        ) {
+          continue;
+        }
+
+        // Thumbnail preview videos are typically small (< 320x180). Skip them on video watch pages.
+        if (rect.width > 0 && rect.width < 320 && rect.height > 0 && rect.height < 180) {
+          continue;
+        }
+      }
+
       // Find the best player container (.plyr, .video-js, .dplayer, .artplayer, Twitter, or parent)
       let container =
         video.closest('.plyr') ||
@@ -1929,9 +1959,20 @@
         sokujiPort = null;
       }
     } else if (msg.type === 'MAO_ASR_STATUS') {
-      isAsrActive = msg.status === 'active';
-      if (isAsrActive) {
+      if (msg.status === 'active') {
+        isAsrActive = true;
         ensureSokujiPort();
+      } else if (msg.status === 'error') {
+        isAsrActive = false;
+        let hint = '需要先在 MAO Chat 设置中配置语音识别 API Key (如 Gemini/OpenAI)';
+        if (msg.error === 'insufficient-balance') {
+          hint = '账户余额不足，请在 MAO Chat 设置中充值或更换 API Key';
+        } else if (msg.error === 'api-key-invalid' || msg.error === 'no-models') {
+          hint = '未配置有效语音识别 API Key：请点击浏览器右上角插件图标设置';
+        }
+        for (const m of activeVideoManagers.values()) {
+          m.displaySubtitle('', hint);
+        }
       }
       for (const group of activeButtons) {
         updateVisuals(group, isSubtitlesActive);

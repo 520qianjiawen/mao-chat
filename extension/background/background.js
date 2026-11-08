@@ -292,11 +292,7 @@ async function startInVideoAsrSession(tabId) {
     });
 
     if (response?.success) {
-      console.info('[MAO] [Background] In-video ASR session started successfully for tab:', tabId);
-      chrome.tabs.sendMessage(tabId, {
-        type: 'MAO_ASR_STATUS',
-        status: 'active',
-      }).catch(() => {});
+      console.info('[MAO] [Background] In-video ASR session request dispatched to session host for tab:', tabId);
     } else {
       console.warn('[MAO] [Background] Subtitle session host start returned error:', response?.error);
       chrome.tabs.sendMessage(tabId, {
@@ -947,6 +943,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'SUBTITLE_SESSION_HOST_ACTIVE') {
     subtitleHostPhase = 'active';
+    const tabId = message.tabId || subtitleHostTabId;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'MAO_ASR_STATUS',
+        status: 'active',
+      }).catch(() => {});
+    }
     sendResponse({ success: true });
     return false;
   }
@@ -954,8 +957,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SUBTITLE_SESSION_HOST_ERROR') {
     console.error('[Sokuji] [Background] Subtitle host error:', message.error);
     subtitleHostPhase = 'error';
-    if (subtitleHostTabId) {
-      chrome.tabs.sendMessage(subtitleHostTabId, { type: 'subtitle:exit' }).catch(() => {});
+    const tabId = subtitleHostTabId;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'MAO_ASR_STATUS',
+        status: 'error',
+        error: message.error || 'Failed to start ASR session',
+      }).catch(() => {});
+      chrome.tabs.sendMessage(tabId, { type: 'subtitle:exit' }).catch(() => {});
     }
     void shutdownSubtitleSessionHost();
     sendResponse({ success: true });
