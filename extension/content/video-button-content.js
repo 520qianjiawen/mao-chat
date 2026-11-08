@@ -1986,8 +1986,20 @@
       const trans = latestAssistant ? getItemText(latestAssistant) : '';
       const orig = latestUser ? getItemText(latestUser) : '';
 
-      const finalTrans = trans || orig;
-      const finalOrig = orig || trans;
+      let finalOrig = orig;
+      let finalTrans = trans;
+
+      if (currentDisplayMode === 'bilingual') {
+        // In bilingual mode, never duplicate untranslated text into the translation box
+        finalOrig = orig;
+        finalTrans = trans;
+      } else if (currentDisplayMode === 'source_only') {
+        finalOrig = orig || trans;
+        finalTrans = '';
+      } else if (currentDisplayMode === 'target_only') {
+        finalTrans = trans || orig;
+        finalOrig = '';
+      }
 
       latestSokujiSubtitle = { orig: finalOrig, trans: finalTrans };
 

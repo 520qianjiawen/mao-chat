@@ -30,8 +30,8 @@ export const defaultGeminiSettings: GeminiSettings = {
   maxTokens: 'inf',
   turnDetectionMode: 'Auto',
   vadStartSensitivity: 'low',
-  vadEndSensitivity: 'high',
-  vadSilenceDurationMs: 500,
+  vadEndSensitivity: 'low',
+  vadSilenceDurationMs: 1000,
   vadPrefixPaddingMs: 300,
 };
 
