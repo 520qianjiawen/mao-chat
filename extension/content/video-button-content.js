@@ -2007,10 +2007,15 @@
       } else if (msg.status === 'error') {
         isAsrActive = false;
         let hint = '需要先在 MAO Chat 设置中配置语音识别 API Key (如 Gemini/OpenAI)';
-        if (msg.error === 'insufficient-balance') {
+        const errStr = String(msg.error || '');
+        if (errStr.includes('insufficient-balance')) {
           hint = '账户余额不足，请在 MAO Chat 设置中充值或更换 API Key';
-        } else if (msg.error === 'api-key-invalid' || msg.error === 'no-models') {
+        } else if (errStr.includes('api-key-invalid') || errStr.includes('no-models')) {
           hint = '未配置有效语音识别 API Key：请点击浏览器右上角插件图标设置';
+        } else if (errStr.includes('toolbar icon') || errStr.includes('activeTab') || errStr.includes('invoked')) {
+          hint = '声音捕获权限未激活：请点击浏览器右上角 MAO Chat 插件图标激活本页';
+        } else if (errStr.trim()) {
+          hint = errStr;
         }
         for (const m of activeVideoManagers.values()) {
           m.displaySubtitle('', hint);

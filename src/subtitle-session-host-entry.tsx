@@ -23,6 +23,20 @@ import { useConversationDisplayStore } from './stores/conversationDisplayStore';
 
 declare const chrome: any;
 
+// Suppress benign React DOM removal race condition when offscreen document is tearing down
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    if (
+      event.message?.includes('removeChild') ||
+      event.message?.includes('not a child of this node') ||
+      event.error?.name === 'NotFoundError'
+    ) {
+      event.preventDefault();
+      console.warn('[Sokuji] [SubtitleHost] Benign removeChild error suppressed during unmount');
+    }
+  });
+}
+
 const HOST_START_EVENT = 'sokuji:subtitle-host-start';
 let requestedTabId: number | null = null;
 
