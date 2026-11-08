@@ -45,6 +45,7 @@ function SessionHostController() {
   const stopCompletedVersion = useSessionStopCompletedVersion();
   const enterSubtitleMode = useEnterSubtitleMode();
   const [startRequested, setStartRequested] = useState(false);
+  const [validationSettled, setValidationSettled] = useState(false);
   const announcedActiveRef = useRef(false);
   const overlayWasActiveRef = useRef(false);
   const waitingForStopVersionRef = useRef<number | null>(null);
@@ -56,7 +57,15 @@ function SessionHostController() {
       useSettingsStore.getState().loadSettings(),
       useSubtitleStore.getState().hydrate(),
       useConversationDisplayStore.getState().hydrate(),
-    ]).catch((error) => {
+    ]).then(async () => {
+      try {
+        await useSettingsStore.getState().validateApiKey();
+      } catch (err) {
+        console.warn('[Sokuji] [SubtitleHost] Initial validateApiKey caught:', err);
+      } finally {
+        setValidationSettled(true);
+      }
+    }).catch((error) => {
       console.error('[Sokuji] [SubtitleHost] Store hydration failed:', error);
       send({ type: 'SUBTITLE_SESSION_HOST_ERROR', error: String(error) });
     });
@@ -69,12 +78,12 @@ function SessionHostController() {
   }, []);
 
   useEffect(() => {
-    if (!settingsLoaded) return;
+    if (!settingsLoaded || !validationSettled) return;
     send({ type: 'SUBTITLE_SESSION_HOST_READY' });
-  }, [settingsLoaded]);
+  }, [settingsLoaded, validationSettled]);
 
   useEffect(() => {
-    if (!startRequested || isSessionActive) return;
+    if (!startRequested || isSessionActive || !validationSettled) return;
     if (!startGate.canStart) {
       if (startGate.reason) {
         console.warn('[Sokuji] [SubtitleHost] startGate blocked start:', startGate.reason);
@@ -87,7 +96,7 @@ function SessionHostController() {
       return;
     }
     requestSessionStart();
-  }, [startRequested, isSessionActive, startGate.canStart, startGate.reason, startGate.balance, requestSessionStart]);
+  }, [startRequested, isSessionActive, startGate.canStart, startGate.reason, startGate.balance, validationSettled, requestSessionStart]);
 
   useEffect(() => {
     if (!startRequested || !isSessionActive || subtitleActive || announcedActiveRef.current) return;

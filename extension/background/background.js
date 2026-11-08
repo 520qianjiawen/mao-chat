@@ -839,12 +839,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (message.active) {
         if (message.needASR) {
-          (async () => {
-            if (message.sourceLanguage || message.targetLanguage) {
-              await syncLanguagesToSettings(message.sourceLanguage, message.targetLanguage);
-            }
-            await startInVideoAsrSession(tabId);
-          })();
+          const isAlreadyCapturing = activeTabCaptures.get(tabId)?.active;
+          if (!isAlreadyCapturing) {
+            (async () => {
+              if (message.sourceLanguage || message.targetLanguage) {
+                await syncLanguagesToSettings(message.sourceLanguage, message.targetLanguage);
+              }
+              await startInVideoAsrSession(tabId);
+            })();
+          } else {
+            console.info('[MAO] Tab audio already capturing for tab:', tabId, 'skipping duplicate session host');
+            chrome.tabs.sendMessage(tabId, {
+              type: 'MAO_ASR_STATUS',
+              status: 'active',
+            }).catch(() => {});
+          }
         }
       } else {
         void stopInVideoAsrSession(tabId);
