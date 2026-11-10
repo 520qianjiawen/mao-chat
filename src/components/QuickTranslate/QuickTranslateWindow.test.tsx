@@ -316,7 +316,43 @@ describe('QuickTranslateWindow', () => {
       );
     });
   });
+
+  it('renders multi-model service cards including 系统翻译, 智谱翻译, 硅基流动, and Bing', async () => {
+    render(<QuickTranslateWindow />);
+    expect(screen.getByText('系统翻译')).toBeInTheDocument();
+    expect(screen.getByText('智谱翻译')).toBeInTheDocument();
+    expect(screen.getByText('硅基流动翻译')).toBeInTheDocument();
+    expect(screen.getByText('Bing 翻译')).toBeInTheDocument();
+  });
+
+  it('opens and closes service settings modal when settings button is clicked', async () => {
+    render(<QuickTranslateWindow />);
+    const settingsBtn = screen.getByTitle('服务配置');
+    fireEvent.click(settingsBtn);
+
+    expect(screen.getByText('翻译服务管理')).toBeInTheDocument();
+    expect(screen.getByText(/启用的翻译服务/i)).toBeInTheDocument();
+
+    const doneBtn = screen.getByText('完成');
+    fireEvent.click(doneBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('翻译服务管理')).not.toBeInTheDocument();
+    });
+  });
+
+  it('displays API key configuration prompts for unconfigured cloud services', async () => {
+    render(<QuickTranslateWindow />);
+    const textarea = screen.getByPlaceholderText(/划选文字或按 ⌃Z 截图/i);
+    fireEvent.change(textarea, { target: { value: 'Test translate' } });
+
+    await waitFor(() => {
+      const configButtons = screen.getAllByText('配置 API Key');
+      expect(configButtons.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });
+
 
 
 

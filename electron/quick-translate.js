@@ -1,6 +1,6 @@
 // electron/quick-translate.js
 // Native macOS Selection Translation & Screenshot OCR Translation
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, clipboard, screen, shell, systemPreferences } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, clipboard, screen, shell, systemPreferences, net } = require('electron');
 const { execFile, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -314,10 +314,10 @@ function getOrCreateQuickTranslateWindow(mainWindow) {
   const isDev = import.meta.env.MODE === 'development' || !app.isPackaged;
 
   quickTranslateWindow = new BrowserWindow({
-    width: 480,
-    height: 420,
-    minWidth: 380,
-    minHeight: 280,
+    width: 500,
+    height: 560,
+    minWidth: 400,
+    minHeight: 320,
     show: false,
     frame: false,
     transparent: true,
@@ -516,6 +516,115 @@ function setupQuickTranslate(mainWindow) {
     }
     if (quickTranslateWindow && !quickTranslateWindow.isDestroyed()) {
       quickTranslateWindow.hide();
+    }
+    return { ok: true };
+  });
+
+  const CLOUD_TRANSLATE_ALLOWED_HOSTS = new Set([
+    'open.bigmodel.cn',
+    'api.siliconflow.cn',
+    'api.deepl.com',
+    'api-free.deepl.com',
+    'translate.googleapis.com',
+  ]);
+
+  ipcMain.handle('quick-translate:cloud-fetch', async (_event, payload) => {
+    try {
+      const url = typeof payload?.url === 'string' ? payload.url : '';
+      let parsed;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return { ok: false, status: 0, headers: {}, body: '', error: 'invalid URL' };
+      }
+      if (parsed.protocol !== 'https:' || !CLOUD_TRANSLATE_ALLOWED_HOSTS.has(parsed.hostname)) {
+        return { ok: false, status: 0, headers: {}, body: '', error: `host not allowed: ${parsed.hostname}` };
+      }
+      const method = (payload?.method || 'POST').toUpperCase();
+      const headers = payload?.headers && typeof payload.headers === 'object' ? payload.headers : {};
+      const body = method === 'GET' || method === 'HEAD' ? undefined : (payload?.body ?? undefined);
+      const res = await net.fetch(url, { method, headers, body });
+      const text = await res.text();
+      const outHeaders = {};
+      res.headers.forEach((value, key) => { outHeaders[key] = value; });
+      return { ok: res.ok, status: res.status, headers: outHeaders, body: text };
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        headers: {},
+        body: '',
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
+
+  ipcMain.handle('quick-translate:apple-translate', async (_event, payload) => {
+    if (process.platform !== 'darwin') {
+      return { ok: false, error: 'unsupported_platform', message: '系统翻译仅支持 macOS 系统' };
+    }
+    const text = (payload?.text || '').trim();
+    const targetLang = (payload?.targetLang || 'zh').trim();
+    const sourceLang = (payload?.sourceLang || 'auto').trim();
+    if (!text) return { ok: true, text: '' };
+
+    return new Promise((resolve) => {
+      const checkScript = `tell application "Shortcuts Events"
+        set hasBob to (exists shortcut "Bob.Translate.v2")
+        set hasMao to (exists shortcut "MAO.Translate.v1")
+        if hasBob then
+          return "Bob.Translate.v2"
+        else if hasMao then
+          return "MAO.Translate.v1"
+        else
+          return "none"
+        end if
+      end tell`;
+
+      execFile('/usr/bin/osascript', ['-e', checkScript], { timeout: 3000 }, (err, stdout) => {
+        if (err) {
+          return resolve({ ok: false, error: 'osascript_error', message: err.message });
+        }
+        const shortcutName = (stdout || '').trim();
+        if (shortcutName === 'none' || !shortcutName) {
+          return resolve({
+            ok: false,
+            error: 'shortcut_not_installed',
+            shortcutName: 'Bob.Translate.v2',
+            message: '未检测到系统翻译快捷指令（支持「Bob.Translate.v2」或「MAO.Translate.v1」）',
+          });
+        }
+
+        const inputJson = JSON.stringify({ text, targetLanguage: targetLang, sourceLanguage: sourceLang });
+        const runScript = `tell application "Shortcuts Events"
+          set outputText to run the shortcut named "${shortcutName}" with input "${inputJson.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+          return outputText
+        end tell`;
+
+        execFile('/usr/bin/osascript', ['-e', runScript], { timeout: 15000 }, (runErr, runStdout) => {
+          if (runErr) {
+            // Fallback: try plain text as input
+            const runScriptFallback = `tell application "Shortcuts Events"
+              set outputText to run the shortcut named "${shortcutName}" with input "${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+              return outputText
+            end tell`;
+            execFile('/usr/bin/osascript', ['-e', runScriptFallback], { timeout: 15000 }, (fErr, fStdout) => {
+              if (fErr) {
+                return resolve({ ok: false, error: 'shortcut_failed', message: runErr.message });
+              }
+              return resolve({ ok: true, text: (fStdout || '').trim() });
+            });
+            return;
+          }
+          return resolve({ ok: true, text: (runStdout || '').trim() });
+        });
+      });
+    });
+  });
+
+  ipcMain.handle('quick-translate:install-apple-shortcut', async () => {
+    if (process.platform === 'darwin') {
+      shell.openExternal('shortcuts://');
     }
     return { ok: true };
   });

@@ -109,6 +109,9 @@ export const INVOKE_CHANNELS = [
   'quick-translate:set-pinned',
   'quick-translate:close',
   'quick-translate:open-main',
+  'quick-translate:apple-translate',
+  'quick-translate:cloud-fetch',
+  'quick-translate:install-apple-shortcut',
   // Externally-registered (electron-audio-loopback)
   ...EXTERNAL_INVOKE_CHANNELS,
 ];
