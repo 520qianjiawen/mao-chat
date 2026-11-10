@@ -214,7 +214,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>安装格式全新升级：切换为通用 DMG 格式，点击更新后自动退出并启动安装器，升级更无缝流畅</li><li>大幅瘦身安装包：离线推理环境剥离为云端按需加载，安装包体积由 521 MB 骤降至约 120 MB，下载与安装提速 5 倍以上</li><li>优化引擎架构：支持通过 Cloudflare 全球 CDN 高速断点续传离线引擎，在线模式用户免除 1.4GB 冗余下载</li><li>修复字幕模式下工具条与中间操作按钮重叠遮挡问题，针对紧凑/矮窗口悬浮条自适应优化视觉</li><li>修复主窗口标题栏在小宽度下的按钮重叠，自适应折叠文字标签并转为紧凑图标</li><li>全面升级更新提醒弹窗与横幅为 Apple 风格清爽浅色主题，去除暗色背景</li><li>修复朗读设置中测试发音按钮样式缺失与多语言下拉菜单展示异常</li><li>虚拟麦克风音频驱动与双向同传发声升级为全新 MaoVirtualAudio 驱动，音质与识别更稳定</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>划词与截图翻译全新支持多模型聚合：同时支持系统翻译（Apple Translate 原生离线引擎）、智谱翻译（GLM-4-Flash 官方免费调用）与硅基流动翻译（Qwen2.5-7B 极速高并发）</li><li>独立品牌化系统翻译快捷指令：内置一键安装 MAO.Translate 快捷指令，提供30秒简易配置指引与快捷指令自动化授权提示</li><li>划词翻译窗口全面升级为 macOS 浅色毛玻璃精致质感，各模型卡片支持独立展开/折叠、耗时显示与复制朗读</li><li>提供直接快捷获取 Key 入口与行内快速配置，免除复杂操作</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,
