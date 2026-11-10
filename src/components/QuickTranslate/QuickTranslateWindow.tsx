@@ -95,6 +95,7 @@ export const QuickTranslateWindow: React.FC = () => {
   // Inline key editing states on cards
   const [editingKeyForService, setEditingKeyForService] = useState<string | null>(null);
   const [tempKeyInput, setTempKeyInput] = useState('');
+  const [isSourceFolded, setIsSourceFolded] = useState(false);
 
   // Per-service translation results
   const [serviceStates, setServiceStates] = useState<Record<string, ServiceTranslationState>>({});
@@ -339,6 +340,7 @@ export const QuickTranslateWindow: React.FC = () => {
       const trimmed = text ? text.trim() : '';
       if (!trimmed) return;
       userManuallyPickedTarget.current = false;
+      setIsSourceFolded(false);
       setSourceText(trimmed);
 
       let nextTarget = targetLang;
@@ -682,19 +684,21 @@ export const QuickTranslateWindow: React.FC = () => {
       {/* Main Body */}
       <main className="qt-body">
         {/* Source Text Box */}
-        <div className="qt-source-card">
-          <textarea
-            className="qt-textarea"
-            placeholder={t('textTranslation.quickInputPlaceholder', '划选文字或按 ⌃Z 截图，亦可在此直接输入...')}
-            value={sourceText}
-            onChange={(e) => setSourceText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                void handleTranslateAll();
-              }
-            }}
-          />
+        <div className={`qt-source-card ${isSourceFolded ? 'is-folded' : ''}`}>
+          {!isSourceFolded && (
+            <textarea
+              className="qt-textarea"
+              placeholder={t('textTranslation.quickInputPlaceholder', '划选文字或按 ⌃Z 截图，亦可在此直接输入...')}
+              value={sourceText}
+              onChange={(e) => setSourceText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  void handleTranslateAll();
+                }
+              }}
+            />
+          )}
 
           <div className="qt-source-card__footer">
             <div className="qt-source-card__actions">
@@ -722,6 +726,7 @@ export const QuickTranslateWindow: React.FC = () => {
                   className="qt-icon-btn"
                   onClick={() => {
                     setSourceText('');
+                    setIsSourceFolded(false);
                     setServiceStates({});
                   }}
                   title="清空"
@@ -729,10 +734,30 @@ export const QuickTranslateWindow: React.FC = () => {
                   <X size={13} />
                 </button>
               )}
+              {sourceText.length > 50 && (
+                <button
+                  type="button"
+                  className="qt-icon-btn qt-icon-btn--fold"
+                  onClick={() => setIsSourceFolded((p) => !p)}
+                  title={isSourceFolded ? '展开原文输入框' : '折叠原文输入框'}
+                >
+                  {isSourceFolded ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+                </button>
+              )}
             </div>
 
             {sourceText && (
-              <div className="qt-source-card__info">
+              <div
+                className="qt-source-card__info"
+                style={{ cursor: sourceText.length > 50 ? 'pointer' : 'default' }}
+                onClick={sourceText.length > 50 ? () => setIsSourceFolded((p) => !p) : undefined}
+                title={sourceText.length > 50 ? (isSourceFolded ? '点击展开原文' : '点击折叠原文') : undefined}
+              >
+                {isSourceFolded && (
+                  <span className="qt-folded-preview">
+                    {sourceText.replace(/\s+/g, ' ').slice(0, 24)}...
+                  </span>
+                )}
                 <span className="qt-detected-badge">
                   识别为 {detectLanguageLabel(sourceText)}
                 </span>
@@ -973,6 +998,8 @@ export const QuickTranslateWindow: React.FC = () => {
                       <div className="qt-service-card__error-text">{state.error}</div>
                     ) : state.translatedText ? (
                       <div className="qt-service-card__text">{state.translatedText}</div>
+                    ) : sourceText.trim() ? (
+                      <div className="qt-service-card__empty">暂无翻译结果</div>
                     ) : (
                       <div className="qt-service-card__empty">等待输入内容...</div>
                     )}

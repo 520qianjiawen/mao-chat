@@ -314,10 +314,10 @@ function getOrCreateQuickTranslateWindow(mainWindow) {
   const isDev = import.meta.env.MODE === 'development' || !app.isPackaged;
 
   quickTranslateWindow = new BrowserWindow({
-    width: 500,
-    height: 560,
-    minWidth: 400,
-    minHeight: 320,
+    width: 520,
+    height: 640,
+    minWidth: 420,
+    minHeight: 380,
     show: false,
     frame: false,
     transparent: true,
@@ -568,6 +568,39 @@ function setupQuickTranslate(mainWindow) {
     const sourceLang = (payload?.sourceLang || 'auto').trim();
     if (!text) return { ok: true, text: '' };
 
+    const toAppleLocale = (code, fallback = 'en_US') => {
+      if (!code || code === 'auto') return fallback;
+      const lower = String(code).toLowerCase().replace(/-/g, '_');
+      if (lower.startsWith('zh_cn') || lower.startsWith('zh_hans') || lower === 'zh') return 'zh_CN';
+      if (lower.startsWith('zh_tw') || lower.startsWith('zh_hant') || lower.startsWith('zh_hk')) return 'zh_TW';
+      if (lower.startsWith('en')) return 'en_US';
+      if (lower.startsWith('ja')) return 'ja_JP';
+      if (lower.startsWith('ko')) return 'ko_KR';
+      if (lower.startsWith('fr')) return 'fr_FR';
+      if (lower.startsWith('de')) return 'de_DE';
+      if (lower.startsWith('es')) return 'es_ES';
+      if (lower.startsWith('ru')) return 'ru_RU';
+      if (lower.startsWith('it')) return 'it_IT';
+      if (lower.startsWith('pt')) return 'pt_BR';
+      return fallback;
+    };
+
+    let srcLocale = sourceLang !== 'auto' ? toAppleLocale(sourceLang, 'en_US') : null;
+    if (!srcLocale) {
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text);
+      const hasJapanese = /[\u3040-\u30ff]/.test(text);
+      const hasKorean = /[\uac00-\ud7af]/.test(text);
+      if (hasChinese) srcLocale = 'zh_CN';
+      else if (hasJapanese) srcLocale = 'ja_JP';
+      else if (hasKorean) srcLocale = 'ko_KR';
+      else srcLocale = 'en_US';
+    }
+
+    let tgtLocale = toAppleLocale(targetLang, 'zh_CN');
+    if (srcLocale === tgtLocale) {
+      tgtLocale = srcLocale === 'zh_CN' ? 'en_US' : 'zh_CN';
+    }
+
     return new Promise((resolve) => {
       const checkScript = `tell application "Shortcuts Events"
         set hasMao to (exists shortcut "MAO.Translate")
@@ -598,35 +631,47 @@ function setupQuickTranslate(mainWindow) {
           });
         }
 
-        const escapeAppleScript = (str) => String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        const inputJson = JSON.stringify({ text, targetLanguage: targetLang, sourceLanguage: sourceLang });
+        const payloadObj = {
+          text,
+          detectFrom: srcLocale,
+          detectTo: tgtLocale,
+          sourceLanguage: srcLocale,
+          targetLanguage: tgtLocale,
+        };
+        const inputJson = JSON.stringify(payloadObj);
 
-        // For MAO.Translate shortcuts, prioritize raw text as shortcut input
-        const isMaoShortcut = shortcutName.startsWith('MAO');
-        const primaryInput = isMaoShortcut ? text : inputJson;
-        const secondaryInput = isMaoShortcut ? inputJson : text;
-
-        const runScriptPrimary = `tell application "Shortcuts Events"
-          set outputText to run the shortcut named "${shortcutName}" with input "${escapeAppleScript(primaryInput)}"
-          return outputText
-        end tell`;
-
-        execFile('/usr/bin/osascript', ['-e', runScriptPrimary], { timeout: 15000 }, (runErr, runStdout) => {
-          if (runErr) {
-            // Fallback: try secondary input variant
-            const runScriptSecondary = `tell application "Shortcuts Events"
-              set outputText to run the shortcut named "${shortcutName}" with input "${escapeAppleScript(secondaryInput)}"
+        const runAppleScript = (inputParam, callback) => {
+          const runScript = `on run argv
+            set inputStr to item 1 of argv
+            tell application "Shortcuts Events"
+              set outputText to run the shortcut named "${shortcutName}" with input inputStr
               return outputText
-            end tell`;
-            execFile('/usr/bin/osascript', ['-e', runScriptSecondary], { timeout: 15000 }, (fErr, fStdout) => {
-              if (fErr) {
-                return resolve({ ok: false, error: 'shortcut_failed', message: runErr.message });
-              }
-              return resolve({ ok: true, text: (fStdout || '').trim() });
-            });
-            return;
+            end tell
+          end run`;
+          execFile('/usr/bin/osascript', ['-e', runScript, inputParam], { timeout: 15000 }, (runErr, runStdout) => {
+            if (runErr) {
+              return callback(runErr, null);
+            }
+            const clean = (runStdout || '').replace(/^missing value$/i, '').trim();
+            callback(null, clean);
+          });
+        };
+
+        // Try structured JSON payload first (native Bob.Translate.v2 / modern MAO.Translate dictionary format)
+        runAppleScript(inputJson, (pErr, pRes) => {
+          if (!pErr && pRes) {
+            return resolve({ ok: true, text: pRes });
           }
-          return resolve({ ok: true, text: (runStdout || '').trim() });
+
+          // Fallback: try raw text (in case shortcut is customized to take raw string)
+          runAppleScript(text, (sErr, sRes) => {
+            if (!sErr && sRes) {
+              return resolve({ ok: true, text: sRes });
+            }
+
+            const errorMsg = pErr?.message || sErr?.message || '系统翻译未返回译文，请确认系统翻译语言包已下载';
+            return resolve({ ok: false, error: 'shortcut_failed', message: errorMsg });
+          });
         });
       });
     });

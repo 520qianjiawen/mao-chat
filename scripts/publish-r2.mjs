@@ -214,7 +214,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>划词与截图翻译全新支持多模型聚合：同时支持系统翻译（Apple Translate 原生离线引擎）、智谱翻译（GLM-4-Flash 官方免费调用）与硅基流动翻译（Qwen2.5-7B 极速高并发）</li><li>独立品牌化系统翻译快捷指令：内置一键安装 MAO.Translate 快捷指令，提供30秒简易配置指引与快捷指令自动化授权提示</li><li>划词翻译窗口全面升级为 macOS 浅色毛玻璃精致质感，各模型卡片支持独立展开/折叠、耗时显示与复制朗读</li><li>提供直接快捷获取 Key 入口与行内快速配置，免除复杂操作</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>修复长文本翻译卡片被弹性布局挤压截断问题：确保所有段落与底部操作按钮（朗读、复制、转语音）100% 完整可见并支持自然平滑垂直滚动</li><li>长文本原文输入体验升级：输入区域最大高度扩展，长文本自动提供折叠/展开原文按钮，支持一键收起原文腾出翻译对比空间</li><li>优化系统翻译（Apple 原生离线引擎）传参协议：精准适配原生地区码与词典结构，支持毫秒级离线免配置秒翻</li><li>扩大快捷翻译悬浮窗初始尺寸至 520x640，提升多模型并发翻译与对照阅读体验</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,

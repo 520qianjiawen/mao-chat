@@ -389,6 +389,45 @@ describe('QuickTranslateWindow', () => {
     fireEvent.click(installBtn);
     expect(window.electron.invoke).toHaveBeenCalledWith('quick-translate:install-apple-shortcut');
   });
+
+  it('supports folding and unfolding source text for long input', async () => {
+    render(<QuickTranslateWindow />);
+    const textarea = screen.getByPlaceholderText(/划选文字或按 ⌃Z 截图/i);
+    const longText = 'According to the latest shipping schedule, the vessel is expected to arrive at Hamburg on November 20. We need to arrange customs clearance in advance.';
+    fireEvent.change(textarea, { target: { value: longText } });
+
+    await waitFor(() => {
+      expect(screen.getByTitle('折叠原文输入框')).toBeInTheDocument();
+    });
+
+    // Click fold button
+    fireEvent.click(screen.getByTitle('折叠原文输入框'));
+
+    // Textarea is hidden, preview is shown
+    expect(screen.queryByPlaceholderText(/划选文字或按 ⌃Z 截图/i)).not.toBeInTheDocument();
+    expect(screen.getByTitle('展开原文输入框')).toBeInTheDocument();
+
+    // Click unfold
+    fireEvent.click(screen.getByTitle('展开原文输入框'));
+    expect(screen.getByPlaceholderText(/划选文字或按 ⌃Z 截图/i)).toBeInTheDocument();
+  });
+
+  it('displays 暂无翻译结果 when input has text but translation is empty', async () => {
+    (window.electron.invoke as any).mockImplementation((channel: string) => {
+      if (channel === 'quick-translate:apple-translate') {
+        return Promise.resolve({ ok: true, text: '' });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    render(<QuickTranslateWindow />);
+    const textarea = screen.getByPlaceholderText(/划选文字或按 ⌃Z 截图/i);
+    fireEvent.change(textarea, { target: { value: 'Something' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('暂无翻译结果')).toBeInTheDocument();
+    });
+  });
 });
 
 
