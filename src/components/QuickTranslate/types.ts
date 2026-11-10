@@ -28,7 +28,7 @@ export const ALL_TRANSLATION_SERVICES: TranslationServiceDefinition[] = [
     requiresKey: true,
     keyName: 'zhipuApiKey',
     defaultModel: 'glm-4-flash',
-    keyHelpUrl: 'https://bigmodel.cn/',
+    keyHelpUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
   },
   {
     id: 'siliconflow',
@@ -39,7 +39,7 @@ export const ALL_TRANSLATION_SERVICES: TranslationServiceDefinition[] = [
     requiresKey: true,
     keyName: 'siliconFlowApiKey',
     defaultModel: 'Qwen/Qwen2.5-7B-Instruct',
-    keyHelpUrl: 'https://cloud.siliconflow.cn/',
+    keyHelpUrl: 'https://cloud.siliconflow.cn/account/ak',
   },
   {
     id: 'bing',

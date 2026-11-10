@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   Globe,
+  HelpCircle,
   Key,
   Languages,
   Loader2,
@@ -72,6 +73,7 @@ export const QuickTranslateWindow: React.FC = () => {
   const [copiedSource, setCopiedSource] = useState(false);
   const [copiedServiceId, setCopiedServiceId] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAppleGuide, setShowAppleGuide] = useState(false);
 
   // Enabled services & API keys
   const [enabledServices, setEnabledServices] = useState<string[]>(() => {
@@ -864,7 +866,7 @@ export const QuickTranslateWindow: React.FC = () => {
                     ) : state.errorCode === 'SHORTCUT_NOT_INSTALLED' ? (
                       <div className="qt-service-card__error-box">
                         <p className="qt-error-msg">
-                          {state.error || '未检测到系统快捷指令。系统翻译基于 macOS Apple Translate 引擎。'}
+                          {state.error || '未检测到系统快捷指令。系统翻译基于 macOS Apple Translate 原生引擎（免 Key、零消耗）。'}
                         </p>
                         <div className="qt-error-actions">
                           <button
@@ -876,9 +878,39 @@ export const QuickTranslateWindow: React.FC = () => {
                             }}
                           >
                             <Download size={13} />
-                            <span>打开快捷指令 App</span>
+                            <span>一键安装「MAO.Translate」快捷指令</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="qt-btn-guide-toggle"
+                            onClick={() => setShowAppleGuide((prev) => !prev)}
+                          >
+                            <HelpCircle size={13} />
+                            <span>{showAppleGuide ? '收起配置说明' : '30秒配置教程'}</span>
                           </button>
                         </div>
+                        {showAppleGuide && (
+                          <div className="qt-shortcut-guide">
+                            <div className="qt-shortcut-guide__step">
+                              <span className="step-num">1</span>
+                              <div className="step-content">
+                                <strong>一键安装</strong>：点击上方按钮，系统将自动弹出导入窗口，点击「添加快捷指令」即可。
+                              </div>
+                            </div>
+                            <div className="qt-shortcut-guide__step">
+                              <span className="step-num">2</span>
+                              <div className="step-content">
+                                <strong>或手动创建</strong>：打开 Mac「快捷指令」App ➔ 点击「+」新建 ➔ 添加动作「翻译文本」➔ 命名为 <code>MAO.Translate</code> 即可。
+                              </div>
+                            </div>
+                            <div className="qt-shortcut-guide__step">
+                              <span className="step-num">3</span>
+                              <div className="step-content">
+                                <strong>自动化授权</strong>：若提示无权限，请前往「系统设置」➔「隐私与安全性」➔「自动化」➔「MAO Chat」勾选「Shortcuts Events」。
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : state.errorCode === 'NO_API_KEY' ? (
                       <div className="qt-service-card__error-box">
@@ -1034,14 +1066,34 @@ export const QuickTranslateWindow: React.FC = () => {
 
               <div className="qt-settings-section">
                 <div className="qt-settings-row">
+                  <label className="qt-settings-label">系统翻译 (Apple Translate 离线引擎)：</label>
+                  <button
+                    type="button"
+                    className="qt-btn-install-shortcut"
+                    onClick={async () => {
+                      const client = new AppleSystemTranslatorClient();
+                      await client.installShortcut();
+                    }}
+                  >
+                    <Download size={11} />
+                    <span>安装 MAO.Translate 快捷指令</span>
+                  </button>
+                </div>
+                <p className="qt-settings-desc">
+                  完全调用 macOS 原生翻译能力，免配置 API Key。指令名称需保持为 <code>MAO.Translate</code>。
+                </p>
+              </div>
+
+              <div className="qt-settings-section">
+                <div className="qt-settings-row">
                   <label className="qt-settings-label">智谱 API Key (GLM-4-Flash 永久免费)：</label>
                   <a
-                    href="https://bigmodel.cn/"
+                    href="https://open.bigmodel.cn/usercenter/apikeys"
                     target="_blank"
                     rel="noreferrer"
                     className="qt-link-help"
                   >
-                    官网获取 →
+                    免费获取 Key →
                   </a>
                 </div>
                 <input
@@ -1057,12 +1109,12 @@ export const QuickTranslateWindow: React.FC = () => {
                 <div className="qt-settings-row">
                   <label className="qt-settings-label">硅基流动 API Key (Qwen2.5 免费调用)：</label>
                   <a
-                    href="https://cloud.siliconflow.cn/"
+                    href="https://cloud.siliconflow.cn/account/ak"
                     target="_blank"
                     rel="noreferrer"
                     className="qt-link-help"
                   >
-                    官网获取 →
+                    免费获取 Key →
                   </a>
                 </div>
                 <input

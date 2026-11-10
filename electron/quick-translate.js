@@ -570,12 +570,15 @@ function setupQuickTranslate(mainWindow) {
 
     return new Promise((resolve) => {
       const checkScript = `tell application "Shortcuts Events"
-        set hasBob to (exists shortcut "Bob.Translate.v2")
-        set hasMao to (exists shortcut "MAO.Translate.v1")
-        if hasBob then
-          return "Bob.Translate.v2"
-        else if hasMao then
+        set hasMao to (exists shortcut "MAO.Translate")
+        set hasMaoV1 to (exists shortcut "MAO.Translate.v1")
+        set hasLegacy to (exists shortcut "Bob.Translate.v2")
+        if hasMao then
+          return "MAO.Translate"
+        else if hasMaoV1 then
           return "MAO.Translate.v1"
+        else if hasLegacy then
+          return "Bob.Translate.v2"
         else
           return "none"
         end if
@@ -590,25 +593,32 @@ function setupQuickTranslate(mainWindow) {
           return resolve({
             ok: false,
             error: 'shortcut_not_installed',
-            shortcutName: 'Bob.Translate.v2',
-            message: '未检测到系统翻译快捷指令（支持「Bob.Translate.v2」或「MAO.Translate.v1」）',
+            shortcutName: 'MAO.Translate',
+            message: '未检测到系统翻译快捷指令。请点击下方按钮一键安装「MAO.Translate」快捷指令。',
           });
         }
 
+        const escapeAppleScript = (str) => String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         const inputJson = JSON.stringify({ text, targetLanguage: targetLang, sourceLanguage: sourceLang });
-        const runScript = `tell application "Shortcuts Events"
-          set outputText to run the shortcut named "${shortcutName}" with input "${inputJson.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+
+        // For MAO.Translate shortcuts, prioritize raw text as shortcut input
+        const isMaoShortcut = shortcutName.startsWith('MAO');
+        const primaryInput = isMaoShortcut ? text : inputJson;
+        const secondaryInput = isMaoShortcut ? inputJson : text;
+
+        const runScriptPrimary = `tell application "Shortcuts Events"
+          set outputText to run the shortcut named "${shortcutName}" with input "${escapeAppleScript(primaryInput)}"
           return outputText
         end tell`;
 
-        execFile('/usr/bin/osascript', ['-e', runScript], { timeout: 15000 }, (runErr, runStdout) => {
+        execFile('/usr/bin/osascript', ['-e', runScriptPrimary], { timeout: 15000 }, (runErr, runStdout) => {
           if (runErr) {
-            // Fallback: try plain text as input
-            const runScriptFallback = `tell application "Shortcuts Events"
-              set outputText to run the shortcut named "${shortcutName}" with input "${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+            // Fallback: try secondary input variant
+            const runScriptSecondary = `tell application "Shortcuts Events"
+              set outputText to run the shortcut named "${shortcutName}" with input "${escapeAppleScript(secondaryInput)}"
               return outputText
             end tell`;
-            execFile('/usr/bin/osascript', ['-e', runScriptFallback], { timeout: 15000 }, (fErr, fStdout) => {
+            execFile('/usr/bin/osascript', ['-e', runScriptSecondary], { timeout: 15000 }, (fErr, fStdout) => {
               if (fErr) {
                 return resolve({ ok: false, error: 'shortcut_failed', message: runErr.message });
               }
@@ -624,9 +634,36 @@ function setupQuickTranslate(mainWindow) {
 
   ipcMain.handle('quick-translate:install-apple-shortcut', async () => {
     if (process.platform === 'darwin') {
+      try {
+        const path = require('path');
+        const fs = require('fs');
+        const candidatePaths = [
+          path.join(__dirname, '../resources/shortcuts/MAO.Translate.shortcut'),
+          path.join(process.resourcesPath || '', 'shortcuts/MAO.Translate.shortcut'),
+          path.join(process.resourcesPath || '', 'resources/shortcuts/MAO.Translate.shortcut'),
+          path.join(app.getAppPath(), 'resources/shortcuts/MAO.Translate.shortcut'),
+        ];
+        let foundPath = null;
+        for (const p of candidatePaths) {
+          if (fs.existsSync(p)) {
+            foundPath = p;
+            break;
+          }
+        }
+        if (foundPath) {
+          execFile('/usr/bin/open', [foundPath], (err) => {
+            if (err) {
+              shell.openExternal('shortcuts://');
+            }
+          });
+          return { ok: true, installedFile: true };
+        }
+      } catch (_e) {
+        // Fallback
+      }
       shell.openExternal('shortcuts://');
     }
-    return { ok: true };
+    return { ok: true, installedFile: false };
   });
 }
 

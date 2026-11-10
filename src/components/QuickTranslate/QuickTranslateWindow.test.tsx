@@ -351,6 +351,44 @@ describe('QuickTranslateWindow', () => {
       expect(configButtons.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  it('displays MAO.Translate installation button and toggles 30s tutorial when shortcut is not installed', async () => {
+    (window.electron.invoke as any).mockImplementation((channel: string) => {
+      if (channel === 'quick-translate:apple-translate') {
+        return Promise.resolve({
+          ok: false,
+          error: 'shortcut_not_installed',
+          shortcutName: 'MAO.Translate',
+          message: '未检测到「MAO.Translate」系统翻译快捷指令。',
+        });
+      }
+      return Promise.resolve({ ok: true });
+    });
+
+    render(<QuickTranslateWindow />);
+    const textarea = screen.getByPlaceholderText(/划选文字或按 ⌃Z 截图/i);
+    fireEvent.change(textarea, { target: { value: 'Bonjour le monde' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('一键安装「MAO.Translate」快捷指令')).toBeInTheDocument();
+      expect(screen.getByText('30秒配置教程')).toBeInTheDocument();
+      // Ensure zero occurrences of "Bob"
+      expect(screen.queryByText(/Bob/i)).not.toBeInTheDocument();
+    });
+
+    // Toggle 30s tutorial
+    const guideToggle = screen.getByText('30秒配置教程');
+    fireEvent.click(guideToggle);
+
+    expect(screen.getByText(/或手动创建/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/MAO.Translate/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/自动化授权/i)).toBeInTheDocument();
+
+    // Click install button
+    const installBtn = screen.getByText('一键安装「MAO.Translate」快捷指令');
+    fireEvent.click(installBtn);
+    expect(window.electron.invoke).toHaveBeenCalledWith('quick-translate:install-apple-shortcut');
+  });
 });
 
 
