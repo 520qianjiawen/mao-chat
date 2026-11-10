@@ -3,6 +3,7 @@ const { app, ipcMain, shell } = require('electron');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const R2_UPDATE_MANIFEST_URL = process.env.MAO_CHAT_UPDATE_URL || 'https://software.asg.li/mao-chat/latest-mac.json';
 
@@ -447,18 +448,114 @@ class UpdateManager {
 
   /**
    * Launch the downloaded installer and quit the app.
-   * #7: Use shell.openPath for reliable launch, then quit.
+   * On macOS: silently mounts DMG, replaces the app bundle via ditto, relaunches, and quits.
+   * On Windows: launches the installer executable and quits.
    */
   _installUpdate() {
     if (this._isInstalling) return Promise.resolve();
     this._isInstalling = true;
+
+    if (process.platform === 'darwin') {
+      return this._installMacUpdate();
+    }
+
     return shell.openPath(this.downloadPath).then((errorMessage) => {
       if (errorMessage) {
         this._isInstalling = false;
         throw new Error(`Failed to launch installer: ${errorMessage}`);
       }
-      // Give the installer a moment to initialize, then quit
       setTimeout(() => app.quit(), 500);
+    });
+  }
+
+  _installMacUpdate() {
+    return new Promise((resolve, reject) => {
+      try {
+        const dmgPath = this.downloadPath;
+        if (!dmgPath || !fs.existsSync(dmgPath)) {
+          this._isInstalling = false;
+          return reject(new Error('DMG 安装包不存在'));
+        }
+
+        let targetAppPath = '/Applications/MAO Chat.app';
+        const execPath = process.execPath;
+        const appMatch = execPath.match(/^(.+?\.app)\/Contents\/MacOS\//);
+        if (appMatch && fs.existsSync(appMatch[1])) {
+          targetAppPath = appMatch[1];
+        }
+
+        const currentPid = process.pid;
+        const scriptContent = `#!/bin/bash
+exec > /tmp/mao_auto_updater.log 2>&1
+echo "=== MAO Chat Auto-Update started at $(date) ==="
+echo "Target app: ${targetAppPath}"
+echo "DMG path: ${dmgPath}"
+
+COUNT=0
+while kill -0 ${currentPid} 2>/dev/null; do
+    sleep 0.2
+    COUNT=$((COUNT+1))
+    if [ $COUNT -gt 40 ]; then
+        kill -9 ${currentPid} 2>/dev/null
+        break
+    fi
+done
+echo "Old process exited."
+
+MOUNT_DIR=$(mktemp -d /tmp/mao_mount_XXXXXX)
+echo "Mounting DMG to $MOUNT_DIR..."
+if hdiutil attach "${dmgPath}" -nobrowse -readonly -mountpoint "$MOUNT_DIR" -quiet; then
+    SOURCE_APP="$MOUNT_DIR/MAO Chat.app"
+    if [ ! -d "$SOURCE_APP" ]; then
+        SOURCE_APP=$(find "$MOUNT_DIR" -maxdepth 1 -name "*.app" | head -n 1)
+    fi
+
+    if [ -d "$SOURCE_APP" ]; then
+        echo "Replacing $targetAppPath with $SOURCE_APP..."
+        rm -rf "${targetAppPath}"
+        ditto "$SOURCE_APP" "${targetAppPath}"
+        xattr -dr com.apple.quarantine "${targetAppPath}" 2>/dev/null || true
+
+        hdiutil detach "$MOUNT_DIR" -quiet -force 2>/dev/null || true
+        rm -rf "$MOUNT_DIR"
+        rm -f "${dmgPath}"
+
+        echo "Relaunching updated app..."
+        open -n -a "${targetAppPath}"
+        echo "Update succeeded!"
+        exit 0
+    fi
+fi
+
+echo "Silent update failed. Falling back to opening DMG in Finder..."
+hdiutil detach "$MOUNT_DIR" -quiet -force 2>/dev/null || true
+rm -rf "$MOUNT_DIR"
+open "${dmgPath}"
+`;
+
+        const scriptPath = path.join(app.getPath('temp'), `mao_updater_${Date.now()}.sh`);
+        fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+
+        const child = spawn('/bin/bash', [scriptPath], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+
+        resolve();
+
+        setTimeout(() => {
+          app.quit();
+        }, 400);
+      } catch (err) {
+        console.warn('[UpdateManager] Silent update failed, fallback to openPath:', err);
+        this._isInstalling = false;
+        shell.openPath(this.downloadPath).then((errMsg) => {
+          if (errMsg) return reject(new Error(errMsg));
+          setTimeout(() => app.quit(), 500);
+          resolve();
+        });
+      }
     });
   }
 

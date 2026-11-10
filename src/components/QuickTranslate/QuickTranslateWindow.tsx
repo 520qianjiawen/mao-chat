@@ -52,10 +52,28 @@ const STORAGE_KEY_SILICON = 'mao_qt_silicon_api_key';
 
 function detectLanguageLabel(text: string): string {
   if (!text || !text.trim()) return '';
-  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) return '日语';
-  if (/[\uAC00-\uD7AF]/.test(text)) return '韩语';
-  if (/[\u4e00-\u9fa5]/.test(text)) return '中文';
-  if (/^[A-Za-z0-9\s.,!?'"()\-–—;:/]+$/.test(text.trim())) return '英语';
+  const trimmed = text.trim();
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(trimmed)) return '日语';
+  if (/[\uAC00-\uD7AF]/.test(trimmed)) return '韩语';
+  if (/[\u0400-\u04FF]/.test(trimmed)) return '俄语';
+  if (/[\u0600-\u06FF]/.test(trimmed)) return '阿拉伯语';
+  if (/[\u4e00-\u9fa5]/.test(trimmed)) return '中文';
+
+  // German specific characters or common vocabulary
+  if (/[äöüßÄÖÜ]/.test(trimmed) || /\b(und|der|die|das|ist|nicht|sie|wir|mit|guten|tag|herr|frau|fahrplan|schiff|zoll)\b/i.test(trimmed)) {
+    return '德语';
+  }
+  // French specific characters or common vocabulary
+  if (/[éèêëàâùûîïôœçÉÈÊËÀÂÙÛÎÏÔŒÇ]/.test(trimmed) || /\b(le|la|les|des|un|une|est|dans|pour|vous|merci|bonjour)\b/i.test(trimmed)) {
+    return '法语';
+  }
+  // Spanish specific characters or common vocabulary
+  if (/[ñáéíóú¿¡ÑÁÉÍÓÚ]/.test(trimmed) || /\b(el|la|los|las|por|para|con|como|hola|buenos)\b/i.test(trimmed)) {
+    return '西班牙语';
+  }
+  if (/^[A-Za-z0-9\s.,!?'"()\-–—;:/%#@&*+=]+$/.test(trimmed)) {
+    return '英语';
+  }
   return '自动检测';
 }
 
@@ -104,6 +122,20 @@ export const QuickTranslateWindow: React.FC = () => {
   const runRef = useRef(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userManuallyPickedTarget = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const scrollH = el.scrollHeight;
+    const clamped = Math.min(Math.max(scrollH, 60), 160);
+    el.style.height = `${clamped}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [sourceText, isSourceFolded, adjustTextareaHeight]);
 
   const isPinnedRef = useRef(false);
   useEffect(() => {
@@ -687,10 +719,14 @@ export const QuickTranslateWindow: React.FC = () => {
         <div className={`qt-source-card ${isSourceFolded ? 'is-folded' : ''}`}>
           {!isSourceFolded && (
             <textarea
+              ref={textareaRef}
               className="qt-textarea"
               placeholder={t('textTranslation.quickInputPlaceholder', '划选文字或按 ⌃Z 截图，亦可在此直接输入...')}
               value={sourceText}
-              onChange={(e) => setSourceText(e.target.value)}
+              onChange={(e) => {
+                setSourceText(e.target.value);
+                adjustTextareaHeight();
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();

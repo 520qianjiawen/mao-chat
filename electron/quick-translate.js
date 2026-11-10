@@ -568,16 +568,16 @@ function setupQuickTranslate(mainWindow) {
     const sourceLang = (payload?.sourceLang || 'auto').trim();
     if (!text) return { ok: true, text: '' };
 
-    const toAppleLocale = (code, fallback = 'en_US') => {
-      if (!code || code === 'auto') return fallback;
+    const toAppleLocale = (code, fallback = '') => {
+      if (!code || code === 'auto') return '';
       const lower = String(code).toLowerCase().replace(/-/g, '_');
       if (lower.startsWith('zh_cn') || lower.startsWith('zh_hans') || lower === 'zh') return 'zh_CN';
       if (lower.startsWith('zh_tw') || lower.startsWith('zh_hant') || lower.startsWith('zh_hk')) return 'zh_TW';
       if (lower.startsWith('en')) return 'en_US';
       if (lower.startsWith('ja')) return 'ja_JP';
       if (lower.startsWith('ko')) return 'ko_KR';
-      if (lower.startsWith('fr')) return 'fr_FR';
       if (lower.startsWith('de')) return 'de_DE';
+      if (lower.startsWith('fr')) return 'fr_FR';
       if (lower.startsWith('es')) return 'es_ES';
       if (lower.startsWith('ru')) return 'ru_RU';
       if (lower.startsWith('it')) return 'it_IT';
@@ -585,20 +585,13 @@ function setupQuickTranslate(mainWindow) {
       return fallback;
     };
 
-    let srcLocale = sourceLang !== 'auto' ? toAppleLocale(sourceLang, 'en_US') : null;
-    if (!srcLocale) {
-      const hasChinese = /[\u4e00-\u9fa5]/.test(text);
-      const hasJapanese = /[\u3040-\u30ff]/.test(text);
-      const hasKorean = /[\uac00-\ud7af]/.test(text);
-      if (hasChinese) srcLocale = 'zh_CN';
-      else if (hasJapanese) srcLocale = 'ja_JP';
-      else if (hasKorean) srcLocale = 'ko_KR';
-      else srcLocale = 'en_US';
-    }
-
+    let srcLocale = sourceLang !== 'auto' ? toAppleLocale(sourceLang, '') : '';
     let tgtLocale = toAppleLocale(targetLang, 'zh_CN');
-    if (srcLocale === tgtLocale) {
-      tgtLocale = srcLocale === 'zh_CN' ? 'en_US' : 'zh_CN';
+
+    // If input text is Chinese and target is set to Chinese, automatically translate to English:
+    const hasChinese = /[\u4e00-\u9fa5]/.test(text);
+    if (hasChinese && (!srcLocale || srcLocale.startsWith('zh')) && tgtLocale.startsWith('zh')) {
+      tgtLocale = 'en_US';
     }
 
     return new Promise((resolve) => {
