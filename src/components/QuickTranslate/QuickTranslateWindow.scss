@@ -1,4 +1,4 @@
-// QuickTranslateWindow.scss — Modern floating translation popover
+// QuickTranslateWindow.scss — Modern floating translation popover (Light Theme)
 .quick-translate-window {
   position: relative;
   display: flex;
@@ -6,14 +6,14 @@
   width: 100vw;
   height: 100vh;
   box-sizing: border-box;
-  background: rgba(26, 28, 34, 0.94);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: #f1f5f9;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  color: #1e293b;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
 }
@@ -23,8 +23,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(248, 250, 252, 0.92);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   -webkit-app-region: drag;
 
   &__title {
@@ -33,12 +33,12 @@
     gap: 6px;
     font-size: 12px;
     font-weight: 600;
-    color: #94a3b8;
-    letter-spacing: 0.3px;
+    color: #334155;
+    letter-spacing: 0.2px;
   }
 
   &__icon {
-    color: #38bdf8;
+    color: #3D1C56;
   }
 
   &__actions {
@@ -54,29 +54,29 @@
     gap: 4px;
     padding: 4px 7px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #475569;
     font-size: 11px;
     cursor: pointer;
     transition: all 0.15s ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.14);
-      color: #ffffff;
+      background: rgba(0, 0, 0, 0.08);
+      color: #0f172a;
     }
 
     &.is-active,
     &.is-pinned {
-      background: rgba(56, 189, 248, 0.25);
-      border-color: rgba(56, 189, 248, 0.5);
-      color: #38bdf8;
+      background: rgba(61, 28, 86, 0.1);
+      border-color: rgba(61, 28, 86, 0.35);
+      color: #3D1C56;
     }
 
     &--close:hover {
-      background: rgba(239, 68, 68, 0.25);
-      border-color: rgba(239, 68, 68, 0.4);
-      color: #f87171;
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #dc2626;
     }
   }
 
@@ -84,8 +84,8 @@
     font-size: 10px;
     padding: 1px 4px;
     border-radius: 3px;
-    background: rgba(0, 0, 0, 0.25);
-    color: #94a3b8;
+    background: rgba(0, 0, 0, 0.06);
+    color: #64748b;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
@@ -95,27 +95,28 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(241, 245, 249, 0.85);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .qt-lang-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #1e293b;
   font-size: 12px;
   padding: 3px 8px;
   border-radius: 6px;
   outline: none;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 0, 0, 0.25);
   }
 
   option {
-    background: #1e293b;
-    color: #f8fafc;
+    background: #ffffff;
+    color: #1e293b;
   }
 }
 
@@ -126,19 +127,21 @@
   font-size: 11px;
   padding: 3px 6px;
   border-radius: 6px;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  background: rgba(56, 189, 248, 0.1);
-  color: #38bdf8;
+  border: 1px solid rgba(61, 28, 86, 0.22);
+  background: rgba(61, 28, 86, 0.06);
+  color: #3D1C56;
+  font-weight: 500;
   outline: none;
   cursor: pointer;
 
   &:hover {
-    border-color: rgba(56, 189, 248, 0.45);
+    border-color: rgba(61, 28, 86, 0.4);
+    background: rgba(61, 28, 86, 0.09);
   }
 
   option {
-    background: #1e293b;
-    color: #f8fafc;
+    background: #ffffff;
+    color: #1e293b;
   }
 }
 
@@ -150,17 +153,18 @@
   border-radius: 5px;
   background: transparent;
   border: 1px solid transparent;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
+  transition: all 0.15s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #f8fafc;
+    background: rgba(0, 0, 0, 0.06);
+    color: #0f172a;
   }
 }
 
 .qt-loading-spinner {
-  color: #38bdf8;
+  color: #3D1C56;
   margin-left: auto;
 }
 
@@ -180,23 +184,24 @@
   min-height: 0;
   border-radius: 8px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 
   &--source {
     max-height: 42%;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
     &:focus-within {
-      border-color: rgba(56, 189, 248, 0.4);
-      background: rgba(255, 255, 255, 0.05);
+      border-color: #3D1C56;
+      box-shadow: 0 0 0 3px rgba(61, 28, 86, 0.12);
     }
   }
 
   &--target {
-    background: rgba(56, 189, 248, 0.04);
-    border-color: rgba(56, 189, 248, 0.15);
+    background: #fbfbfe;
+    border-color: rgba(61, 28, 86, 0.18);
   }
 }
 
@@ -208,14 +213,25 @@
   border: none;
   outline: none;
   background: transparent;
-  color: #e2e8f0;
+  color: #1e293b;
   font-size: 13px;
   line-height: 1.5;
   font-family: inherit;
   user-select: text;
 
   &::placeholder {
-    color: #64748b;
+    color: #94a3b8;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #d4d7e2;
+    border-radius: 3px;
+    &:hover {
+      background: #b8bccb;
+    }
   }
 }
 
@@ -224,11 +240,22 @@
   overflow-y: auto;
   font-size: 13.5px;
   line-height: 1.55;
-  color: #f8fafc;
+  color: #0f172a;
   white-space: pre-wrap;
   word-break: break-word;
   user-select: text;
   padding-bottom: 24px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #d4d7e2;
+    border-radius: 3px;
+    &:hover {
+      background: #b8bccb;
+    }
+  }
 }
 
 .qt-target-empty {
@@ -236,7 +263,7 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 12px;
 }
 
@@ -244,13 +271,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #38bdf8;
+  color: #3D1C56;
   font-size: 12px;
   margin: auto;
 }
 
 .qt-error {
-  color: #f87171;
+  color: #dc2626;
   font-size: 12px;
   padding: 6px;
   line-height: 1.4;
@@ -263,9 +290,11 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(26, 28, 34, 0.85);
+  background: rgba(255, 255, 255, 0.94);
   padding: 2px 4px;
   border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(8px);
 }
 
@@ -275,16 +304,16 @@
   gap: 3px;
   padding: 3px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
+    background: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
   }
 
   &:disabled {
@@ -293,18 +322,18 @@
   }
 
   &--tts {
-    background: rgba(56, 189, 248, 0.15);
-    border-color: rgba(56, 189, 248, 0.3);
-    color: #38bdf8;
+    background: rgba(61, 28, 86, 0.08);
+    border-color: rgba(61, 28, 86, 0.22);
+    color: #3D1C56;
+    font-weight: 500;
 
     &:hover:not(:disabled) {
-      background: rgba(56, 189, 248, 0.3);
-      color: #e0f2fe;
+      background: rgba(61, 28, 86, 0.16);
+      color: #240e34;
     }
   }
 
   .is-success {
-    color: #4ade80;
+    color: #16a34a;
   }
 }
-
