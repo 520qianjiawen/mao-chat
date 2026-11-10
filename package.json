@@ -1,7 +1,7 @@
 {
   "name": "mao-chat",
   "productName": "MAO Chat",
-  "version": "1.0.45",
+  "version": "1.0.46",
   "sidecarVersion": "0.1.13",
   "private": true,
   "main": "dist-electron/main.js",
