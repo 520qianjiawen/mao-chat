@@ -369,8 +369,14 @@ function getOrCreateQuickTranslateWindow(mainWindow) {
 /**
  * Show the quick translate window near the cursor or centered.
  */
-function showQuickTranslate(text, source, mainWindow) {
-  latestPayload = { text: text || '', source: source || 'manual', timestamp: Date.now() };
+function showQuickTranslate(text, source, mainWindow, options = {}) {
+  const openSettings = Boolean(options && options.openSettings);
+  latestPayload = {
+    text: text || '',
+    source: source || 'manual',
+    openSettings,
+    timestamp: Date.now(),
+  };
 
   const win = getOrCreateQuickTranslateWindow(mainWindow);
 
@@ -408,12 +414,17 @@ function showQuickTranslate(text, source, mainWindow) {
   focusAppWithoutMainWindow();
 
   // Send payload to renderer
-  if (win.webContents.isLoading()) {
-    win.webContents.once('did-finish-load', () => {
-      win.webContents.send('quick-translate:payload', latestPayload);
-    });
-  } else {
+  const deliverPayload = () => {
     win.webContents.send('quick-translate:payload', latestPayload);
+    if (openSettings) {
+      win.webContents.send('quick-translate:open-settings');
+    }
+  };
+
+  if (win.webContents.isLoading()) {
+    win.webContents.once('did-finish-load', deliverPayload);
+  } else {
+    deliverPayload();
   }
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuickTranslateWindow from './QuickTranslateWindow';
 
@@ -427,6 +427,20 @@ describe('QuickTranslateWindow', () => {
     await waitFor(() => {
       expect(screen.getByText('暂无翻译结果')).toBeInTheDocument();
     });
+  });
+
+  it('automatically opens settings modal when quick-translate:open-settings is received', async () => {
+    render(<QuickTranslateWindow />);
+    expect(screen.queryByText('翻译服务管理')).not.toBeInTheDocument();
+
+    const openSettingsHandler = listeners['quick-translate:open-settings']?.[0];
+    expect(openSettingsHandler).toBeDefined();
+
+    act(() => {
+      openSettingsHandler();
+    });
+
+    expect(screen.getByText('翻译服务管理')).toBeInTheDocument();
   });
 });
 

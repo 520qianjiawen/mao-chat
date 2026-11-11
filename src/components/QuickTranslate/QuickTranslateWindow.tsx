@@ -440,6 +440,9 @@ export const QuickTranslateWindow: React.FC = () => {
       window.electron
         .invoke('quick-translate:get-payload')
         .then((payload: any) => {
+          if (payload?.openSettings) {
+            setShowSettingsModal(true);
+          }
           if (payload?.text) {
             applyTextAndTranslateRef.current(payload.text);
           }
@@ -449,15 +452,24 @@ export const QuickTranslateWindow: React.FC = () => {
 
     if (!window.electron?.receive) return;
 
-    const onPayload = (payload: { text: string; source: string }) => {
+    const onPayload = (payload: { text: string; source: string; openSettings?: boolean }) => {
+      if (payload?.openSettings) {
+        setShowSettingsModal(true);
+      }
       if (payload?.text) {
         applyTextAndTranslateRef.current(payload.text);
       }
     };
 
+    const onOpenSettings = () => {
+      setShowSettingsModal(true);
+    };
+
     window.electron.receive('quick-translate:payload', onPayload);
+    window.electron.receive('quick-translate:open-settings', onOpenSettings);
     return () => {
       window.electron?.removeListener?.('quick-translate:payload', onPayload);
+      window.electron?.removeListener?.('quick-translate:open-settings', onOpenSettings);
     };
   }, []);
 

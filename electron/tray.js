@@ -127,6 +127,12 @@ function buildContextMenu() {
         showQuickTranslate('', 'manual', mainWindow);
       },
     },
+    {
+      label: '翻译服务设置...',
+      click: () => {
+        showQuickTranslate('', 'manual', mainWindow, { openSettings: true });
+      },
+    },
     { type: 'separator' },
     {
       label: isVisible ? '隐藏主界面' : '打开主界面',

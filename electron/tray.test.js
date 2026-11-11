@@ -157,6 +157,7 @@ describe('electron/tray.js', () => {
     expect(labels).toContain('截图翻译');
     expect(labels).toContain('剪贴板翻译');
     expect(labels).toContain('显示翻译窗口');
+    expect(labels).toContain('翻译服务设置...');
     expect(labels).toContain('打开主界面');
     expect(labels).toContain('偏好设置...');
     expect(labels).toContain('MAO Chat v1.0.25');
@@ -248,6 +249,22 @@ describe('electron/tray.js', () => {
       '',
       'manual',
       fakeMainWindow,
+    );
+  });
+
+  it('opens translation settings when clicking 翻译服务设置...', () => {
+    const { setupTray } = nodeRequire(trayModulePath);
+    setupTray(() => fakeMainWindow);
+
+    const settingsItem = fakeMenuTemplate.find((item) => item.label === '翻译服务设置...');
+    expect(settingsItem).toBeDefined();
+
+    settingsItem.click();
+    expect(fakeQuickTranslate.showQuickTranslate).toHaveBeenCalledWith(
+      '',
+      'manual',
+      fakeMainWindow,
+      { openSettings: true },
     );
   });
 
