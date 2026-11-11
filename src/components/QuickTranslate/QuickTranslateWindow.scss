@@ -194,11 +194,17 @@
   }
 
   &::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d4d7e2;
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.14);
+    border-radius: 999px;
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
   }
 }
 
@@ -321,17 +327,22 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-right: 4px;
+  padding-right: 3px;
   padding-bottom: 14px;
 
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d4d7e2;
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.14);
+    border-radius: 999px;
+    transition: background 0.15s ease;
+
     &:hover {
-      background: #b8bccb;
+      background: rgba(0, 0, 0, 0.32);
     }
   }
 }
@@ -435,20 +446,6 @@
     white-space: pre-wrap;
     word-break: break-word;
     user-select: text;
-    max-height: 360px;
-    overflow-y: auto;
-    padding-right: 4px;
-
-    &::-webkit-scrollbar {
-      width: 5px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
-      &:hover {
-        background: #94a3b8;
-      }
-    }
   }
 
   &__empty {
@@ -812,6 +809,20 @@
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.14);
+    border-radius: 999px;
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
 }
 
 .qt-settings-section {
