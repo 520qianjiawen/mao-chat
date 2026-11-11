@@ -214,7 +214,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>彻底移除划词翻译卡片嵌套双滚动条：译文内容自然撑开，由列表全局单层平滑滚动，杜绝两条滚动条并排紧挨</li><li>重塑极简悬浮滚动条：宽度缩细至 4px，全圆角透明胶囊轨道，与 macOS 原生质感完美契合</li><li>菜单栏托盘新增「翻译服务设置...」直接入口：支持一键打开并弹出多模型与 API Key 配置面板</li><li>支持全自动静默无感更新：点击更新下载完成后自动静默替换安装并重新打开，彻底免去手动拖移 DMG 步骤</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>主界面「文本翻译」全面接入大模型翻译：模型下拉列表置顶新增智谱 AI (GLM-4-Flash · 免费大模型)、硅基流动 (Qwen-2.5-7B · 免费大模型) 与系统翻译 (macOS 原生离线)</li><li>API Key 全局打通与共享：智谱与硅基流动密钥与划词翻译完全互通，并提供快捷配置胶囊与卡片内就地保存</li><li>划词翻译滚动条体验重塑：移除卡片嵌套局部滚动条，统一切换为 4px 极简悬浮圆角胶囊设计</li><li>菜单栏托盘新增「翻译服务设置...」直接入口，支持全自动无感静默更新</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,
