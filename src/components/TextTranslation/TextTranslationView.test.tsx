@@ -24,6 +24,18 @@ const mocks = vi.hoisted(() => ({
     inferenceTimeMs: 90,
   }),
   ollamaDispose: vi.fn(),
+  zhipuTranslate: vi.fn().mockResolvedValue({
+    translatedText: '你好，世界（智谱）',
+    inferenceTimeMs: 150,
+  }),
+  siliconTranslate: vi.fn().mockResolvedValue({
+    translatedText: '你好，世界（硅基流动）',
+    inferenceTimeMs: 140,
+  }),
+  appleTranslate: vi.fn().mockResolvedValue({
+    translatedText: '你好，世界（系统翻译）',
+    inferenceTimeMs: 50,
+  }),
   settings: {
     targetLanguage: 'zh',
     translationModel: 'confucius4-t3po-14b',
@@ -89,6 +101,27 @@ vi.mock('../../lib/ollama-translator', () => {
     },
   };
 });
+
+vi.mock('../../lib/zhipu-translator/ZhipuTranslatorClient', () => ({
+  ZhipuTranslatorClient: class {
+    constructor(public options: any) {}
+    translate = mocks.zhipuTranslate;
+  },
+}));
+
+vi.mock('../../lib/siliconflow-translator/SiliconFlowTranslatorClient', () => ({
+  SiliconFlowTranslatorClient: class {
+    constructor(public options: any) {}
+    translate = mocks.siliconTranslate;
+  },
+}));
+
+vi.mock('../../lib/apple-system-translator/AppleSystemTranslatorClient', () => ({
+  AppleSystemTranslatorClient: class {
+    translate = mocks.appleTranslate;
+    installShortcut = vi.fn().mockResolvedValue(undefined);
+  },
+}));
 
 describe('TextTranslationView', () => {
   beforeEach(() => {
@@ -426,6 +459,124 @@ describe('TextTranslationView', () => {
     await waitFor(() => {
       expect(mocks.ollamaInit).toHaveBeenCalledWith('auto', 'zh', 'ollama:translategemma:12b');
       expect(mocks.ollamaTranslate).toHaveBeenCalledWith('Hello world', expect.any(String), false);
+    });
+  });
+
+  it('lists LLM models including 智谱 AI and 硅基流动 in the model selector', async () => {
+    render(
+      <TextTranslationView
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const modelSelect = await screen.findByRole('combobox', { name: /翻译模型/i });
+    const options = Array.from(modelSelect.querySelectorAll('option')).map((opt) => opt.textContent);
+    expect(options.some((text) => text?.includes('智谱 AI'))).toBe(true);
+    expect(options.some((text) => text?.includes('硅基流动'))).toBe(true);
+  });
+
+  it('translates with 智谱 AI when selected with configured API key', async () => {
+    localStorage.setItem('mao_qt_zhipu_api_key', 'test-zhipu-key');
+
+    render(
+      <TextTranslationView
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const modelSelect = await screen.findByRole('combobox', { name: /翻译模型/i });
+    fireEvent.change(modelSelect, { target: { value: 'zhipu' } });
+
+    const textarea = screen.getByPlaceholderText(/在此输入或粘贴需要翻译的文本/i) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Hello world' } });
+
+    const translateBtn = screen.getByRole('button', { name: /立即翻译/i });
+    fireEvent.click(translateBtn);
+
+    await waitFor(() => {
+      expect(mocks.zhipuTranslate).toHaveBeenCalledWith('Hello world', 'auto', 'zh');
+      expect(screen.getByText('你好，世界（智谱）')).toBeInTheDocument();
+    });
+
+    localStorage.removeItem('mao_qt_zhipu_api_key');
+  });
+
+  it('displays API key prompt when 智谱 key is missing', async () => {
+    localStorage.removeItem('mao_qt_zhipu_api_key');
+    mocks.zhipuTranslate.mockRejectedValueOnce(new Error('未配置智谱 API Key'));
+
+    render(
+      <TextTranslationView
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const modelSelect = await screen.findByRole('combobox', { name: /翻译模型/i });
+    fireEvent.change(modelSelect, { target: { value: 'zhipu' } });
+
+    const textarea = screen.getByPlaceholderText(/在此输入或粘贴需要翻译的文本/i) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Hello world' } });
+
+    const translateBtn = screen.getByRole('button', { name: /立即翻译/i });
+    fireEvent.click(translateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('未配置智谱 API Key')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/输入智谱 API Key/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /保存并翻译/i })).toBeInTheDocument();
+    });
+  });
+
+  it('translates with 硅基流动 when selected', async () => {
+    localStorage.setItem('mao_qt_silicon_api_key', 'test-silicon-key');
+
+    render(
+      <TextTranslationView
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const modelSelect = await screen.findByRole('combobox', { name: /翻译模型/i });
+    fireEvent.change(modelSelect, { target: { value: 'siliconflow' } });
+
+    const textarea = screen.getByPlaceholderText(/在此输入或粘贴需要翻译的文本/i) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Hello world' } });
+
+    const translateBtn = screen.getByRole('button', { name: /立即翻译/i });
+    fireEvent.click(translateBtn);
+
+    await waitFor(() => {
+      expect(mocks.siliconTranslate).toHaveBeenCalledWith('Hello world', 'auto', 'zh');
+      expect(screen.getByText('你好，世界（硅基流动）')).toBeInTheDocument();
+    });
+
+    localStorage.removeItem('mao_qt_silicon_api_key');
+  });
+
+  it('translates with 系统翻译 (Apple System) when selected on macOS', async () => {
+    render(
+      <TextTranslationView
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const modelSelect = await screen.findByRole('combobox', { name: /翻译模型/i });
+    fireEvent.change(modelSelect, { target: { value: 'apple-system' } });
+
+    const textarea = screen.getByPlaceholderText(/在此输入或粘贴需要翻译的文本/i) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Hello world' } });
+
+    const translateBtn = screen.getByRole('button', { name: /立即翻译/i });
+    fireEvent.click(translateBtn);
+
+    await waitFor(() => {
+      expect(mocks.appleTranslate).toHaveBeenCalledWith('Hello world', 'auto', 'zh');
+      expect(screen.getByText('你好，世界（系统翻译）')).toBeInTheDocument();
     });
   });
 });

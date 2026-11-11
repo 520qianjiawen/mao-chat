@@ -19,6 +19,9 @@ import { useTranslation } from 'react-i18next';
 import { NativeTranslateClient } from '../../lib/local-inference/native/NativeTranslateClient';
 import { TranslationEngine } from '../../lib/local-inference/engine/TranslationEngine';
 import { OllamaTranslatorClient, fetchOllamaModels, type OllamaModelItem } from '../../lib/ollama-translator';
+import { ZhipuTranslatorClient } from '../../lib/zhipu-translator/ZhipuTranslatorClient';
+import { SiliconFlowTranslatorClient } from '../../lib/siliconflow-translator/SiliconFlowTranslatorClient';
+import { AppleSystemTranslatorClient } from '../../lib/apple-system-translator/AppleSystemTranslatorClient';
 import {
   isNativeOnlineTranslation,
   isOllamaTranslation,
@@ -53,6 +56,13 @@ interface SentenceRange {
 
 // Popular languages prioritized in the dropdown
 const POPULAR_LANGUAGES = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'ru', 'it', 'pt'];
+
+const STORAGE_KEY_ZHIPU = 'mao_qt_zhipu_api_key';
+const STORAGE_KEY_SILICON = 'mao_qt_silicon_api_key';
+
+export function isCustomTranslationModel(id: string | null | undefined): boolean {
+  return id === 'zhipu' || id === 'siliconflow' || id === 'apple-system';
+}
 
 /**
  * Detect whether input is Chinese or other language.
@@ -212,11 +222,27 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
     return () => { cancelled = true; };
   }, []);
 
-  // Available models list (online + Ollama local + downloaded native models)
+  // Available models list (LLMs + online + Ollama local + downloaded native models)
   const availableModels = useMemo(() => {
     const list: { id: string; name: string; isOnline: boolean; isReady: boolean }[] = [];
 
-    // Online models (always available)
+    // 大模型翻译 (LLM Models)
+    list.push(
+      { id: 'zhipu', name: '智谱 AI (GLM-4-Flash · 免费大模型)', isOnline: true, isReady: true },
+      { id: 'siliconflow', name: '硅基流动 (Qwen-2.5-7B · 免费大模型)', isOnline: true, isReady: true },
+    );
+
+    // Apple 系统翻译 (macOS 离线)
+    const isMac = typeof process !== 'undefined'
+      ? process.platform === 'darwin'
+      : (typeof navigator !== 'undefined' && navigator.platform?.toUpperCase().includes('MAC'));
+    if (isMac) {
+      list.push(
+        { id: 'apple-system', name: '系统翻译 (macOS 离线 · 免配置)', isOnline: true, isReady: true },
+      );
+    }
+
+    // 在线翻译服务
     list.push(
       { id: 'bing-translator', name: 'Bing Translator (在线 · 无需下载)', isOnline: true, isReady: true },
       { id: 'google-translator', name: 'Google Translator (在线 · 无需下载)', isOnline: true, isReady: true },
@@ -252,7 +278,7 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
   const defaultModelId = useMemo(() => {
     const configured = resolveNativeTranslation(settings.translationModel);
     if (configured) {
-      if (isNativeOnlineTranslation(configured) || isOllamaTranslation(configured)) return configured;
+      if (isNativeOnlineTranslation(configured) || isOllamaTranslation(configured) || isCustomTranslationModel(configured)) return configured;
       if (statuses[configured] === 'ready') return configured;
     }
     // Check if any local model in catalog is downloaded and ready
@@ -270,12 +296,39 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
   useEffect(() => {
     const isReadyOrOnline = isNativeOnlineTranslation(selectedModelId)
       || isOllamaTranslation(selectedModelId)
+      || isCustomTranslationModel(selectedModelId)
       || statuses[selectedModelId] === 'ready';
     const isInList = availableModels.some((m) => m.id === selectedModelId);
     if (!isReadyOrOnline || !isInList) {
       setSelectedModelId(defaultModelId);
     }
   }, [defaultModelId, selectedModelId, statuses, availableModels]);
+
+  // API Key management for LLMs
+  const [zhipuApiKey, setZhipuApiKey] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY_ZHIPU) || '';
+  });
+  const [siliconFlowApiKey, setSiliconFlowApiKey] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY_SILICON) || '';
+  });
+  const [showKeyModal, setShowKeyModal] = useState<'zhipu' | 'siliconflow' | null>(null);
+  const [tempKeyInput, setTempKeyInput] = useState('');
+
+  const saveZhipuKey = useCallback((key: string) => {
+    const trimmed = key.trim();
+    setZhipuApiKey(trimmed);
+    try {
+      localStorage.setItem(STORAGE_KEY_ZHIPU, trimmed);
+    } catch {}
+  }, []);
+
+  const saveSiliconKey = useCallback((key: string) => {
+    const trimmed = key.trim();
+    setSiliconFlowApiKey(trimmed);
+    try {
+      localStorage.setItem(STORAGE_KEY_SILICON, trimmed);
+    } catch {}
+  }, []);
 
   // Text inputs & outputs
   const [sourceText, setSourceText] = useState('');
@@ -384,44 +437,47 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
     const t0 = performance.now();
 
     try {
+      const isCustom = isCustomTranslationModel(curModelId);
       const isOnline = isNativeOnlineTranslation(curModelId);
       const variant = settings.translationVariantByModel[curModelId];
       const clientKey = `${curModelId}:${curSourceLang}:${curTargetLang}:${variant || ''}`;
 
       let clientInstance = clientRef.current;
-      if (!clientInstance || clientInstance.key !== clientKey) {
-        if (clientInstance) {
-          try {
-            (clientInstance.client as any).dispose?.();
-          } catch {
-            // ignore
+      if (!isCustom) {
+        if (!clientInstance || clientInstance.key !== clientKey) {
+          if (clientInstance) {
+            try {
+              (clientInstance.client as any).dispose?.();
+            } catch {
+              // ignore
+            }
           }
-        }
 
-        if (isOnline) {
-          const client = new TranslationEngine();
-          await client.init(curSourceLang, curTargetLang, curModelId, {
-            apiKey: settings.deeplApiKey,
-          });
-          clientInstance = { key: clientKey, client };
-        } else if (isOllamaTranslation(curModelId)) {
-          const client = new OllamaTranslatorClient();
-          await client.init(curSourceLang, curTargetLang, curModelId);
-          clientInstance = { key: clientKey, client };
-        } else {
-          const client = new NativeTranslateClient();
-          await client.init(
-            curSourceLang === 'auto' ? '' : curSourceLang,
-            curTargetLang,
-            curModelId,
-            settings.translationDevice,
-            null,
-            null,
-            variant,
-          );
-          clientInstance = { key: clientKey, client };
+          if (isOnline) {
+            const client = new TranslationEngine();
+            await client.init(curSourceLang, curTargetLang, curModelId, {
+              apiKey: settings.deeplApiKey,
+            });
+            clientInstance = { key: clientKey, client };
+          } else if (isOllamaTranslation(curModelId)) {
+            const client = new OllamaTranslatorClient();
+            await client.init(curSourceLang, curTargetLang, curModelId);
+            clientInstance = { key: clientKey, client };
+          } else {
+            const client = new NativeTranslateClient();
+            await client.init(
+              curSourceLang === 'auto' ? '' : curSourceLang,
+              curTargetLang,
+              curModelId,
+              settings.translationDevice,
+              null,
+              null,
+              variant,
+            );
+            clientInstance = { key: clientKey, client };
+          }
+          clientRef.current = clientInstance;
         }
-        clientRef.current = clientInstance;
       }
 
       // Build clean system prompt for text/article translation
@@ -430,6 +486,21 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
       const textPrompt = `You are a professional translator. Translate the text from ${srcDisplay} to ${tgtDisplay} accurately and fluently. Preserve all formatting, line breaks, and nuances. Output ONLY the translation. No explanations, notes, or commentary.`;
 
       const translateSingleChunk = async (chunk: string): Promise<string> => {
+        if (curModelId === 'zhipu') {
+          const client = new ZhipuTranslatorClient({ apiKey: zhipuApiKey });
+          const r = await client.translate(chunk, curSourceLang, curTargetLang);
+          return (r.translatedText || '').trim();
+        }
+        if (curModelId === 'siliconflow') {
+          const client = new SiliconFlowTranslatorClient({ apiKey: siliconFlowApiKey });
+          const r = await client.translate(chunk, curSourceLang, curTargetLang);
+          return (r.translatedText || '').trim();
+        }
+        if (curModelId === 'apple-system') {
+          const client = new AppleSystemTranslatorClient();
+          const r = await client.translate(chunk, curSourceLang, curTargetLang);
+          return (r.translatedText || '').trim();
+        }
         const r = await clientInstance!.client.translate(
           chunk,
           isOnline ? '' : textPrompt,
@@ -458,6 +529,8 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
     sourceLang,
     targetLang,
     selectedModelId,
+    zhipuApiKey,
+    siliconFlowApiKey,
     settings.translationVariantByModel,
     settings.deeplApiKey,
     settings.translationDevice,
@@ -864,6 +937,32 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
                 </option>
               ))}
             </select>
+            {selectedModelId === 'zhipu' && (
+              <button
+                type="button"
+                className={`text-translation-view__key-badge ${zhipuApiKey ? 'is-configured' : 'is-missing'}`}
+                onClick={() => {
+                  setTempKeyInput(zhipuApiKey);
+                  setShowKeyModal('zhipu');
+                }}
+                title={zhipuApiKey ? '已配置智谱 API Key (点击修改)' : '未配置 API Key (点击配置)'}
+              >
+                {zhipuApiKey ? '智谱 Key 已配置' : '⚠️ 配置智谱 Key'}
+              </button>
+            )}
+            {selectedModelId === 'siliconflow' && (
+              <button
+                type="button"
+                className={`text-translation-view__key-badge ${siliconFlowApiKey ? 'is-configured' : 'is-missing'}`}
+                onClick={() => {
+                  setTempKeyInput(siliconFlowApiKey);
+                  setShowKeyModal('siliconflow');
+                }}
+                title={siliconFlowApiKey ? '已配置硅基流动 API Key (点击修改)' : '未配置 API Key (点击配置)'}
+              >
+                {siliconFlowApiKey ? '硅基 Key 已配置' : '⚠️ 配置硅基 Key'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1085,15 +1184,114 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
               </div>
             ) : error ? (
               <div className="translation-card__error">
-                <p className="error-title">翻译遇到问题</p>
-                <p className="error-detail">{error}</p>
-                <button
-                  type="button"
-                  className="retry-btn"
-                  onClick={onManualTranslate}
-                >
-                  重试
-                </button>
+                {selectedModelId === 'zhipu' && (!zhipuApiKey || error.includes('未配置智谱 API Key')) ? (
+                  <div className="key-prompt-box">
+                    <p className="error-title">未配置智谱 API Key</p>
+                    <p className="error-detail">
+                      智谱 GLM-4-Flash 为完全免费的大语言模型，需输入 API Key 即可翻译。
+                    </p>
+                    <div className="key-prompt-row">
+                      <input
+                        type="password"
+                        placeholder="输入智谱 API Key (如: xxx.yyy)"
+                        value={tempKeyInput}
+                        onChange={(e) => setTempKeyInput(e.target.value)}
+                        className="key-prompt-input"
+                      />
+                      <button
+                        type="button"
+                        className="key-prompt-save-btn"
+                        onClick={() => {
+                          saveZhipuKey(tempKeyInput);
+                          setError(null);
+                          void handleTranslate(sourceText, sourceLang, targetLang, 'zhipu');
+                        }}
+                      >
+                        保存并翻译
+                      </button>
+                    </div>
+                    <a
+                      href="https://open.bigmodel.cn/usercenter/apikeys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="key-prompt-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.electron?.invoke?.('open-external', 'https://open.bigmodel.cn/usercenter/apikeys');
+                      }}
+                    >
+                      免费获取智谱 API Key →
+                    </a>
+                  </div>
+                ) : selectedModelId === 'siliconflow' && (!siliconFlowApiKey || error.includes('未配置硅基流动 API Key')) ? (
+                  <div className="key-prompt-box">
+                    <p className="error-title">未配置硅基流动 API Key</p>
+                    <p className="error-detail">
+                      硅基流动 Qwen-2.5-7B 为开源大语言模型，需输入 API Key 即可翻译。
+                    </p>
+                    <div className="key-prompt-row">
+                      <input
+                        type="password"
+                        placeholder="输入硅基流动 API Key (如: sk-xxx)"
+                        value={tempKeyInput}
+                        onChange={(e) => setTempKeyInput(e.target.value)}
+                        className="key-prompt-input"
+                      />
+                      <button
+                        type="button"
+                        className="key-prompt-save-btn"
+                        onClick={() => {
+                          saveSiliconKey(tempKeyInput);
+                          setError(null);
+                          void handleTranslate(sourceText, sourceLang, targetLang, 'siliconflow');
+                        }}
+                      >
+                        保存并翻译
+                      </button>
+                    </div>
+                    <a
+                      href="https://cloud.siliconflow.cn/account/ak"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="key-prompt-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.electron?.invoke?.('open-external', 'https://cloud.siliconflow.cn/account/ak');
+                      }}
+                    >
+                      免费获取硅基流动 API Key →
+                    </a>
+                  </div>
+                ) : selectedModelId === 'apple-system' && error.includes('未检测到系统翻译快捷指令') ? (
+                  <div className="key-prompt-box">
+                    <p className="error-title">未检测到系统翻译快捷指令</p>
+                    <p className="error-detail">
+                      系统翻译基于 macOS Apple Translate 原生引擎（免 Key、零消耗）。需要快捷指令「MAO.Translate.v1」。
+                    </p>
+                    <button
+                      type="button"
+                      className="key-prompt-save-btn"
+                      onClick={async () => {
+                        const client = new AppleSystemTranslatorClient();
+                        await client.installShortcut();
+                      }}
+                    >
+                      一键安装快捷指令
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="error-title">翻译遇到问题</p>
+                    <p className="error-detail">{error}</p>
+                    <button
+                      type="button"
+                      className="retry-btn"
+                      onClick={onManualTranslate}
+                    >
+                      重试
+                    </button>
+                  </>
+                )}
               </div>
             ) : translatedText ? (
               <div
@@ -1165,6 +1363,95 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
           </div>
         </div>
       </div>
+      {/* Key Config Modal */}
+      {showKeyModal && (
+        <div className="tt-modal-overlay" onClick={() => setShowKeyModal(null)}>
+          <div className="tt-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="tt-modal-header">
+              <h3>{showKeyModal === 'zhipu' ? '配置智谱 API Key' : '配置硅基流动 API Key'}</h3>
+              <button
+                type="button"
+                className="text-translation-view__icon-btn"
+                onClick={() => setShowKeyModal(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="tt-modal-body">
+              <p className="tt-modal-desc">
+                {showKeyModal === 'zhipu' ? (
+                  <>
+                    使用 <strong>智谱 GLM-4-Flash</strong> 大语言模型。完全免费，翻译迅速流畅。<br />
+                    如无密钥，可在{' '}
+                    <a
+                      href="https://open.bigmodel.cn/usercenter/apikeys"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.electron?.invoke?.('open-external', 'https://open.bigmodel.cn/usercenter/apikeys');
+                      }}
+                    >
+                      智谱开放平台
+                    </a>{' '}
+                    免费注册并获取。
+                  </>
+                ) : (
+                  <>
+                    使用 <strong>硅基流动 Qwen-2.5-7B</strong> 开源大语言模型。翻译准确自然。<br />
+                    如无密钥，可在{' '}
+                    <a
+                      href="https://cloud.siliconflow.cn/account/ak"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.electron?.invoke?.('open-external', 'https://cloud.siliconflow.cn/account/ak');
+                      }}
+                    >
+                      硅基流动控制台
+                    </a>{' '}
+                    免费注册并获取。
+                  </>
+                )}
+              </p>
+              <div className="tt-modal-input-group">
+                <input
+                  type="password"
+                  placeholder={showKeyModal === 'zhipu' ? '输入智谱 API Key (如: xxx.yyy)' : '输入硅基流动 API Key (如: sk-xxx)'}
+                  value={tempKeyInput}
+                  onChange={(e) => setTempKeyInput(e.target.value)}
+                  className="tt-modal-input"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="tt-modal-footer">
+              <button
+                type="button"
+                className="tt-btn-cancel"
+                onClick={() => setShowKeyModal(null)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="tt-btn-save"
+                onClick={() => {
+                  if (showKeyModal === 'zhipu') {
+                    saveZhipuKey(tempKeyInput);
+                  } else {
+                    saveSiliconKey(tempKeyInput);
+                  }
+                  setShowKeyModal(null);
+                  setError(null);
+                  if (sourceText.trim()) {
+                    void handleTranslate(sourceText, sourceLang, targetLang, showKeyModal);
+                  }
+                }}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
