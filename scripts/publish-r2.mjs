@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -119,6 +120,62 @@ async function computeSha256(filePath) {
   });
 }
 
+function uploadWithBoto3(key, filePath) {
+  return new Promise((resolve, reject) => {
+    const pythonCode = `
+import sys, os, boto3
+from botocore.config import Config
+from boto3.s3.transfer import TransferConfig
+
+s3 = boto3.client(
+    's3',
+    endpoint_url='https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com',
+    aws_access_key_id='${R2_CONFIG.accessKeyId}',
+    aws_secret_access_key='${R2_CONFIG.secretAccessKey}',
+    config=Config(signature_version='s3v4'),
+    region_name='auto',
+)
+
+class ProgressCallback:
+    def __init__(self, total):
+        self.total = total
+        self.uploaded = 0
+    def __call__(self, bytes_amount):
+        self.uploaded += bytes_amount
+        pct = (self.uploaded / self.total) * 100
+        mb = self.uploaded / (1024 * 1024)
+        total_mb = self.total / (1024 * 1024)
+        sys.stdout.write(f'\\r⏳ 上传进度: {pct:.1f}% ({mb:.1f} MB / {total_mb:.1f} MB)')
+        sys.stdout.flush()
+
+file_path = sys.argv[1]
+dest_key = sys.argv[2]
+size = os.path.getsize(file_path)
+config = TransferConfig(
+    multipart_threshold=8 * 1024 * 1024,
+    max_concurrency=4,
+    multipart_chunksize=8 * 1024 * 1024,
+    use_threads=True,
+)
+s3.upload_file(
+    file_path,
+    '${R2_CONFIG.bucket}',
+    dest_key,
+    Callback=ProgressCallback(size),
+    Config=config,
+    ExtraArgs={'ContentType': 'application/x-apple-diskimage'},
+)
+sys.stdout.write('\\n')
+`;
+    const child = spawn('python3', ['-c', pythonCode, filePath, key], { stdio: 'inherit' });
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Python boto3 exited with code ${code}`));
+    });
+    child.on('error', reject);
+  });
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const manifestOnly = args.includes('--manifest-only') || args.includes('--only-manifest');
@@ -166,37 +223,45 @@ async function main() {
 
   if (!manifestOnly) {
     if (R2_CONFIG.accessKeyId && R2_CONFIG.secretAccessKey) {
-      console.log(`\n📤 正在通过 S3 分块传输上传安装包 (${(stat.size / 1024 / 1024).toFixed(1)} MB) 到 R2: ${r2DmgKey} ...`);
-      const s3 = new S3Client({
-        region: 'auto',
-        endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId: R2_CONFIG.accessKeyId,
-          secretAccessKey: R2_CONFIG.secretAccessKey,
-        },
-      });
+      console.log(`\n📤 正在上传安装包 (${(stat.size / 1024 / 1024).toFixed(1)} MB) 到 R2: ${r2DmgKey} ...`);
+      try {
+        await uploadWithBoto3(r2DmgKey, dmgPath);
+        console.log(`✅ 安装包分块上传成功: ${dmgPublicUrl}`);
+      } catch (botoErr) {
+        console.warn(`\n⚠️  boto3 上传失败或不可用 (${botoErr.message})，正在尝试通过 AWS SDK 上传...`);
+        const s3 = new S3Client({
+          region: 'auto',
+          endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
+          credentials: {
+            accessKeyId: R2_CONFIG.accessKeyId,
+            secretAccessKey: R2_CONFIG.secretAccessKey,
+          },
+          maxAttempts: 5,
+        });
 
-      const parallelUploads3 = new Upload({
-        client: s3,
-        params: {
-          Bucket: R2_CONFIG.bucket,
-          Key: r2DmgKey,
-          Body: fs.createReadStream(dmgPath),
-          ContentType: 'application/x-apple-diskimage',
-        },
-        partSize: 20 * 1024 * 1024,
-        leavePartsOnError: false,
-      });
+        const parallelUploads3 = new Upload({
+          client: s3,
+          params: {
+            Bucket: R2_CONFIG.bucket,
+            Key: r2DmgKey,
+            Body: fs.createReadStream(dmgPath),
+            ContentType: 'application/x-apple-diskimage',
+          },
+          partSize: 10 * 1024 * 1024,
+          queueSize: 1,
+          leavePartsOnError: false,
+        });
 
-      parallelUploads3.on('httpUploadProgress', (progress) => {
-        if (progress.total) {
-          const pct = ((progress.loaded / progress.total) * 100).toFixed(1);
-          process.stdout.write(`\r⏳ 上传进度: ${pct}% (${(progress.loaded / 1024 / 1024).toFixed(1)} MB / ${(progress.total / 1024 / 1024).toFixed(1)} MB)`);
-        }
-      });
+        parallelUploads3.on('httpUploadProgress', (progress) => {
+          if (progress.total) {
+            const pct = ((progress.loaded / progress.total) * 100).toFixed(1);
+            process.stdout.write(`\r⏳ 上传进度: ${pct}% (${(progress.loaded / 1024 / 1024).toFixed(1)} MB / ${(progress.total / 1024 / 1024).toFixed(1)} MB)`);
+          }
+        });
 
-      await parallelUploads3.done();
-      console.log(`\n✅ 安装包分块上传成功: ${dmgPublicUrl}`);
+        await parallelUploads3.done();
+        console.log(`\n✅ 安装包分块上传成功: ${dmgPublicUrl}`);
+      }
     } else {
       console.log(`\n⚠️  提示：Cloudflare 对 REST API 单次请求限制为 100MB。`);
       console.log(`大文件需要通过 S3 分块传输协议上传，您只需提供创建 R2 API 令牌时页面显示的两个字段：`);
@@ -214,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>主界面「文本翻译」全面接入大模型翻译：模型下拉列表置顶新增智谱 AI (GLM-4-Flash · 免费大模型)、硅基流动 (Qwen-2.5-7B · 免费大模型) 与系统翻译 (macOS 原生离线)</li><li>API Key 全局打通与共享：智谱与硅基流动密钥与划词翻译完全互通，并提供快捷配置胶囊与卡片内就地保存</li><li>划词翻译滚动条体验重塑：移除卡片嵌套局部滚动条，统一切换为 4px 极简悬浮圆角胶囊设计</li><li>菜单栏托盘新增「翻译服务设置...」直接入口，支持全自动无感静默更新</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>Kokoro 82M 官方端侧语音合成模型全面解锁多语种支持：支持英语 (美音/英音)、中文、日语、西班牙语、法语、印地语、意大利语、巴西葡萄牙语等全部 8 大官方语言</li><li>完整开放全部 53 款官方预置音色，各语种自动匹配最佳默认音色并显示性别与音色元数据</li><li>模型列表显示优化为「Kokoro 82M Official (多语种 / 53音色)」</li><li>优化端侧语音合成与翻译联动体验</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,
