@@ -99,16 +99,18 @@ def test_supertonic_presets_without_download():
 
 def test_kokoro_named_voices_have_language_defaults_without_download():
     voices = tts_voices.list_builtin_voices("kokoro-82m")
-    # Official path: en + zh + ja only (41 voices).
-    assert len(voices) == 41
+    # Official path: 53 voices across 8 languages.
+    assert len(voices) == 53
     heart = next(v for v in voices if v["name"] == "af_heart")
     assert heart["language"] == "en" and heart["default"] is True
     chinese = next(v for v in voices if v["name"] == "zf_xiaoxiao")
     assert chinese["language"] == "zh" and chinese["default"] is True
     japanese = next(v for v in voices if v["name"] == "jf_alpha")
     assert japanese["language"] == "ja" and japanese["default"] is True
-    assert all(v["language"] in ("en", "zh", "ja") for v in voices)
-    assert not any(v["name"].startswith("ef_") for v in voices)
+    spanish = next(v for v in voices if v["name"] == "ef_dora")
+    assert spanish["language"] == "es" and spanish["default"] is True
+    assert all(v["language"] in ("en", "zh", "ja", "es", "fr", "it", "pt", "hi") for v in voices)
+    assert any(v["name"].startswith("ef_") for v in voices)
 
 
 def test_qwen3_bundled_preset_voices_from_manifest(tmp_path, monkeypatch):

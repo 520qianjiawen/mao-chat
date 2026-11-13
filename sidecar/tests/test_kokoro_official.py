@@ -13,15 +13,21 @@ from sokuji_sidecar.kokoro_official import (
 from sokuji_sidecar.backends import BackendLoadError
 
 
-def test_official_voice_list_is_en_zh_ja_only():
+def test_official_voice_list_covers_all_languages():
     assert "af_heart" in KOKORO_OFFICIAL_VOICE_NAMES
     assert "zf_xiaoxiao" in KOKORO_OFFICIAL_VOICE_NAMES
     assert "jf_alpha" in KOKORO_OFFICIAL_VOICE_NAMES
-    assert not any(n.startswith(("ef_", "ff_", "hf_", "if_", "pf_")) for n in KOKORO_OFFICIAL_VOICE_NAMES)
+    assert "ef_dora" in KOKORO_OFFICIAL_VOICE_NAMES
+    assert "ff_siwis" in KOKORO_OFFICIAL_VOICE_NAMES
+    assert "hf_alpha" in KOKORO_OFFICIAL_VOICE_NAMES
+    assert "if_sara" in KOKORO_OFFICIAL_VOICE_NAMES
+    assert "pf_dora" in KOKORO_OFFICIAL_VOICE_NAMES
     rows = kokoro_official_voice_descriptors()
-    assert len(rows) == len(KOKORO_OFFICIAL_VOICE_NAMES) == 41
+    assert len(rows) == len(KOKORO_OFFICIAL_VOICE_NAMES) == 53
     heart = next(r for r in rows if r["name"] == "af_heart")
     assert heart["default"] is True and heart["language"] == "en"
+    spanish = next(r for r in rows if r["name"] == "ef_dora")
+    assert spanish["default"] is True and spanish["language"] == "es"
 
 
 def test_set_builtin_voice_rejects_unknown_without_snapshot():

@@ -4,7 +4,8 @@ Matches the Hugging Face Space / Kokoro-FastAPI pipeline:
 
     text → misaki G2P → Kokoro-82M (PyTorch) → 24 kHz mono
 
-Primary product languages: English (US/GB), Mandarin Chinese, Japanese.
+Primary product languages: English (US/GB), Mandarin Chinese, Japanese,
+Spanish, French, Hindi, Italian, Brazilian Portuguese.
 Weights live in the HF cache (``hexgrad/Kokoro-82M``); after the first download
 the whole path runs offline (``local_files_only`` + absolute ``voices/*.pt``).
 
@@ -25,8 +26,8 @@ from .backends import register_backend, BackendLoadError
 _DEFAULT_REPO = "hexgrad/Kokoro-82M"
 _MODEL_FILE = "kokoro-v1_0.pth"
 
-# Official voice pack focused on en / zh / ja (hexgrad VOICES.md).
-# Order: Heart first for English, then quality defaults, then the rest.
+# Official voice pack (53 voices across en / zh / ja / es / fr / hi / it / pt).
+# Order: Heart first for English, then per-language defaults, then remaining voices.
 KOKORO_OFFICIAL_VOICE_NAMES: tuple[str, ...] = (
     # American English
     "af_heart",
@@ -40,22 +41,39 @@ KOKORO_OFFICIAL_VOICE_NAMES: tuple[str, ...] = (
     # Japanese
     "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo",
     # Mandarin Chinese
-    "zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi",
+    "zf_xiaoxiao", "zf_xiaobei", "zf_xiaoni", "zf_xiaoyi",
     "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang",
+    # Spanish
+    "ef_dora", "em_alex",
+    # French
+    "ff_siwis",
+    # Hindi
+    "hf_alpha", "hf_beta", "hm_omega", "hm_psi",
+    # Italian
+    "if_sara", "im_nicola",
+    # Brazilian Portuguese
+    "pf_dora", "pm_alex", "pm_santa",
 )
 
 _DEFAULT_VOICE_BY_LANG = {
     "en": "af_heart",
     "zh": "zf_xiaoxiao",
     "ja": "jf_alpha",
+    "es": "ef_dora",
+    "fr": "ff_siwis",
+    "hi": "hf_alpha",
+    "it": "if_sara",
+    "pt": "pf_dora",
 }
 
 # First letter of the official voice id → KPipeline lang_code / product language.
 _VOICE_LANG_CODE = {
     "a": "a", "b": "b", "j": "j", "z": "z",
+    "e": "e", "f": "f", "h": "h", "i": "i", "p": "p",
 }
 _VOICE_PRODUCT_LANG = {
     "a": "en", "b": "en", "j": "ja", "z": "zh",
+    "e": "es", "f": "fr", "h": "hi", "i": "it", "p": "pt",
 }
 
 

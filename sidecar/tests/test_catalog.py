@@ -487,8 +487,8 @@ def test_tts_models_use_repo_path_ids_and_have_num_speakers():
     assert tts["csukuangfj/vits-piper-en_US-libritts_r-medium"].num_speakers > 1
     kokoro = tts["kokoro-82m"]
     assert kokoro.repos == ("hexgrad/Kokoro-82M",)
-    assert kokoro.languages == ("en", "zh", "ja")
-    assert kokoro.num_speakers == 41
+    assert kokoro.languages == ("en", "zh", "ja", "es", "fr", "it", "pt", "hi")
+    assert kokoro.num_speakers == 53
     assert {d.backend for d in kokoro.deployments} == {"kokoro_official"}
     assert all(d.compute_type == "fp32" for d in kokoro.deployments)
     assert "samples/*" in kokoro.download_ignore

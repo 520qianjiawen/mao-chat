@@ -749,8 +749,8 @@ TTS_MODELS: list[TtsModel] = [
              repos=(_QWEN3_TTS_17B_FP32,), clones=True, streaming=False,
              transcript_required=True, named_voices=True, sample_rate=24000,
              recommended=False, sort_order=3, size_bytes=8_374_470_096),
-    TtsModel("kokoro-82m", "Kokoro 82M Official (en/zh/ja)",
-             ("en", "zh", "ja"),
+    TtsModel("kokoro-82m", "Kokoro 82M Official (多语种 / 53音色)",
+             ("en", "zh", "ja", "es", "fr", "it", "pt", "hi"),
              (
                  # CUDA when available; CPU floor everywhere (macOS / offline).
                  Deployment("kokoro_official", "gpu-cuda", "fp32",
@@ -759,7 +759,7 @@ TTS_MODELS: list[TtsModel] = [
                             _KOKORO_82M_REPO, 1.0),
              ),
              repos=(_KOKORO_82M_REPO,), clones=False, streaming=False,
-             named_voices=True, sample_rate=24000, num_speakers=41,
+             named_voices=True, sample_rate=24000, num_speakers=53,
              recommended=True, sort_order=4, size_bytes=_KOKORO_82M_SIZE,
              # Demo/eval assets are not needed for offline synthesis.
              download_ignore=("samples/*", "eval/*", "DONATE.md",
