@@ -125,6 +125,19 @@ class NativeHostManager {
       // via onnxruntime.preload_dlls() at startup (spec D8).
       const env = { ...process.env, HF_HOME: hfHome, SOKUJI_EXTRAS_DIR: extrasDir };
       if (launch.source === 'embedded') env.MAO_CHAT_LIVE_CAPTIONS_RUNTIME = '1';
+
+      // If packaged sidecar code exists in app resources, prioritize it so catalog & fixes update with app releases
+      const packagedSidecar = path.join(process.resourcesPath, 'sidecar');
+      if (fs.existsSync(packagedSidecar)) {
+        env.PYTHONPATH = packagedSidecar + (env.PYTHONPATH ? path.delimiter + env.PYTHONPATH : '');
+        try {
+          const srcPkg = path.join(packagedSidecar, 'sokuji_sidecar');
+          const destPkg = path.join(launch.cwd, 'sokuji_sidecar');
+          if (fs.existsSync(srcPkg) && fs.existsSync(launch.cwd) && srcPkg !== destPkg) {
+            fs.cpSync(srcPkg, destPkg, { recursive: true });
+          }
+        } catch (_) {}
+      }
       const spawnedAt = Date.now();
       const sidecarModule = launch.source === 'embedded'
         ? 'sokuji_sidecar.live_caption_main'

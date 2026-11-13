@@ -48,6 +48,10 @@
           "**/*",
           "!sidecar-runtime/**"
         ]
+      },
+      {
+        "from": "sidecar/sokuji_sidecar",
+        "to": "sidecar/sokuji_sidecar"
       }
     ],
     "linux": {
