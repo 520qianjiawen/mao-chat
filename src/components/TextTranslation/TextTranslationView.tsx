@@ -636,11 +636,13 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
       if (res?.ok && res.text) {
         setSourceText(res.text);
         setError(null);
+        let nextTarget = targetLang;
         if (!userManuallyPickedTarget.current) {
           const detected = detectLanguageGroup(res.text);
-          setTargetLang(detected === 'zh' ? 'en' : 'zh');
+          nextTarget = detected === 'zh' ? 'en' : 'zh';
+          setTargetLang(nextTarget);
         }
-        void handleTranslate(res.text);
+        void handleTranslate(res.text, sourceLang, nextTarget);
       } else if (res?.error === 'permission_denied' || res?.permission === 'screen') {
         setError(t('textTranslation.screenPermissionRequired', '截图翻译需要「屏幕与系统音频录制」权限，请在 macOS 系统设置中授权'));
       } else if (res?.ok && !res.text && !res?.cancelled) {
@@ -651,7 +653,7 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
     } finally {
       setIsCapturingOcr(false);
     }
-  }, [handleTranslate, t]);
+  }, [handleTranslate, sourceLang, targetLang, t]);
 
   // Trigger Selection/Clipboard Translation (⌃Q)
   const handleSelectionCapture = useCallback(async () => {
@@ -662,18 +664,20 @@ export const TextTranslationView: React.FC<TextTranslationViewProps> = ({
       if (res?.ok && res.text) {
         setSourceText(res.text);
         setError(null);
+        let nextTarget = targetLang;
         if (!userManuallyPickedTarget.current) {
           const detected = detectLanguageGroup(res.text);
-          setTargetLang(detected === 'zh' ? 'en' : 'zh');
+          nextTarget = detected === 'zh' ? 'en' : 'zh';
+          setTargetLang(nextTarget);
         }
-        void handleTranslate(res.text);
+        void handleTranslate(res.text, sourceLang, nextTarget);
       } else if (res?.ok && !res.text) {
         setError(t('textTranslation.noSelectionDetected', '未检测到划选文字。您可以选中文本后按 ⌘C 复制，或检查「系统设置 > 隐私与安全性 > 辅助功能」中是否已允许 MAO Chat。'));
       }
     } catch (e: any) {
       setError(e?.message || '划词获取失败');
     }
-  }, [handleTranslate, t]);
+  }, [handleTranslate, sourceLang, targetLang, t]);
 
   // Listen for open-in-main from floating quick translate window
   useEffect(() => {

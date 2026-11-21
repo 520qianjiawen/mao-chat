@@ -10,7 +10,15 @@ import {
 
 type InMessage =
   | { type: 'init'; sourceLang: string; targetLang: string }
-  | { type: 'translate'; id: string; text: string; systemPrompt?: string; wrapTranscript?: boolean }
+  | {
+      type: 'translate';
+      id: string;
+      text: string;
+      sourceLang?: string;
+      targetLang?: string;
+      systemPrompt?: string;
+      wrapTranscript?: boolean;
+    }
   | { type: 'dispose' };
 
 type OutMessage =
@@ -54,7 +62,9 @@ ctx.onmessage = async (event: MessageEvent<InMessage>) => {
         return;
       }
       try {
-        const result = await client.translate(msg.text, sourceLang, targetLang);
+        const effectiveSource = msg.sourceLang ?? sourceLang;
+        const effectiveTarget = msg.targetLang ?? targetLang;
+        const result = await client.translate(msg.text, effectiveSource, effectiveTarget);
         post({
           type: 'result',
           id: msg.id,

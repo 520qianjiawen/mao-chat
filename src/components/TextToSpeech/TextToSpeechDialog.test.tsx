@@ -301,13 +301,13 @@ describe('TextToSpeechDialog modes', () => {
     expect(screen.getByText('0/10000')).toBeInTheDocument();
   });
 
-  it('switches to Gemini 3.8 Flash TTS when gemini engine is selected', async () => {
+  it('switches to Gemini 2.5 Flash TTS when gemini engine is selected', async () => {
     render(<TextToSpeechDialog isOpen onClose={vi.fn()} onOpenSettings={vi.fn()} />);
 
     const engineSelect = screen.getByRole('combobox', { name: '语音引擎' });
     fireEvent.change(engineSelect, { target: { value: 'gemini' } });
 
-    expect(screen.getByText('Google Gemini 3.8 Flash TTS')).toBeInTheDocument();
+    expect(screen.getByText('Google Gemini 2.5 Flash TTS')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('option', { name: /Puck/i })).toBeInTheDocument());
     expect(screen.getByRole('combobox', { name: /声音/ })).toHaveValue('Puck');
     expect(screen.getByRole('combobox', { name: '情感与风格' })).toHaveValue('natural');
@@ -352,7 +352,7 @@ describe('TextToSpeechDialog modes', () => {
     fireEvent.change(screen.getByRole('combobox', { name: '语音引擎' }), { target: { value: 'gemini' } });
     fireEvent.click(screen.getByRole('button', { name: '翻译后转语音' }));
 
-    expect(screen.getByText('gemini-3.8-flash-tts')).toBeInTheDocument();
+    expect(screen.getByText('gemini-2.5-flash')).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('textbox', { name: /^输入要翻译的原文/ }), {
       target: { value: '今天天气真好。' },
@@ -377,5 +377,40 @@ describe('TextToSpeechDialog modes', () => {
         text: 'Gemini translated text.',
       }),
     );
+  });
+
+  it('clears stale audio when new initialText is pushed', async () => {
+    const { rerender } = render(
+      <TextToSpeechDialog isOpen onClose={vi.fn()} onOpenSettings={vi.fn()} initialText="First text" />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '生成语音' }));
+    await waitFor(() => expect(screen.getByText('试听')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: '下载 WAV' })).not.toBeDisabled();
+
+    rerender(
+      <TextToSpeechDialog isOpen onClose={vi.fn()} onOpenSettings={vi.fn()} initialText="Second text" />,
+    );
+
+    expect(screen.getByPlaceholderText('在这里输入文字…')).toHaveValue('Second text');
+    expect(screen.queryByText('试听')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '下载 WAV' })).toBeDisabled();
+  });
+
+  it('allows cancelling an in-flight speech generation', async () => {
+    let resolveGen!: (v: ArrayBuffer) => void;
+    mocks.geminiSpeech.mockImplementation(() => new Promise<ArrayBuffer>((res) => { resolveGen = res; }));
+
+    render(<TextToSpeechDialog isOpen onClose={vi.fn()} onOpenSettings={vi.fn()} />);
+    fireEvent.change(screen.getByRole('combobox', { name: '语音引擎' }), { target: { value: 'gemini' } });
+    fireEvent.change(screen.getByPlaceholderText('在这里输入文字…'), { target: { value: 'Cancel me' } });
+    fireEvent.click(screen.getByRole('button', { name: '生成语音' }));
+
+    const cancelBtn = await screen.findByRole('button', { name: '取消' });
+    fireEvent.click(cancelBtn);
+
+    expect(screen.queryByRole('button', { name: '取消' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '生成语音' })).not.toBeDisabled();
+    resolveGen(new ArrayBuffer(64));
   });
 });

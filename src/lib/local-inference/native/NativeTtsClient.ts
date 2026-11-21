@@ -162,7 +162,8 @@ export class NativeTtsClient {
     const msg = await this.conn.request({ type: 'tts_generate', text, speed }, { id, timeoutMs });
     const r = msg as Extract<ServerMsg, { type: 'tts_generate_result' }>;
     const binary = this.lastBinary; this.lastBinary = null;
-    return { samples: int16ToFloat32(binary!), sampleRate: r.sampleRate, generationTimeMs: r.generationTimeMs };
+    const samples = binary ? int16ToFloat32(binary) : new Float32Array(0);
+    return { samples, sampleRate: r.sampleRate, generationTimeMs: r.generationTimeMs };
   }
 
   cancel(): void {

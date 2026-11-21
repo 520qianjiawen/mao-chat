@@ -1,15 +1,16 @@
 // src/lib/gemini/geminiSpeech.ts
 import { encodeMonoPcm16Wav } from '../../utils/ttsAudioExport';
 
-export const GEMINI_TTS_DEFAULT_MODEL = 'gemini-3.8-flash-tts';
+export const GEMINI_TTS_DEFAULT_MODEL = 'gemini-2.5-flash-preview-tts';
+export const GEMINI_TRANSLATE_DEFAULT_MODEL = 'gemini-2.5-flash';
 export const GEMINI_TTS_FALLBACK_MODELS = [
-  'gemini-3.8-flash-tts',
-  'gemini-3.8-flash-lite-tts',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
+  'gemini-2.5-flash-preview-tts',
+  'gemini-2.5-pro-preview-tts',
 ] as const;
 
 export const GEMINI_DEFAULT_HOST = 'https://generativelanguage.googleapis.com';
+const DEFAULT_TTS_TIMEOUT_MS = 60_000;
+const DEFAULT_TRANSLATE_TIMEOUT_MS = 30_000;
 
 /**
  * High-quality prebuilt voices supported by Gemini audio generation.
@@ -40,7 +41,7 @@ export interface GeminiSpeechEmotion {
 }
 
 /**
- * Granular emotion and style presets for Gemini 3.8 Flash TTS.
+ * Granular emotion and style presets for Gemini TTS.
  */
 export const GEMINI_SPEECH_EMOTIONS: GeminiSpeechEmotion[] = [
   {
@@ -126,6 +127,15 @@ function isRiffWav(bytes: Uint8Array): boolean {
   );
 }
 
+function parseSampleRateFromMime(mimeType: string, fallback = 24_000): number {
+  const match = /rate=(\d+)/i.exec(mimeType);
+  if (match) {
+    const parsed = Number(match[1]);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return fallback;
+}
+
 /**
  * Format raw audio bytes into an ArrayBuffer (standard WAV).
  */
@@ -141,10 +151,11 @@ export function formatGeminiAudioToWav(
     return copy.buffer;
   }
 
-  // Raw PCM16 format from Gemini (24 kHz, 16-bit mono signed LE)
+  // Raw PCM16 format from Gemini (default 24 kHz, 16-bit mono signed LE)
+  const resolvedRate = parseSampleRateFromMime(mimeType, sampleRate);
   const pcmLength = Math.floor(bytes.length / 2);
   const pcm16 = new Int16Array(bytes.buffer, bytes.byteOffset, pcmLength);
-  return encodeMonoPcm16Wav([pcm16], sampleRate);
+  return encodeMonoPcm16Wav([pcm16], resolvedRate);
 }
 
 async function readGeminiError(response: Response): Promise<string> {
@@ -158,8 +169,58 @@ async function readGeminiError(response: Response): Promise<string> {
   return `Gemini API request failed (${response.status})`;
 }
 
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  externalSignal?: AbortSignal,
+): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
+
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (timedOut) {
+      throw new Error(`Gemini API 请求超时（${Math.round(timeoutMs / 1000)}s）`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+  }
+}
+
+function buildSpeechInputText(text: string, emotionPrompt?: string, speed?: number): string {
+  const directives: string[] = [];
+  if (emotionPrompt && emotionPrompt.trim()) {
+    directives.push(emotionPrompt.trim());
+  }
+  if (typeof speed === 'number' && Number.isFinite(speed) && Math.abs(speed - 1) >= 0.05) {
+    const paceLabel = speed > 1 ? 'faster' : 'slower';
+    directives.push(`Speaking speed: ${speed.toFixed(2)}x (${paceLabel} than normal).`);
+  }
+  if (directives.length === 0) return text;
+  return `Read the following text aloud with this delivery style — ${directives.join(' ')}\n\n${text}`;
+}
+
 /**
- * Synthesize speech from text using Google Gemini 3.8 Flash TTS.
+ * Synthesize speech from text using Google Gemini TTS.
  */
 export async function createGeminiSpeech(opts: {
   apiKey: string;
@@ -169,31 +230,25 @@ export async function createGeminiSpeech(opts: {
   voice: string;
   speed?: number;
   emotionPrompt?: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<ArrayBuffer> {
   if (!opts.apiKey) {
     throw new Error('Missing Gemini API Key');
   }
 
-  const model = opts.model || GEMINI_TTS_DEFAULT_MODEL;
   const host = normalizeHost(opts.apiHost);
-  const url = `${host}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(opts.apiKey)}`;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TTS_TIMEOUT_MS;
+  const modelsToTry = opts.model
+    ? [opts.model]
+    : [...GEMINI_TTS_FALLBACK_MODELS];
 
-  const part: Record<string, any> = {
-    text: opts.text,
-  };
-
-  // Add emotion and vocal style control via speech_metadata (Gemini 3.8 Flash TTS standard)
-  if (opts.emotionPrompt && opts.emotionPrompt.trim()) {
-    const style = opts.emotionPrompt.trim();
-    part.speech_metadata = { style };
-    part.speechMetadata = { style };
-  }
-
+  const promptText = buildSpeechInputText(opts.text, opts.emotionPrompt, opts.speed);
   const body: Record<string, any> = {
     contents: [
       {
         role: 'user',
-        parts: [part],
+        parts: [{ text: promptText }],
       },
     ],
     generationConfig: {
@@ -208,32 +263,49 @@ export async function createGeminiSpeech(opts: {
     },
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  let lastError: Error | null = null;
+  for (let i = 0; i < modelsToTry.length; i += 1) {
+    const model = modelsToTry[i];
+    const url = `${host}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(opts.apiKey)}`;
+    const response = await fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+      timeoutMs,
+      opts.signal,
+    );
 
-  if (!response.ok) {
-    const errorMsg = await readGeminiError(response);
-    throw new Error(errorMsg);
-  }
-
-  const json = (await response.json()) as any;
-  const candidate = json.candidates?.[0];
-  const parts = candidate?.content?.parts || [];
-
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      const mimeType = part.inlineData.mimeType || 'audio/wav';
-      const rawBytes = base64ToUint8Array(part.inlineData.data);
-      return formatGeminiAudioToWav(rawBytes, mimeType, 24_000);
+    if (!response.ok) {
+      const errorMsg = await readGeminiError(response);
+      lastError = new Error(errorMsg);
+      // Fallback to next candidate model only on 404 (model unavailable)
+      if (response.status === 404 && i < modelsToTry.length - 1) {
+        continue;
+      }
+      throw lastError;
     }
+
+    const json = (await response.json()) as any;
+    const candidate = json.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
+
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        const mimeType = part.inlineData.mimeType || 'audio/wav';
+        const rawBytes = base64ToUint8Array(part.inlineData.data);
+        return formatGeminiAudioToWav(rawBytes, mimeType, 24_000);
+      }
+    }
+
+    throw new Error('Gemini API did not return audio data in the response.');
   }
 
-  throw new Error('Gemini API did not return audio data in the response.');
+  throw lastError || new Error('Gemini TTS request failed.');
 }
 
 /**
@@ -246,28 +318,35 @@ export async function translateWithGemini(opts: {
   text: string;
   sourceLanguage: string;
   targetLanguage: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<{ translatedText: string; inferenceTimeMs: number }> {
   const started = performance.now();
-  const model = opts.model || 'gemini-2.5-flash';
+  const model = opts.model || GEMINI_TRANSLATE_DEFAULT_MODEL;
   const host = normalizeHost(opts.apiHost);
   const url = `${host}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(opts.apiKey)}`;
 
   const prompt = `Translate the following text from ${opts.sourceLanguage} to ${opts.targetLanguage}. Output ONLY the translated text without explanations, greetings, or formatting fences.\n\n${opts.text}`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+      }),
     },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }],
-        },
-      ],
-    }),
-  });
+    opts.timeoutMs ?? DEFAULT_TRANSLATE_TIMEOUT_MS,
+    opts.signal,
+  );
 
   if (!response.ok) {
     throw new Error(await readGeminiError(response));

@@ -90,7 +90,9 @@ export class TranslationEngine {
 
     // If already loaded with same model and same language pair, skip
     if (this.session?.ready && this.currentModelId === modelCacheKey
-      && this.sourceLang === sourceLang && this.targetLang === targetLang) {
+      && (entry.isCloudModel || (this.sourceLang === sourceLang && this.targetLang === targetLang))) {
+      this.sourceLang = sourceLang;
+      this.targetLang = targetLang;
       return { loadTimeMs: 0, device: entry.isCloudModel ? 'cloud' : (entry.requiredDevice || 'wasm') };
     }
 

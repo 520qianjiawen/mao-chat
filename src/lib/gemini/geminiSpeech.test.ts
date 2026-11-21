@@ -7,6 +7,7 @@ import {
   GEMINI_SPEECH_VOICES,
   GEMINI_SPEECH_EMOTIONS,
   GEMINI_TTS_DEFAULT_MODEL,
+  GEMINI_TRANSLATE_DEFAULT_MODEL,
 } from './geminiSpeech';
 
 describe('geminiSpeech', () => {
@@ -15,7 +16,8 @@ describe('geminiSpeech', () => {
   });
 
   it('exports default model, voices, and emotions', () => {
-    expect(GEMINI_TTS_DEFAULT_MODEL).toBe('gemini-3.8-flash-tts');
+    expect(GEMINI_TTS_DEFAULT_MODEL).toBe('gemini-2.5-flash-preview-tts');
+    expect(GEMINI_TRANSLATE_DEFAULT_MODEL).toBe('gemini-2.5-flash');
     expect(GEMINI_SPEECH_VOICES.length).toBeGreaterThan(5);
     expect(GEMINI_SPEECH_EMOTIONS.some((e) => e.id === 'cheerful')).toBe(true);
     expect(GEMINI_SPEECH_EMOTIONS.some((e) => e.id === 'natural')).toBe(true);
@@ -39,7 +41,7 @@ describe('geminiSpeech', () => {
     expect(wavBuffer.byteLength).toBe(48);
   });
 
-  it('calls Gemini generateContent API with speechConfig and emotion systemInstruction', async () => {
+  it('calls Gemini generateContent API with standard text prompt, speechConfig, and speed cue', async () => {
     const fakePcm = new Uint8Array(240);
     const base64 = btoa(String.fromCharCode(...fakePcm));
 
@@ -52,7 +54,7 @@ describe('geminiSpeech', () => {
               parts: [
                 {
                   inlineData: {
-                    mimeType: 'audio/pcm',
+                    mimeType: 'audio/L16;codec=pcm;rate=24000',
                     data: base64,
                   },
                 },
@@ -69,19 +71,52 @@ describe('geminiSpeech', () => {
       text: '你好，欢迎使用 MAO Chat！',
       voice: 'Puck',
       emotionPrompt: 'Voice affect: Cheerful and lively.',
+      speed: 1.2,
     });
 
     expect(result).toBeInstanceOf(ArrayBuffer);
     expect(fetchMock).toHaveBeenCalledOnce();
 
     const [url, request] = fetchMock.mock.calls[0];
-    expect(url).toContain('gemini-3.8-flash-tts:generateContent');
+    expect(url).toContain('gemini-2.5-flash-preview-tts:generateContent');
     expect(url).toContain('key=test-api-key');
 
     const body = JSON.parse(request.body);
     expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
     expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Puck');
-    expect(body.contents[0].parts[0].speech_metadata.style).toContain('Cheerful and lively');
+    expect(body.contents[0].parts[0].speech_metadata).toBeUndefined();
+    expect(body.contents[0].parts[0].speechMetadata).toBeUndefined();
+    expect(body.contents[0].parts[0].text).toContain('Cheerful and lively');
+    expect(body.contents[0].parts[0].text).toContain('1.20x');
+    expect(body.contents[0].parts[0].text).toContain('你好，欢迎使用 MAO Chat！');
+  });
+
+  it('falls back to gemini-2.5-pro-preview-tts on 404', async () => {
+    const fakePcm = new Uint8Array(120);
+    const base64 = btoa(String.fromCharCode(...fakePcm));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { message: 'Model not found' } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/pcm', data: base64 } }] } }],
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await createGeminiSpeech({
+      apiKey: 'test-api-key',
+      text: 'Hello',
+      voice: 'Puck',
+    });
+
+    expect(result).toBeInstanceOf(ArrayBuffer);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain('gemini-2.5-pro-preview-tts:generateContent');
   });
 
   it('throws an error if apiKey is missing', async () => {

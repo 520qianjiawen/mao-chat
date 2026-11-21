@@ -8,6 +8,7 @@ const os = require('os');
 const { resolveOcrPath } = require('./ocr-path');
 
 let quickTranslateWindow = null;
+let prewarmTimer = null;
 let isPinned = false;
 let isCapturingScreenshot = false;
 let lastShownTime = 0;
@@ -113,7 +114,7 @@ async function captureSelectedText(parentWindow) {
   if (quickTranslateWindow && !quickTranslateWindow.isDestroyed() && quickTranslateWindow.isVisible()) {
     quickTranslateWindow.hide();
     shouldRestoreQuick = true;
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 50));
   }
 
   const ocrBinary = resolveOcrPath();
@@ -122,7 +123,7 @@ async function captureSelectedText(parentWindow) {
   if (ocrBinary) {
     try {
       const axText = await new Promise((resolve) => {
-        execFile(ocrBinary, ['--get-selection'], { timeout: 250 }, (err, stdout) => {
+        execFile(ocrBinary, ['--get-selection'], { timeout: 200 }, (err, stdout) => {
           if (!err && stdout && stdout.trim().length > 0) {
             resolve(stdout.trim());
           } else {
@@ -141,27 +142,29 @@ async function captureSelectedText(parentWindow) {
   }
 
   // Tier 2: Simulate Cmd+C via native mao-ocr --simulate-copy
+  // Brief pause to let Control+Q key release settle before posting Cmd+C
+  await new Promise((r) => setTimeout(r, 35));
   // Clear clipboard first to detect if target app places new text
   clipboard.clear();
 
   if (ocrBinary) {
     try {
       await new Promise((resolve) => {
-        execFile(ocrBinary, ['--simulate-copy'], { timeout: 250 }, () => resolve());
+        execFile(ocrBinary, ['--simulate-copy'], { timeout: 200 }, () => resolve());
       });
     } catch (_) {}
   }
 
-  // Poll clipboard for up to 250ms
+  // Poll clipboard every 10ms for up to 180ms
   let copiedText = '';
   const start = Date.now();
-  while (Date.now() - start < 250) {
+  while (Date.now() - start < 180) {
     const text = clipboard.readText();
     if (text && text.trim().length > 0 && !text.startsWith('__mao_clip_')) {
       copiedText = text.trim();
       break;
     }
-    await new Promise((r) => setTimeout(r, 25));
+    await new Promise((r) => setTimeout(r, 10));
   }
 
   // If mao-ocr didn't yield text, try AppleScript simulation fallback
@@ -173,13 +176,13 @@ async function captureSelectedText(parentWindow) {
     } catch (_) {}
 
     const start2 = Date.now();
-    while (Date.now() - start2 < 200) {
+    while (Date.now() - start2 < 150) {
       const text = clipboard.readText();
       if (text && text.trim().length > 0 && !text.startsWith('__mao_clip_')) {
         copiedText = text.trim();
         break;
       }
-      await new Promise((r) => setTimeout(r, 25));
+      await new Promise((r) => setTimeout(r, 10));
     }
   }
 
@@ -438,7 +441,6 @@ function setupQuickTranslate(mainWindow) {
       // 划词翻译: Control+Q
       globalShortcut.register('Control+Q', async () => {
         try {
-          await new Promise((r) => setTimeout(r, 120));
           const selectedText = await captureSelectedText();
           if (selectedText && selectedText.trim().length > 0) {
             showQuickTranslate(selectedText, 'selection');
@@ -606,27 +608,46 @@ function setupQuickTranslate(mainWindow) {
     }
 
     return new Promise((resolve) => {
-      const checkScript = `tell application "Shortcuts Events"
-        set hasMao to (exists shortcut "MAO.Translate")
-        set hasMaoV1 to (exists shortcut "MAO.Translate.v1")
-        set hasLegacy to (exists shortcut "Bob.Translate.v2")
-        if hasMao then
-          return "MAO.Translate"
-        else if hasMaoV1 then
-          return "MAO.Translate.v1"
-        else if hasLegacy then
-          return "Bob.Translate.v2"
-        else
-          return "none"
-        end if
-      end tell`;
+      const payloadObj = {
+        text,
+        detectFrom: srcLocale,
+        detectTo: tgtLocale,
+        sourceLanguage: srcLocale,
+        targetLanguage: tgtLocale,
+      };
+      const inputJson = JSON.stringify(payloadObj);
 
-      execFile('/usr/bin/osascript', ['-e', checkScript], { timeout: 3000 }, (err, stdout) => {
-        if (err) {
-          return resolve({ ok: false, error: 'osascript_error', message: err.message });
+      // Resolve shortcut name and run it in a single osascript process (no caching, saves 1 process spawn)
+      const combinedScript = `on run argv
+        set inputJson to item 1 of argv
+        set rawText to item 2 of argv
+        tell application "Shortcuts Events"
+          if (exists shortcut "MAO.Translate") then
+            set scName to "MAO.Translate"
+          else if (exists shortcut "MAO.Translate.v1") then
+            set scName to "MAO.Translate.v1"
+          else if (exists shortcut "Bob.Translate.v2") then
+            set scName to "Bob.Translate.v2"
+          else
+            return "__MAO_SHORTCUT_NOT_INSTALLED__"
+          end if
+          try
+            set outputText to run the shortcut named scName with input inputJson
+            if outputText is not missing value and (outputText as text) is not "" then
+              return outputText as text
+            end if
+          end try
+          set fallbackText to run the shortcut named scName with input rawText
+          return fallbackText as text
+        end tell
+      end run`;
+
+      execFile('/usr/bin/osascript', ['-e', combinedScript, inputJson, text], { timeout: 15000 }, (runErr, runStdout) => {
+        if (runErr) {
+          return resolve({ ok: false, error: 'shortcut_failed', message: runErr.message || '系统翻译调用失败' });
         }
-        const shortcutName = (stdout || '').trim();
-        if (shortcutName === 'none' || !shortcutName) {
+        const clean = (runStdout || '').replace(/^missing value$/i, '').trim();
+        if (clean === '__MAO_SHORTCUT_NOT_INSTALLED__') {
           return resolve({
             ok: false,
             error: 'shortcut_not_installed',
@@ -634,49 +655,10 @@ function setupQuickTranslate(mainWindow) {
             message: '未检测到系统翻译快捷指令。请点击下方按钮一键安装「MAO.Translate」快捷指令。',
           });
         }
-
-        const payloadObj = {
-          text,
-          detectFrom: srcLocale,
-          detectTo: tgtLocale,
-          sourceLanguage: srcLocale,
-          targetLanguage: tgtLocale,
-        };
-        const inputJson = JSON.stringify(payloadObj);
-
-        const runAppleScript = (inputParam, callback) => {
-          const runScript = `on run argv
-            set inputStr to item 1 of argv
-            tell application "Shortcuts Events"
-              set outputText to run the shortcut named "${shortcutName}" with input inputStr
-              return outputText
-            end tell
-          end run`;
-          execFile('/usr/bin/osascript', ['-e', runScript, inputParam], { timeout: 15000 }, (runErr, runStdout) => {
-            if (runErr) {
-              return callback(runErr, null);
-            }
-            const clean = (runStdout || '').replace(/^missing value$/i, '').trim();
-            callback(null, clean);
-          });
-        };
-
-        // Try structured JSON payload first (native Bob.Translate.v2 / modern MAO.Translate dictionary format)
-        runAppleScript(inputJson, (pErr, pRes) => {
-          if (!pErr && pRes) {
-            return resolve({ ok: true, text: pRes });
-          }
-
-          // Fallback: try raw text (in case shortcut is customized to take raw string)
-          runAppleScript(text, (sErr, sRes) => {
-            if (!sErr && sRes) {
-              return resolve({ ok: true, text: sRes });
-            }
-
-            const errorMsg = pErr?.message || sErr?.message || '系统翻译未返回译文，请确认系统翻译语言包已下载';
-            return resolve({ ok: false, error: 'shortcut_failed', message: errorMsg });
-          });
-        });
+        if (clean) {
+          return resolve({ ok: true, text: clean });
+        }
+        return resolve({ ok: false, error: 'shortcut_failed', message: '系统翻译未返回译文，请确认系统翻译语言包已下载' });
       });
     });
   });
@@ -714,9 +696,25 @@ function setupQuickTranslate(mainWindow) {
     }
     return { ok: true, installedFile: false };
   });
+
+  // Pre-warm hidden quick-translate window after startup so first ⌃Q has no cold-start delay
+  if (process.platform === 'darwin' && !prewarmTimer) {
+    prewarmTimer = setTimeout(() => {
+      prewarmTimer = null;
+      if (!quickTranslateWindow || quickTranslateWindow.isDestroyed()) {
+        try {
+          getOrCreateQuickTranslateWindow(mainWindow);
+        } catch (_) {}
+      }
+    }, 1500);
+  }
 }
 
 function cleanupQuickTranslate() {
+  if (prewarmTimer) {
+    clearTimeout(prewarmTimer);
+    prewarmTimer = null;
+  }
   globalShortcut.unregisterAll();
   if (quickTranslateWindow && !quickTranslateWindow.isDestroyed()) {
     quickTranslateWindow.destroy();

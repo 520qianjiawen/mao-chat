@@ -44,6 +44,7 @@ import {
 } from '../../lib/openai/openaiSpeech';
 import {
   GEMINI_TTS_DEFAULT_MODEL,
+  GEMINI_TRANSLATE_DEFAULT_MODEL,
   GEMINI_SPEECH_VOICES,
   GEMINI_SPEECH_EMOTIONS,
   DEFAULT_GEMINI_EMOTION,
@@ -237,19 +238,6 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
   const [text, setText] = useState(() => initialText || '');
   const [sourceLanguage, setSourceLanguage] = useState(settings.sourceLanguage || 'zh');
   const [language, setLanguage] = useState(() => initialLanguage || settings.targetLanguage || 'en');
-
-  useEffect(() => {
-    if (initialText) {
-      setText(initialText);
-      setMode('direct');
-    }
-  }, [initialText]);
-
-  useEffect(() => {
-    if (initialLanguage) {
-      setLanguage(initialLanguage);
-    }
-  }, [initialLanguage]);
   const [voice, setVoice] = useState('');
   const [vibeId, setVibeId] = useState(() => {
     try {
@@ -273,6 +261,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
   const [translationEdited, setTranslationEdited] = useState(false);
   const clientRef = useRef<LiveClient | null>(null);
   const translationClientRef = useRef<LiveTranslationClient | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const audioUrlRef = useRef('');
   const runRef = useRef(0);
 
@@ -371,6 +360,42 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
     translationClientRef.current = null;
     live?.client.dispose();
   }, []);
+
+  const abortCloudRequest = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  const cancelActiveRun = useCallback(() => {
+    runRef.current += 1;
+    abortCloudRequest();
+    clientRef.current?.client.cancel();
+    setTranslating(false);
+    setGenerating(false);
+  }, [abortCloudRequest]);
+
+  // Sync pushed text/language from TextTranslationView and clear any stale audio.
+  useEffect(() => {
+    if (isOpen && initialText) {
+      clearResult();
+      setError('');
+      setText(initialText);
+      setMode('direct');
+    }
+  }, [clearResult, initialText, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && initialLanguage) {
+      const normalized = initialLanguage.toLowerCase();
+      const base = normalized.split(/[-_]/)[0];
+      const resolved = modelLanguages.includes(normalized)
+        ? normalized
+        : (modelLanguages.includes(base) ? base : initialLanguage);
+      setLanguage(resolved);
+    }
+  }, [initialLanguage, isOpen, modelLanguages]);
 
   // Keep language in the selected TTS model's support set.
   useEffect(() => {
@@ -477,6 +502,13 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
     voices,
   ]);
 
+  // Always persist engine selection even before a model/voice is picked.
+  useEffect(() => {
+    try {
+      localStorage.setItem(TTS_ENGINE_STORAGE_KEY, engine);
+    } catch { /* Persisting preferences is best-effort. */ }
+  }, [engine]);
+
   useEffect(() => {
     if (!selectedModelId || !voice) return;
     try {
@@ -487,27 +519,28 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
         localStorage.setItem(TTS_GEMINI_EMOTION_STORAGE_KEY, geminiEmotionId);
         localStorage.setItem(TTS_GEMINI_CUSTOM_PROMPT_STORAGE_KEY, customEmotionPrompt);
       }
-      localStorage.setItem(TTS_ENGINE_STORAGE_KEY, engine);
     } catch { /* Persisting preferences is best-effort. */ }
-  }, [customEmotionPrompt, engine, geminiEmotionId, isGeminiSpeech, isOpenAISpeech, language, selectedModelId, vibeId, voice]);
+  }, [customEmotionPrompt, geminiEmotionId, isGeminiSpeech, isOpenAISpeech, language, selectedModelId, vibeId, voice]);
 
   useEffect(() => {
     if (isOpen) return;
     runRef.current += 1;
+    abortCloudRequest();
     setTranslating(false);
     setGenerating(false);
     setError('');
     disposeClient();
     disposeTranslationClient();
     clearResult();
-  }, [clearResult, disposeClient, disposeTranslationClient, isOpen]);
+  }, [abortCloudRequest, clearResult, disposeClient, disposeTranslationClient, isOpen]);
 
   useEffect(() => () => {
     runRef.current += 1;
+    abortCloudRequest();
     disposeClient();
     disposeTranslationClient();
     if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-  }, [disposeClient, disposeTranslationClient]);
+  }, [abortCloudRequest, disposeClient, disposeTranslationClient]);
 
   const downloadTtsModel = useCallback(async () => {
     if (!selectedModelId) return;
@@ -547,6 +580,9 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
 
     const run = runRef.current + 1;
     runRef.current = run;
+    abortCloudRequest();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setTranslating(true);
     setError('');
     clearAudio();
@@ -560,6 +596,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
           text: value,
           sourceLanguage,
           targetLanguage: language,
+          signal: controller.signal,
         });
         result = translation.translatedText.trim();
         inferenceTimeMs = translation.inferenceTimeMs;
@@ -570,6 +607,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
           text: value,
           sourceLanguage,
           targetLanguage: language,
+          signal: controller.signal,
         });
         result = translation.translatedText.trim();
         inferenceTimeMs = translation.inferenceTimeMs;
@@ -681,6 +719,9 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
 
     const run = runRef.current + 1;
     runRef.current = run;
+    abortCloudRequest();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setGenerating(true);
     setError('');
     clearAudio();
@@ -697,6 +738,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
           voice: voice || 'Puck',
           emotionPrompt,
           speed,
+          signal: controller.signal,
         });
         if (runRef.current !== run) return;
         const nextUrl = URL.createObjectURL(new Blob([nextWav], { type: 'audio/wav' }));
@@ -716,6 +758,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
           voice: voice || 'alloy',
           speed,
           instructions: selectedVibe.instructions,
+          signal: controller.signal,
         });
         if (runRef.current !== run) return;
         const nextUrl = URL.createObjectURL(new Blob([nextWav], { type: 'audio/wav' }));
@@ -840,7 +883,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
   }, [clearResult]);
 
   const modelName = isGeminiSpeech
-    ? 'Google Gemini 3.8 Flash TTS'
+    ? 'Google Gemini 2.5 Flash TTS'
     : (isOpenAISpeech
       ? t('ttsTool.openaiSpeechTitle', 'OpenAI Speech')
       : (selectedModel?.name
@@ -848,7 +891,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
           ? selectedModelId
           : t('ttsTool.noTtsModelTitle', '未选择 TTS 模型'))));
   const translationModelName = isGeminiSpeech
-    ? 'gemini-3.8-flash-tts'
+    ? GEMINI_TRANSLATE_DEFAULT_MODEL
     : (isOpenAISpeech
       ? 'gpt-4o-mini'
       : (translationModel?.name || translationModelId));
@@ -903,6 +946,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
             <select
               value={engine}
               onChange={(event) => {
+                cancelActiveRun();
                 setEngine(event.target.value as TtsEngineType);
                 clearAudio();
                 setError('');
@@ -911,7 +955,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
               <option value="auto">
                 {t('ttsTool.engineAuto', '跟随全局服务商')} ({provider})
               </option>
-              <option value="gemini">Google Gemini 3.8 Flash TTS（推荐 · 情感表现力）</option>
+              <option value="gemini">Google Gemini 2.5 Flash TTS（推荐 · 情感表现力）</option>
               <option value="openai">OpenAI Speech（13 种声音）</option>
               <option value="local">本地离线模型（Kokoro / Qwen3）</option>
             </select>
@@ -1276,7 +1320,7 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
             {t('ttsTool.sessionActive', '请先结束实时翻译会话，再使用独立文本转语音。')}
           </div>
         )}
-        {mode === 'translate' && !translationIsOnline
+        {mode === 'translate' && !isGeminiSpeech && !isOpenAISpeech && !translationIsOnline
           && (translationStatus === 'absent' || translationStatus === 'downloading') && (
           <div className="text-to-speech__notice text-to-speech__notice--error">
             {translationStatus === 'downloading'
@@ -1369,6 +1413,16 @@ const TextToSpeechDialog: React.FC<TextToSpeechDialogProps> = ({
               {generating
                 ? t('ttsTool.generating', '正在生成…')
                 : t('ttsTool.generateSpeech', '生成语音')}
+            </button>
+          )}
+          {(generating || translating) && (
+            <button
+              type="button"
+              className="text-to-speech__button"
+              onClick={cancelActiveRun}
+            >
+              <X size={16} />
+              {t('common.cancel', '取消')}
             </button>
           )}
           <button

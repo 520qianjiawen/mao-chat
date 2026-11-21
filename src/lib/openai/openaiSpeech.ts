@@ -110,6 +110,46 @@ async function readOpenAIError(response: Response): Promise<string> {
   return `OpenAI request failed (${response.status})`;
 }
 
+const DEFAULT_OPENAI_TTS_TIMEOUT_MS = 60_000;
+const DEFAULT_OPENAI_TRANSLATE_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  externalSignal?: AbortSignal,
+): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
+
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (timedOut) {
+      throw new Error(`OpenAI 请求超时（${Math.round(timeoutMs / 1000)}s）`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+  }
+}
+
 export async function createOpenAISpeech(opts: {
   apiKey: string;
   apiHost?: string;
@@ -117,22 +157,29 @@ export async function createOpenAISpeech(opts: {
   voice: string;
   speed?: number;
   instructions?: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<ArrayBuffer> {
-  const response = await fetch(`${normalizeHost(opts.apiHost)}/v1/audio/speech`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${opts.apiKey}`,
-      'Content-Type': 'application/json',
+  const response = await fetchWithTimeout(
+    `${normalizeHost(opts.apiHost)}/v1/audio/speech`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${opts.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OPENAI_SPEECH_MODEL,
+        voice: opts.voice,
+        input: opts.text,
+        speed: opts.speed ?? 1,
+        response_format: 'wav',
+        ...(opts.instructions ? { instructions: opts.instructions } : {}),
+      }),
     },
-    body: JSON.stringify({
-      model: OPENAI_SPEECH_MODEL,
-      voice: opts.voice,
-      input: opts.text,
-      speed: opts.speed ?? 1,
-      response_format: 'wav',
-      ...(opts.instructions ? { instructions: opts.instructions } : {}),
-    }),
-  });
+    opts.timeoutMs ?? DEFAULT_OPENAI_TTS_TIMEOUT_MS,
+    opts.signal,
+  );
   if (!response.ok) throw new Error(await readOpenAIError(response));
   return response.arrayBuffer();
 }
@@ -143,26 +190,33 @@ export async function translateWithOpenAI(opts: {
   text: string;
   sourceLanguage: string;
   targetLanguage: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<{ translatedText: string; inferenceTimeMs: number }> {
   const started = performance.now();
-  const response = await fetch(`${normalizeHost(opts.apiHost)}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${opts.apiKey}`,
-      'Content-Type': 'application/json',
+  const response = await fetchWithTimeout(
+    `${normalizeHost(opts.apiHost)}/v1/chat/completions`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${opts.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: `Translate from ${opts.sourceLanguage} to ${opts.targetLanguage}. Return only the translation, with no quotes or commentary.`,
+          },
+          { role: 'user', content: opts.text },
+        ],
+      }),
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0.2,
-      messages: [
-        {
-          role: 'system',
-          content: `Translate from ${opts.sourceLanguage} to ${opts.targetLanguage}. Return only the translation, with no quotes or commentary.`,
-        },
-        { role: 'user', content: opts.text },
-      ],
-    }),
-  });
+    opts.timeoutMs ?? DEFAULT_OPENAI_TRANSLATE_TIMEOUT_MS,
+    opts.signal,
+  );
   if (!response.ok) throw new Error(await readOpenAIError(response));
   const body = await response.json() as {
     choices?: Array<{ message?: { content?: string } }>;

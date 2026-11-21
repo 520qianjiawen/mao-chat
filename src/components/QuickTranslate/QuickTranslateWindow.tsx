@@ -118,11 +118,24 @@ export const QuickTranslateWindow: React.FC = () => {
   // Per-service translation results
   const [serviceStates, setServiceStates] = useState<Record<string, ServiceTranslationState>>({});
 
-  const bingEngineRef = useRef<TranslationEngine | null>(null);
+  const enginesRef = useRef<Map<string, TranslationEngine>>(new Map());
   const runRef = useRef(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastImmediateRunRef = useRef<{ text: string; sourceLang: string; targetLang: string } | null>(null);
   const userManuallyPickedTarget = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Dispose all translation engine workers on unmount
+  useEffect(() => {
+    return () => {
+      for (const engine of enginesRef.current.values()) {
+        try {
+          engine.dispose();
+        } catch {}
+      }
+      enginesRef.current.clear();
+    };
+  }, []);
 
   const adjustTextareaHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -314,10 +327,10 @@ export const QuickTranslateWindow: React.FC = () => {
                   ? 'google-translator'
                   : 'deepl-translator';
 
-              let engine = bingEngineRef.current;
+              let engine = enginesRef.current.get(sid);
               if (!engine) {
                 engine = new TranslationEngine();
-                bingEngineRef.current = engine;
+                enginesRef.current.set(sid, engine);
               }
               const start = performance.now();
               await engine.init(curSourceLang, curTargetLang, engineModel, {
@@ -371,6 +384,10 @@ export const QuickTranslateWindow: React.FC = () => {
     (text: string) => {
       const trimmed = text ? text.trim() : '';
       if (!trimmed) return;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       userManuallyPickedTarget.current = false;
       setIsSourceFolded(false);
       setSourceText(trimmed);
@@ -383,6 +400,7 @@ export const QuickTranslateWindow: React.FC = () => {
         nextTarget = 'zh';
       }
       setTargetLang(nextTarget);
+      lastImmediateRunRef.current = { text: trimmed, sourceLang, targetLang: nextTarget };
       void handleTranslateAll(trimmed, sourceLang, nextTarget);
     },
     [targetLang, sourceLang, handleTranslateAll],
@@ -421,6 +439,18 @@ export const QuickTranslateWindow: React.FC = () => {
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+    }
+
+    // Skip redundant debounced run when applyTextAndTranslate / lang switch already fired immediately
+    const lastImmediate = lastImmediateRunRef.current;
+    if (
+      lastImmediate &&
+      lastImmediate.text === trimmed &&
+      lastImmediate.sourceLang === sourceLang &&
+      lastImmediate.targetLang === effectiveTarget
+    ) {
+      lastImmediateRunRef.current = null;
+      return;
     }
 
     debounceTimerRef.current = setTimeout(() => {
@@ -826,6 +856,7 @@ export const QuickTranslateWindow: React.FC = () => {
                 userManuallyPickedTarget.current = false;
               }
               setSourceLang(next);
+              lastImmediateRunRef.current = { text: sourceText.trim(), sourceLang: next, targetLang };
               void handleTranslateAll(sourceText, next, targetLang);
             }}
           >
@@ -846,6 +877,7 @@ export const QuickTranslateWindow: React.FC = () => {
               const nextTgt = sourceLang === 'auto' ? 'zh' : sourceLang;
               setSourceLang(nextSrc);
               setTargetLang(nextTgt);
+              lastImmediateRunRef.current = { text: sourceText.trim(), sourceLang: nextSrc, targetLang: nextTgt };
               void handleTranslateAll(sourceText, nextSrc, nextTgt);
             }}
             title={t('textTranslation.swapLanguages', '交换语言')}
@@ -860,6 +892,7 @@ export const QuickTranslateWindow: React.FC = () => {
               const next = e.target.value;
               userManuallyPickedTarget.current = true;
               setTargetLang(next);
+              lastImmediateRunRef.current = { text: sourceText.trim(), sourceLang, targetLang: next };
               void handleTranslateAll(sourceText, sourceLang, next);
             }}
           >

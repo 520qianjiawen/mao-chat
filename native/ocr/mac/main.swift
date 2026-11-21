@@ -37,20 +37,21 @@ if arg1 == "--get-selection" {
 
 // Mode: Hardware-level Cmd+C simulation via CGEventPost
 if arg1 == "--simulate-copy" {
-    let src = CGEventSource(stateID: .hidSystemState)
+    // Use .privateState so physical modifier keys (e.g. Control still held from ⌃Q)
+    // are not merged into the synthetic Cmd+C event.
+    let src = CGEventSource(stateID: .privateState)
+    src?.localEventsSuppressionInterval = 0
     // 0x08 is virtual key for ANSI 'c'
     if let cDown = CGEvent(keyboardEventSource: src, virtualKey: 0x08, keyDown: true) {
         cDown.flags = .maskCommand
         cDown.post(tap: .cghidEventTap)
-        cDown.post(tap: .cgSessionEventTap)
     }
-    usleep(25_000) // 25ms key press duration
+    usleep(10_000) // 10ms key press duration
     if let cUp = CGEvent(keyboardEventSource: src, virtualKey: 0x08, keyDown: false) {
         cUp.flags = .maskCommand
         cUp.post(tap: .cghidEventTap)
-        cUp.post(tap: .cgSessionEventTap)
     }
-    usleep(60_000) // 60ms wait for WindowServer to dispatch event before exiting
+    usleep(25_000) // 25ms wait for WindowServer to dispatch event before exiting
     exit(0)
 }
 

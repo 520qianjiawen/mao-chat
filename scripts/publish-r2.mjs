@@ -279,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>Kokoro 82M 官方端侧语音合成模型全面解锁多语种支持：支持英语 (美音/英音)、中文、日语、西班牙语、法语、印地语、意大利语、巴西葡萄牙语等全部 8 大官方语言</li><li>完整开放全部 53 款官方预置音色，各语种自动匹配最佳默认音色并显示性别与音色元数据</li><li>模型列表显示优化为「Kokoro 82M Official (多语种 / 53音色)」</li><li>优化端侧语音合成与翻译联动体验</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>端侧语音合成与模型清单同步架构升级：内置 sidecar 源码随安装包直接打包同步，彻底消除旧版清单缓存，Kokoro 82M 8 大语种及 53 款音色开箱即用</li><li>划词翻译与截图响应提速：精简快捷键与剪贴板捕获调度，合并快捷指令调用流程，响应更敏捷</li><li>云端语音与翻译连接韧性优化：完善超时控制与主动中断机制（AbortSignal），避免网络波动造成的请求悬挂</li><li>修复若干界面交互与多模型翻译细节问题</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,
