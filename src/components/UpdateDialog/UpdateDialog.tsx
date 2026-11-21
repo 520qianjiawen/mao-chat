@@ -9,9 +9,11 @@ import {
   useUpdateProgressPercent,
   useUpdateProgressTransferred,
   useUpdateProgressTotal,
+  useUpdateError,
   useUpdateDownloadUrl,
   useUpdateDialogOpen,
   useCloseUpdateDialog,
+  useCheckForUpdates,
   useDownloadUpdate,
   useInstallUpdate,
   useUpdateSupportsAutoUpdate,
@@ -28,9 +30,11 @@ const UpdateDialog: React.FC = () => {
   const percent = useUpdateProgressPercent();
   const transferred = useUpdateProgressTransferred();
   const total = useUpdateProgressTotal();
+  const errorMessage = useUpdateError();
   const downloadUrl = useUpdateDownloadUrl();
   const dialogOpen = useUpdateDialogOpen();
   const closeDialog = useCloseUpdateDialog();
+  const checkForUpdates = useCheckForUpdates();
   const downloadUpdate = useDownloadUpdate();
   const installUpdate = useInstallUpdate();
   const supportsAutoUpdate = useUpdateSupportsAutoUpdate();
@@ -59,10 +63,12 @@ const UpdateDialog: React.FC = () => {
 
   const getTitle = (): string => {
     switch (status) {
+      case 'checking': return t('update.checking', '正在检查更新...');
       case 'available': return t('update.available', { version: newVersion });
       case 'downloading': return t('update.downloading', { percent: Math.round(percent) });
       case 'downloaded': return t('update.downloaded');
       case 'not-available': return t('update.notAvailable');
+      case 'error': return t('update.error', '检查更新失败');
       default: return t('update.checkButton');
     }
   };
@@ -132,6 +138,12 @@ const UpdateDialog: React.FC = () => {
           {status === 'not-available' && (
             <div className="up-to-date">
               <p>{t('update.notAvailable')}</p>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div className="up-to-date">
+              <p>{errorMessage || t('update.error', '更新失败，请检查网络连接后重试')}</p>
             </div>
           )}
         </div>
@@ -221,9 +233,23 @@ const UpdateDialog: React.FC = () => {
             </>
           )}
 
-          {status === 'not-available' && (
+          {status === 'error' && (
+            <>
+              <button
+                className="primary-button"
+                onClick={newVersion ? downloadUpdate : checkForUpdates}
+              >
+                {t('common.retry', '重试')}
+              </button>
+              <button className="secondary-button" onClick={closeDialog}>
+                {t('common.close', '关闭')}
+              </button>
+            </>
+          )}
+
+          {(status === 'not-available' || status === 'idle' || status === 'checking') && (
             <button className="secondary-button" onClick={closeDialog}>
-              {t('common.close', 'Close')}
+              {t('common.close', '关闭')}
             </button>
           )}
         </div>

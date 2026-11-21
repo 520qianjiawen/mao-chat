@@ -19,11 +19,14 @@ function semverGt(v1, v2) {
   return false;
 }
 
-function fetchJson(url) {
+function fetchJson(url, redirectsLeft = 5) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        return fetchJson(res.headers.location).then(resolve, reject);
+    const req = https.get(url, { headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' } }, (res) => {
+      if ((res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) && res.headers.location) {
+        res.resume();
+        if (redirectsLeft <= 0) return reject(new Error('Too many redirects'));
+        const nextUrl = new URL(res.headers.location, url).toString();
+        return fetchJson(nextUrl, redirectsLeft - 1).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -43,7 +46,7 @@ function fetchJson(url) {
     req.on('error', reject);
     req.setTimeout(8000, () => {
       req.destroy();
-      reject(new Error('Update check timeout'));
+      reject(new Error('检查更新超时，请检查网络连接'));
     });
   });
 }
@@ -69,7 +72,7 @@ class UpdateManager {
 
     // Log once at startup for easier debugging
     if (process.platform === 'linux') {
-      console.log(`[Sokuji] [UpdateManager] Linux runtime: isAppImage=${this.isAppImage}, APPIMAGE=${process.env.APPIMAGE || '<unset>'}`);
+      console.log(`[MAO Chat] [UpdateManager] Linux runtime: isAppImage=${this.isAppImage}, APPIMAGE=${process.env.APPIMAGE || '<unset>'}`);
     }
 
     // MAO Chat is a new product identity.  Never inherit the upstream Sokuji
@@ -141,8 +144,8 @@ class UpdateManager {
         const base = `https://github.com/${this.feedOwner}/${this.feedRepo}/releases/download/v${version}`;
 
         payload.supportsAutoUpdate = this.isAppImage;
-        payload.appImageUrl = `${base}/Sokuji-${version}-${appImageArch}.AppImage`;
-        payload.debUrl = `${base}/sokuji_${version}_${debArch}.deb`;
+        payload.appImageUrl = `${base}/MAO-Chat-${version}-${appImageArch}.AppImage`;
+        payload.debUrl = `${base}/mao-chat_${version}_${debArch}.deb`;
         payload.releasePageUrl = `https://github.com/${this.feedOwner}/${this.feedRepo}/releases/tag/v${version}`;
         // Legacy field kept for Windows / backward compat callers of updateStore:
         if (!this.isAppImage) {
@@ -187,9 +190,10 @@ class UpdateManager {
    */
   async checkR2Updates() {
     try {
-      const manifest = await fetchJson(R2_UPDATE_MANIFEST_URL);
+      const manifestUrl = `${R2_UPDATE_MANIFEST_URL}${R2_UPDATE_MANIFEST_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      const manifest = await fetchJson(manifestUrl);
       if (!manifest || !manifest.version) {
-        return null;
+        return { error: '更新清单格式无效' };
       }
       const currentVersion = app.getVersion();
       if (!semverGt(manifest.version, currentVersion)) {
@@ -212,7 +216,7 @@ class UpdateManager {
       };
     } catch (err) {
       console.warn('[UpdateManager] R2 update check failed:', err.message);
-      return null;
+      return { error: err.message || '检查更新失败' };
     }
   }
 
@@ -367,21 +371,33 @@ class UpdateManager {
       const { fileName, url: downloadUrl } = this._resolveDownloadUrl();
 
       const tempDir = app.getPath('temp');
-      this.downloadPath = path.join(tempDir, fileName);
+      const targetPath = path.join(tempDir, fileName);
+      this.downloadPath = targetPath;
 
       this._sendStatus({ status: 'downloading' });
 
-      const file = fs.createWriteStream(this.downloadPath);
+      const file = fs.createWriteStream(targetPath);
+      let settled = false;
+
+      const fail = (err) => {
+        if (settled) return;
+        settled = true;
+        file.destroy();
+        this.downloadPath = null;
+        fs.unlink(targetPath, () => {});
+        reject(err);
+      };
 
       // #5: Handle file stream errors
       file.on('error', (err) => {
         console.error('File write error:', err);
-        fs.unlink(this.downloadPath, () => {});
-        reject(err);
+        fail(err);
       });
 
       // #3: Wait for file stream to fully flush before resolving
       file.on('finish', () => {
+        if (settled) return;
+        settled = true;
         this._sendStatus({ status: 'downloaded' });
         resolve();
 
@@ -397,19 +413,23 @@ class UpdateManager {
 
       let receivedBytes = 0;
 
-      const doRequest = (url) => {
-        https.get(url, (response) => {
-          // Handle redirects (GitHub releases redirect to CDN)
-          if (response.statusCode === 302 || response.statusCode === 301) {
+      const doRequest = (url, redirectsLeft = 5) => {
+        const req = https.get(url, (response) => {
+          // Handle redirects (GitHub releases / R2 CDN)
+          if ((response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 303 || response.statusCode === 307 || response.statusCode === 308) && response.headers.location) {
             response.resume(); // Drain the redirect response to free the socket
-            doRequest(response.headers.location);
+            if (redirectsLeft <= 0) {
+              fail(new Error('下载重定向次数过多'));
+              return;
+            }
+            const nextUrl = new URL(response.headers.location, url).toString();
+            doRequest(nextUrl, redirectsLeft - 1);
             return;
           }
 
           if (response.statusCode !== 200) {
-            file.destroy();
-            fs.unlink(this.downloadPath, () => {});
-            reject(new Error(`Download failed with status ${response.statusCode}`));
+            response.resume();
+            fail(new Error(`下载失败 (HTTP ${response.statusCode})`));
             return;
           }
 
@@ -430,15 +450,13 @@ class UpdateManager {
 
           response.pipe(file);
 
-          response.on('error', (err) => {
-            file.destroy();
-            fs.unlink(this.downloadPath, () => {});
-            reject(err);
-          });
-        }).on('error', (err) => {
-          file.destroy();
-          fs.unlink(this.downloadPath, () => {});
-          reject(err);
+          response.on('error', (err) => fail(err));
+        });
+
+        req.on('error', (err) => fail(err));
+        req.setTimeout(30_000, () => {
+          req.destroy();
+          fail(new Error('更新包下载超时，请检查网络后重试'));
         });
       };
 
@@ -562,12 +580,15 @@ open "${dmgPath}"
   /**
    * Public method to check for updates (used by Help menu and Settings).
    */
-  async checkForUpdates() {
-    this._sendStatus({ status: 'checking' });
+  async checkForUpdates(options = {}) {
+    const silent = Boolean(options?.silent);
+    if (!silent) {
+      this._sendStatus({ status: 'checking' });
+    }
 
     // 1. Check Cloudflare R2 manifest first
     const r2Result = await this.checkR2Updates();
-    if (r2Result) {
+    if (r2Result && !r2Result.error) {
       if (r2Result.available) {
         this._updateInfo = {
           version: r2Result.version,
@@ -586,19 +607,25 @@ open "${dmgPath}"
       } else {
         this._updateInfo = null;
         this.downloadPath = null;
-        this._sendStatus({ status: 'not-available' });
+        if (!silent) {
+          this._sendStatus({ status: 'not-available' });
+        }
         return { success: true };
       }
     }
 
     // 2. Fall back to GitHub autoUpdater if configured
     if (!this.updatesEnabled) {
-      this._sendStatus({ status: 'not-available' });
-      return Promise.resolve(null);
+      if (!silent) {
+        this._sendStatus({ status: 'error', message: r2Result?.error || '检查更新失败，请稍后重试' });
+      }
+      return { success: false, error: r2Result?.error || 'Update check failed' };
     }
     return autoUpdater.checkForUpdates().catch((err) => {
       console.error('Update check failed:', err);
-      this._sendStatus({ status: 'error', message: err.message || String(err) });
+      if (!silent) {
+        this._sendStatus({ status: 'error', message: err.message || String(err) });
+      }
     });
   }
 
@@ -607,7 +634,7 @@ open "${dmgPath}"
    */
   checkAfterDelay(delayMs = 5000) {
     setTimeout(() => {
-      this.checkForUpdates().catch((err) => {
+      this.checkForUpdates({ silent: true }).catch((err) => {
         console.warn('Startup update check failed:', err);
       });
     }, delayMs);

@@ -141,7 +141,7 @@ export class ModernAudioPlayer {
           if (!this.context || this.context.state !== 'suspended') return;
           // Recovery attempt, not fatal: the recreate deadline below is the
           // backstop if resume() rejects or the context stays suspended.
-          this.context.resume().catch((e) => console.warn('[Sokuji] ctx auto-resume failed:', e));
+          this.context.resume().catch((e) => console.warn('[MAO Chat] ctx auto-resume failed:', e));
           // Recreate deadline: if state didn't go back to running by then,
           // resume() is silently stuck and we need to rebuild the context.
           if (this._recreateDeadlineTimer) clearTimeout(this._recreateDeadlineTimer);
@@ -896,7 +896,7 @@ export class ModernAudioPlayer {
       }
     } catch (e) {
       // Last-ditch recovery failed; leave context null so the next op retries.
-      console.error('[Sokuji] AudioContext recreation failed:', e);
+      console.error('[MAO Chat] AudioContext recreation failed:', e);
     } finally {
       this._recreatingContext = false;
     }

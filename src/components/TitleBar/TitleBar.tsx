@@ -104,16 +104,28 @@ const TitleBar: React.FC<TitleBarProps> = ({
             <span className="title-bar__action-label">{textToSpeechLabel}</span>
           </button>
         )}
-        {isElectron() && updateStatus === 'available' && (
+        {isElectron() && (updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'downloaded') && (
           <button
             type="button"
             className="title-bar__action update-pill-button"
             onClick={openUpdateDialog}
-            title={t('update.available', { version: updateNewVersion, defaultValue: `发现新版本 v${updateNewVersion}，点击立即升级` })}
+            title={
+              updateStatus === 'downloading'
+                ? t('update.downloadingShort', '正在下载更新，点击查看进度')
+                : updateStatus === 'downloaded'
+                  ? t('update.restartNow', '更新已下载，点击重启安装')
+                  : t('update.available', { version: updateNewVersion, defaultValue: `发现新版本 v${updateNewVersion}，点击立即升级` })
+            }
             aria-label={t('update.upgradeTo', { version: updateNewVersion, defaultValue: `升级 v${updateNewVersion}` })}
           >
             <ArrowUpCircle size={15} />
-            <span className="title-bar__action-label">升级 v{updateNewVersion}</span>
+            <span className="title-bar__action-label">
+              {updateStatus === 'downloading'
+                ? '下载更新中'
+                : updateStatus === 'downloaded'
+                  ? '重启安装'
+                  : `升级 v${updateNewVersion}`}
+            </span>
           </button>
         )}
         <button

@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Välj inte den här enheten här. Använd istället denna virtuella mikrofon i dina videokonferensapplikationer (som Google Meet, Zoom, Microsoft Teams osv.) för att ta emot den direktöversatta talutmatningen.",
     "virtualMicWarningText2": "För att MAO Chat ska fungera korrekt, välj din faktiska fysiska mikrofon från listan.",
     "virtualSpeakerWarningTitle": "Detta är en virtuell högtalare skapad av MAO Chat.",
-    "virtualSpeakerWarningText1": "Välj inte den här enheten som din monitor. Sokuji_Virtual_Speaker används av MAO Chat för att skicka ljud till dina konferensapplikationer.",
+    "virtualSpeakerWarningText1": "Välj inte den här enheten som din monitor. MAO_Virtual_Speaker används av MAO Chat för att skicka ljud till dina konferensapplikationer.",
     "virtualSpeakerWarningText2": "Att koppla din monitor till MAO Chats utgångsenhet skulle skapa en ljudåterkopplingsslinga, vilket gör att din inmatning innehåller din egen övervakade utmatning.",
     "virtualSpeakerWarningText3": "Reglaget \"Slå på\" kopplar den virtuella högtalaren till din valda monitorenhet, så att du kan höra vad som skickas till din konferensapplikation. Reglaget \"Stäng av\" kopplar bort denna övervakningsanslutning.",
     "virtualSpeakerWarningText4": "För korrekt funktion, välj en annan monitorenhet (som dina hörlurar eller högtalare) från listan.",

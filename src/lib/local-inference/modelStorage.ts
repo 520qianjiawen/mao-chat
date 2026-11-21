@@ -90,7 +90,7 @@ async function openModelsDb(): Promise<IDBPDatabase<SokujiModelsDB>> {
       throw err;
     }
     console.warn(
-      `[Sokuji] [ModelStorage] '${DB_NAME}' is at newer version ${db.version} ` +
+      `[MAO Chat] [ModelStorage] '${DB_NAME}' is at newer version ${db.version} ` +
       `(this build expects ${DB_VERSION}); opened unversioned since all required stores exist`
     );
     return db;

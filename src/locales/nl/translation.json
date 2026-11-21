@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Selecteer dit apparaat hier niet. Gebruik in plaats daarvan deze virtuele microfoon in uw videoconferentie-applicaties (zoals Google Meet, Zoom, Microsoft Teams, enz.) om realtime spraakvertaling output te ontvangen.",
     "virtualMicWarningText2": "Voor een juiste werking van MAO Chat, selecteer uw echte fysieke microfoon uit de lijst.",
     "virtualSpeakerWarningTitle": "Dit is een virtuele luidspreker gemaakt door MAO Chat.",
-    "virtualSpeakerWarningText1": "Selecteer dit apparaat niet als uw monitor. De Sokuji_Virtual_Speaker wordt door MAO Chat gebruikt om audio naar uw conferentie-applicaties te sturen.",
+    "virtualSpeakerWarningText1": "Selecteer dit apparaat niet als uw monitor. De MAO_Virtual_Speaker wordt door MAO Chat gebruikt om audio naar uw conferentie-applicaties te sturen.",
     "virtualSpeakerWarningText2": "Het verbinden van uw monitor met MAO Chat's output apparaat zou een audio feedback loop creëren, waardoor uw input uw eigen gemonitorde output zou bevatten.",
     "virtualSpeakerWarningText3": "De \"Inschakelen\" schakelaar verbindt de virtuele luidspreker met uw geselecteerde monitor apparaat, zodat u kunt horen wat naar uw conferentie-applicatie wordt gestuurd. De \"Uitschakelen\" schakelaar verbreekt deze monitor verbinding.",
     "virtualSpeakerWarningText4": "Voor een juiste werking, selecteer een ander monitor apparaat (zoals uw koptelefoon of luidsprekers) uit de lijst.",

@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Vui lòng không chọn thiết bị này tại đây. Thay vào đó, hãy sử dụng micro ảo này trong các ứng dụng hội nghị truyền hình của bạn (như Google Meet, Zoom, Microsoft Teams, v.v.) để nhận đầu ra dịch giọng nói trực tiếp.",
     "virtualMicWarningText2": "Để MAO Chat hoạt động đúng, vui lòng chọn micro vật lý thực của bạn từ danh sách.",
     "virtualSpeakerWarningTitle": "Đây là loa ảo do MAO Chat tạo ra.",
-    "virtualSpeakerWarningText1": "Vui lòng không chọn thiết bị này làm thiết bị giám sát. Sokuji_Virtual_Speaker được MAO Chat sử dụng để xuất âm thanh tới các ứng dụng hội nghị của bạn.",
+    "virtualSpeakerWarningText1": "Vui lòng không chọn thiết bị này làm thiết bị giám sát. MAO_Virtual_Speaker được MAO Chat sử dụng để xuất âm thanh tới các ứng dụng hội nghị của bạn.",
     "virtualSpeakerWarningText2": "Kết nối thiết bị giám sát với thiết bị đầu ra của MAO Chat sẽ tạo ra vòng lặp phản hồi âm thanh, khiến đầu vào của bạn chứa chính đầu ra đang được giám sát.",
     "virtualSpeakerWarningText3": "Công tắc \"Bật\" kết nối loa ảo với thiết bị giám sát bạn đã chọn, cho phép bạn nghe những gì đang được gửi tới ứng dụng hội nghị. Công tắc \"Tắt\" ngắt kết nối giám sát này.",
     "virtualSpeakerWarningText4": "Để hoạt động đúng, vui lòng chọn một thiết bị giám sát khác (như tai nghe hoặc loa của bạn) từ danh sách.",

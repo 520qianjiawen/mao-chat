@@ -279,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>端侧语音合成与模型清单同步架构升级：内置 sidecar 源码随安装包直接打包同步，彻底消除旧版清单缓存，Kokoro 82M 8 大语种及 53 款音色开箱即用</li><li>划词翻译与截图响应提速：精简快捷键与剪贴板捕获调度，合并快捷指令调用流程，响应更敏捷</li><li>云端语音与翻译连接韧性优化：完善超时控制与主动中断机制（AbortSignal），避免网络波动造成的请求悬挂</li><li>修复若干界面交互与多模型翻译细节问题</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>应用内检查更新体验全面优化：清单增加时间戳防缓存策略，更新弹窗增加检查中、失败重试与超时提示</li><li>多语言本地化与界面体验完善：补齐各语种关于更新检查与对话框的本地化文案</li><li>品牌标识与音频底层服务统一：深度清理残留标识，优化系统音频录制与设备捕获稳定性</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,

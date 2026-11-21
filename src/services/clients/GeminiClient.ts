@@ -182,7 +182,7 @@ export class GeminiClient implements IClient {
    * Handle API key validation errors
    */
   private static handleValidationError(error: any): ApiKeyValidationResult {
-    console.error("[Sokuji] [GeminiClient] API key validation error:", error);
+    console.error("[MAO Chat] [GeminiClient] API key validation error:", error);
     return {
       valid: false,
       message: error.message || i18n.t('settings.errorValidatingApiKey'),
@@ -194,7 +194,7 @@ export class GeminiClient implements IClient {
    * Handle model fetching errors
    */
   private static handleModelFetchError(error: any): never {
-    console.error("[Sokuji] [GeminiClient] Error fetching models:", error);
+    console.error("[MAO Chat] [GeminiClient] Error fetching models:", error);
     throw error;
   }
 
@@ -230,13 +230,13 @@ export class GeminiClient implements IClient {
       // Make request to Gemini API models endpoint
       const availableModels = await this.fetchModelsFromAPI(apiKey);
 
-      console.info("[Sokuji] [GeminiClient] Validation response: success");
+      console.info("[MAO Chat] [GeminiClient] Validation response: success");
 
       // Check for realtime models availability
       const hasRealtimeModel = this.checkRealtimeModelAvailability(availableModels);
 
-      console.info("[Sokuji] [GeminiClient] Available models:", availableModels);
-      console.info("[Sokuji] [GeminiClient] Has realtime model:", hasRealtimeModel);
+      console.info("[MAO Chat] [GeminiClient] Available models:", availableModels);
+      console.info("[MAO Chat] [GeminiClient] Has realtime model:", hasRealtimeModel);
 
       // Filter relevant models
       const filteredModels = this.filterRelevantModels(availableModels);
@@ -290,11 +290,11 @@ export class GeminiClient implements IClient {
       }
     });
 
-    console.info(`[Sokuji] [GeminiClient] Found ${relevantModels.length} realtime-capable models from API`);
+    console.info(`[MAO Chat] [GeminiClient] Found ${relevantModels.length} realtime-capable models from API`);
 
     // If no models found from API, return fallback models
     if (relevantModels.length === 0) {
-      console.warn("[Sokuji] [GeminiClient] No suitable models found from API, using fallback models");
+      console.warn("[MAO Chat] [GeminiClient] No suitable models found from API, using fallback models");
       return this.getFallbackModels();
     }
 
@@ -362,7 +362,7 @@ export class GeminiClient implements IClient {
       }
     }
 
-    console.info('[Sokuji] [GeminiClient] realtimeInputConfig:', JSON.stringify(realtimeInputConfig));
+    console.info('[MAO Chat] [GeminiClient] realtimeInputConfig:', JSON.stringify(realtimeInputConfig));
 
     // Convert SessionConfig to LiveConnectConfig
     const liveConfig: LiveConnectConfig = {
@@ -404,7 +404,7 @@ export class GeminiClient implements IClient {
         callbacks: {
           onopen: () => {
             if (token !== this.connectionToken) return;  // stale callback
-            console.info('[Sokuji] [GeminiClient] Session opened');
+            console.info('[MAO Chat] [GeminiClient] Session opened');
             this.isConnectedState = true;
             this.eventHandlers.onRealtimeEvent?.({
               source: 'client',
@@ -431,7 +431,7 @@ export class GeminiClient implements IClient {
           },
           onerror: (error: ErrorEvent) => {
             if (token !== this.connectionToken) return;  // stale callback
-            console.error('[Sokuji] [GeminiClient] Session error:', error);
+            console.error('[MAO Chat] [GeminiClient] Session error:', error);
             this.eventHandlers.onRealtimeEvent?.({
               source: 'client',
               event: {
@@ -457,10 +457,10 @@ export class GeminiClient implements IClient {
               // trigger reconnect(). The spurious reconnect bug this guards against
               // would otherwise tear down a perfectly healthy session seconds after
               // a successful resume.
-              console.debug('[Sokuji] [GeminiClient] Ignoring stale onclose from token', token);
+              console.debug('[MAO Chat] [GeminiClient] Ignoring stale onclose from token', token);
               return;
             }
-            console.info('[Sokuji] [GeminiClient] Session closed', event);
+            console.info('[MAO Chat] [GeminiClient] Session closed', event);
             this.session = null;
 
             // If already reconnecting (triggered by goAway), skip — reconnect() handles it
@@ -515,7 +515,7 @@ export class GeminiClient implements IClient {
   }
 
   private async handleMessage(message: LiveServerMessage): Promise<void> {
-    console.debug('[Sokuji] [GeminiClient] Message received:', message);
+    console.debug('[MAO Chat] [GeminiClient] Message received:', message);
     
     // Emit specific realtime events based on message content
     if (message.setupComplete) {
@@ -980,7 +980,7 @@ export class GeminiClient implements IClient {
       this.pendingAudioQueue = [];
       return;
     }
-    console.info(`[Sokuji] [GeminiClient] Flushing ${this.pendingAudioQueue.length} buffered audio chunks after reconnect`);
+    console.info(`[MAO Chat] [GeminiClient] Flushing ${this.pendingAudioQueue.length} buffered audio chunks after reconnect`);
     for (const chunk of this.pendingAudioQueue) {
       const base64Audio = this.int16ToBase64(chunk);
       this.session.sendRealtimeInput({
@@ -1006,10 +1006,10 @@ export class GeminiClient implements IClient {
 
     if (!this.savedResumptionHandle) {
       console.info(
-        `[Sokuji] [GeminiClient] Reconnecting with fresh session (resumption handle not available; preserving ${this.conversationItems.length} items in UI)`
+        `[MAO Chat] [GeminiClient] Reconnecting with fresh session (resumption handle not available; preserving ${this.conversationItems.length} items in UI)`
       );
     } else {
-      console.info('[Sokuji] [GeminiClient] Resuming session with saved handle');
+      console.info('[MAO Chat] [GeminiClient] Resuming session with saved handle');
     }
 
     this.isReconnecting = true;
@@ -1063,7 +1063,7 @@ export class GeminiClient implements IClient {
             }
           }
         });
-        console.warn(`[Sokuji] [GeminiClient] Reconnection attempt ${attempt}/${maxRetries} failed`, error);
+        console.warn(`[MAO Chat] [GeminiClient] Reconnection attempt ${attempt}/${maxRetries} failed`, error);
       }
     }
 

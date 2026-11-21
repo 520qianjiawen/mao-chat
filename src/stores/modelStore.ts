@@ -217,7 +217,7 @@ export const useModelStore = create<ModelStoreState>()(
         // (IndexedDB VersionError from a newer-schema profile, storage
         // estimate failures, corrupt model metadata).
         const message = err instanceof Error ? err.message : String(err);
-        console.error('[Sokuji] [ModelStore] initialize failed:', err);
+        console.error('[MAO Chat] [ModelStore] initialize failed:', err);
         set({ initError: message });
       }
     },

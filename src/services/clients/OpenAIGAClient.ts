@@ -639,7 +639,7 @@ export class OpenAIGAClient implements IClient {
     // Reasoning effort: only `gpt-realtime-2` accepts this; older models reject the field.
     if (config.model?.startsWith('gpt-realtime-2') && config.reasoningEffort) {
       session.reasoning = { effort: config.reasoningEffort };
-      console.info('[Sokuji] [OpenAIGAClient] reasoning.effort applied:', config.reasoningEffort);
+      console.info('[MAO Chat] [OpenAIGAClient] reasoning.effort applied:', config.reasoningEffort);
     }
 
     // GA API nests turn_detection, transcription, noise_reduction under audio.input

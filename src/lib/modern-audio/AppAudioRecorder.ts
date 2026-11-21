@@ -93,13 +93,13 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
   async begin(options?: ParticipantAudioOptions): Promise<boolean> {
     const deviceId = options?.deviceId;
     if (!deviceId) {
-      console.error('[Sokuji] [AppAudioRecorder] A deviceId is required for application capture');
+      console.error('[MAO Chat] [AppAudioRecorder] A deviceId is required for application capture');
       return false;
     }
 
     const electron = window.electron;
     if (!electron) {
-      console.error('[Sokuji] [AppAudioRecorder] Application capture requires Electron');
+      console.error('[MAO Chat] [AppAudioRecorder] Application capture requires Electron');
       return false;
     }
 
@@ -116,12 +116,12 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
     } catch (error) {
       // Both listeners are already registered at this point; throwing here
       // would leak them and take the session start down with it.
-      console.error('[Sokuji] [AppAudioRecorder] Capture request failed:', error);
+      console.error('[MAO Chat] [AppAudioRecorder] Capture request failed:', error);
       await this.end();
       return false;
     }
     if (!result?.ok) {
-      console.error('[Sokuji] [AppAudioRecorder] Failed to start capture:', result?.error);
+      console.error('[MAO Chat] [AppAudioRecorder] Failed to start capture:', result?.error);
       await this.end();
       return false;
     }
@@ -130,14 +130,14 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
     this.silenceWatchdog = setInterval(() => {
       if (this.chunksSeen === 0) {
         console.warn(
-          '[Sokuji] [AppAudioRecorder] No audio data at all from the helper yet.' +
+          '[MAO Chat] [AppAudioRecorder] No audio data at all from the helper yet.' +
           ' A tap delivers nothing while its target renders no output, so this is' +
           ' expected for an idle application - but it also looks exactly like a' +
           ' tap pointed at the wrong process.'
         );
       }
     }, 5000);
-    console.info(`[Sokuji] [AppAudioRecorder] Capturing ${deviceId}`);
+    console.info(`[MAO Chat] [AppAudioRecorder] Capturing ${deviceId}`);
     return true;
   }
 
@@ -173,7 +173,7 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
     try {
       await electron?.invoke('stop-app-audio-capture');
     } catch (error) {
-      console.warn('[Sokuji] [AppAudioRecorder] Failed to stop capture:', error);
+      console.warn('[MAO Chat] [AppAudioRecorder] Failed to stop capture:', error);
     }
 
     if (this.silenceWatchdog) {
@@ -240,7 +240,7 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
     const peak = this.peakSinceLog / 32768;
     if (peak > 0.001) this.everHeardAudio = true;
     console.info(
-      `[Sokuji] [AppAudioRecorder] captured level: peak=${peak.toFixed(4)}` +
+      `[MAO Chat] [AppAudioRecorder] captured level: peak=${peak.toFixed(4)}` +
       `${peak <= 0.001 ? ' (silent - the source is not playing, or capture is not permitted)' : ''}`
     );
     this.peakSinceLog = 0;
@@ -288,7 +288,7 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
     } catch (error) {
       // The waveform is cosmetic; never let it break capture - and never let it
       // repeat, since this runs on every chunk about a hundred times a second.
-      console.warn('[Sokuji] [AppAudioRecorder] Analyser disabled after:', error);
+      console.warn('[MAO Chat] [AppAudioRecorder] Analyser disabled after:', error);
       this.analyserBroken = true;
       this.analyser = null;
       void this.audioContext?.close().catch(() => { /* already closing */ });
@@ -298,21 +298,21 @@ export class AppAudioRecorder implements IParticipantAudioRecorder {
 
   private onHelperEvent(payload: { event?: string; code?: string }): void {
     if (payload?.event === 'format') {
-      console.info('[Sokuji] [AppAudioRecorder] Helper format:', payload);
+      console.info('[MAO Chat] [AppAudioRecorder] Helper format:', payload);
       return;
     }
     if (payload?.event === 'warning') {
-      console.warn('[Sokuji] [AppAudioRecorder] Capture helper warning:', payload);
+      console.warn('[MAO Chat] [AppAudioRecorder] Capture helper warning:', payload);
       this.onWarning?.(payload.code ?? 'unknown');
       return;
     }
     if (payload?.event === 'exit' || payload?.event === 'error') {
       if (this.stopping) {
         // Our own stop killed it; nothing was lost.
-        console.info('[Sokuji] [AppAudioRecorder] Capture helper exited during teardown:', payload);
+        console.info('[MAO Chat] [AppAudioRecorder] Capture helper exited during teardown:', payload);
         return;
       }
-      console.warn('[Sokuji] [AppAudioRecorder] Capture helper reported:', payload);
+      console.warn('[MAO Chat] [AppAudioRecorder] Capture helper reported:', payload);
       this.onLost?.();
     }
   }

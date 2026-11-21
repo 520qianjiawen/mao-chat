@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Älä valitse tätä laitetta tässä. Käytä sen sijaan tätä virtuaalimikrofonia videokokoussovelluksissasi (kuten Google Meet, Zoom, Microsoft Teams jne.) vastaanottaaksesi reaaliaikaisen puheenkäännöksen.",
     "virtualMicWarningText2": "Jotta MAO Chat toimisi oikein, valitse luettelosta todellinen fyysinen mikrofonisi.",
     "virtualSpeakerWarningTitle": "Tämä on MAO Chatn luoma virtuaalikaiutin.",
-    "virtualSpeakerWarningText1": "Älä valitse tätä laitetta valvontalaitteeksesi. MAO Chat käyttää Sokuji_Virtual_Speakeria äänen lähettämiseen kokoussovelluksiisi.",
+    "virtualSpeakerWarningText1": "Älä valitse tätä laitetta valvontalaitteeksesi. MAO Chat käyttää MAO_Virtual_Speakeria äänen lähettämiseen kokoussovelluksiisi.",
     "virtualSpeakerWarningText2": "Valvontalaitteen yhdistäminen MAO Chatn lähtölaitteeseen loisi äänipalautesilmukan, jolloin syötteesi sisältäisi oman valvotun tulosteesi.",
     "virtualSpeakerWarningText3": "\"Ota käyttöön\" -kytkin yhdistää virtuaalikaiuttimen valitsemaasi valvontalaitteeseen, jolloin kuulet, mitä kokoussovellukseesi lähetetään. \"Poista käytöstä\" -kytkin katkaisee tämän valvontayhteyden.",
     "virtualSpeakerWarningText4": "Jotta toiminta olisi oikeaa, valitse luettelosta toinen valvontalaite (kuten kuulokkeesi tai kaiuttimesi).",

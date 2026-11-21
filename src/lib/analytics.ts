@@ -323,11 +323,11 @@ export async function syncDistinctIdToBackground(posthogInstance?: any): Promise
       distinct_id: distinctId
     }, (response: any) => {
       if ((window as any).chrome.runtime.lastError) {
-        console.error('[Sokuji] [Analytics] Error syncing distinct_id to background:', (window as any).chrome.runtime.lastError);
+        console.error('[MAO Chat] [Analytics] Error syncing distinct_id to background:', (window as any).chrome.runtime.lastError);
       }
     });
   } catch (error) {
-    console.error('[Sokuji] [Analytics] Error syncing distinct_id to background:', error);
+    console.error('[MAO Chat] [Analytics] Error syncing distinct_id to background:', error);
   }
 }
 
@@ -351,7 +351,7 @@ export function useAnalytics() {
         }, 100);
       }
     } catch (error) {
-      console.error('[Sokuji] [Analytics] Analytics tracking error:', error);
+      console.error('[MAO Chat] [Analytics] Analytics tracking error:', error);
     }
   };
 
@@ -378,7 +378,7 @@ export function useAnalytics() {
         }, 100);
       }
     } catch (error) {
-      console.error('[Sokuji] [Analytics] User identification error:', error);
+      console.error('[MAO Chat] [Analytics] User identification error:', error);
     }
   };
 
@@ -389,7 +389,7 @@ export function useAnalytics() {
         posthog.identify(posthog.getDistinctId(), { $set: sanitizedProperties });
       }
     } catch (error) {
-      console.error('[Sokuji] [Analytics] Set user properties error:', error);
+      console.error('[MAO Chat] [Analytics] Set user properties error:', error);
     }
   };
 
@@ -420,7 +420,7 @@ export function useAnalytics() {
       }
       return null;
     } catch (error) {
-      console.error('[Sokuji] [Analytics] Error getting distinct_id:', error);
+      console.error('[MAO Chat] [Analytics] Error getting distinct_id:', error);
       return null;
     }
   };

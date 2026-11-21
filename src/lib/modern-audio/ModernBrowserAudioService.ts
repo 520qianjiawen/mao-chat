@@ -87,7 +87,7 @@ export class ModernBrowserAudioService implements IAudioService {
     // Initialize virtual speaker player only in Electron
     this.virtualSpeakerPlayer = null;
     if (ServiceFactory.isElectron()) {
-      console.info('[Sokuji] [ModernBrowserAudio] Initializing virtual speaker player for Electron');
+      console.info('[MAO Chat] [ModernBrowserAudio] Initializing virtual speaker player for Electron');
       this.virtualSpeakerPlayer = new ModernAudioPlayer({
         sampleRate: 24000,
         // Meeting apps downmix the HAL loopback and TTS is often well below
@@ -112,7 +112,7 @@ export class ModernBrowserAudioService implements IAudioService {
     // concurrently, tripping "NotReadableError: Could not start audio source".
     // Caching the in-flight promise makes all callers share one initialization.
     if (this.initialized) {
-      console.info('[Sokuji] [ModernBrowserAudio] Audio service already initialized');
+      console.info('[MAO Chat] [ModernBrowserAudio] Audio service already initialized');
       return;
     }
     if (!this.initPromise) {
@@ -148,15 +148,15 @@ export class ModernBrowserAudioService implements IAudioService {
       
       if (tabIdParam) {
         this.targetTabId = parseInt(tabIdParam, 10);
-        console.info(`[Sokuji] [ModernBrowserAudio] Initialized with target tabId: ${this.targetTabId}`);
+        console.info(`[MAO Chat] [ModernBrowserAudio] Initialized with target tabId: ${this.targetTabId}`);
       }
       
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error parsing URL parameters:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error parsing URL parameters:', error);
     }
 
     this.initialized = true;
-    console.info('[Sokuji] [ModernBrowserAudio] Audio service initialized');
+    console.info('[MAO Chat] [ModernBrowserAudio] Audio service initialized');
   }
 
   /**
@@ -204,7 +204,7 @@ export class ModernBrowserAudioService implements IAudioService {
           await this.ensureMicrophonePermission();
           devices = await navigator.mediaDevices.enumerateDevices();
         } catch (permissionError: any) {
-          console.warn('[Sokuji] [ModernBrowserAudio] Microphone permission warm-up failed; returning enumerated devices anyway:', permissionError);
+          console.warn('[MAO Chat] [ModernBrowserAudio] Microphone permission warm-up failed; returning enumerated devices anyway:', permissionError);
           if (options.requestMicrophonePermission) {
             this.showPermissionError(permissionError);
           }
@@ -253,7 +253,7 @@ export class ModernBrowserAudioService implements IAudioService {
       
       return { inputs, outputs };
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Failed to get audio devices:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Failed to get audio devices:', error);
       return { inputs: [], outputs: [] };
     }
   }
@@ -307,7 +307,7 @@ export class ModernBrowserAudioService implements IAudioService {
     try {
       this.recorder.releaseStream();
     } catch (error) {
-      console.warn('[Sokuji] [ModernBrowserAudio] Error releasing microphone on close:', error);
+      console.warn('[MAO Chat] [ModernBrowserAudio] Error releasing microphone on close:', error);
     }
   }
 
@@ -410,12 +410,12 @@ export class ModernBrowserAudioService implements IAudioService {
 
       if (virtualSpeaker && this.virtualSpeakerPlayer) {
         await this.virtualSpeakerPlayer.setSinkId(virtualSpeaker.deviceId);
-        console.info('[Sokuji] [ModernBrowserAudio] Virtual speaker detected and configured:', virtualSpeaker.label);
+        console.info('[MAO Chat] [ModernBrowserAudio] Virtual speaker detected and configured:', virtualSpeaker.label);
       } else if (this.virtualSpeakerPlayer) {
-        console.warn('[Sokuji] [ModernBrowserAudio] Virtual speaker device not found (neither MaoVirtualAudio, SokujiVirtualAudio, Sokuji_Virtual_Speaker, nor VB-CABLE)');
+        console.warn('[MAO Chat] [ModernBrowserAudio] Virtual speaker device not found (neither MaoVirtualAudio, SokujiVirtualAudio, Sokuji_Virtual_Speaker, nor VB-CABLE)');
       }
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error detecting virtual speaker:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error detecting virtual speaker:', error);
     }
   }
 
@@ -424,7 +424,7 @@ export class ModernBrowserAudioService implements IAudioService {
    */
   async connectMonitoringDevice(deviceId: string, label: string): Promise<AudioOperationResult> {
     try {
-      console.debug(`[Sokuji] [ModernBrowserAudio] Connecting monitoring device: ${label} (${deviceId})`);
+      console.debug(`[MAO Chat] [ModernBrowserAudio] Connecting monitoring device: ${label} (${deviceId})`);
       
       const success = await this.player.setSinkId(deviceId);
       
@@ -445,7 +445,7 @@ export class ModernBrowserAudioService implements IAudioService {
         };
       }
     } catch (error: any) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error connecting monitoring device:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error connecting monitoring device:', error);
       return {
         success: false,
         error: error.message || 'Failed to connect monitoring device'
@@ -496,7 +496,7 @@ export class ModernBrowserAudioService implements IAudioService {
   async setupVirtualAudioOutput(): Promise<boolean> {
     // Modern implementation doesn't need special virtual output setup
     // HTMLAudioElement handles echo cancellation automatically
-    console.info('[Sokuji] [ModernBrowserAudio] Virtual audio output ready with modern implementation');
+    console.info('[MAO Chat] [ModernBrowserAudio] Virtual audio output ready with modern implementation');
     return true;
   }
 
@@ -533,7 +533,7 @@ export class ModernBrowserAudioService implements IAudioService {
   public setMonitorVolume(enabled: boolean): void {
     const volume = enabled ? 1.0 : 0.0;
     this.player.setGlobalVolume(volume);
-    console.debug(`[Sokuji] [ModernBrowserAudio] Monitor volume set to: ${volume}`);
+    console.debug(`[MAO Chat] [ModernBrowserAudio] Monitor volume set to: ${volume}`);
     
     // Virtual speaker always plays at full volume (not affected by monitor toggle)
     if (this.virtualSpeakerPlayer) {
@@ -587,7 +587,7 @@ export class ModernBrowserAudioService implements IAudioService {
   public sendPcmDataToTabs(data: Int16Array, trackId?: string): void {
     // Skip empty data
     if (!data || data.length === 0) {
-      console.debug('[Sokuji] [ModernBrowserAudio] Attempted to send empty audio data');
+      console.debug('[MAO Chat] [ModernBrowserAudio] Attempted to send empty audio data');
       return;
     }
     
@@ -602,7 +602,7 @@ export class ModernBrowserAudioService implements IAudioService {
     const totalChunks = Math.ceil(data.length / chunkSize);
     
     if (isLargeFile) {
-      console.info(`[Sokuji] [ModernBrowserAudio] Sending audio data (${data.length} samples, ~${(data.length / sampleRate).toFixed(2)}s) in ${totalChunks} chunks`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Sending audio data (${data.length} samples, ~${(data.length / sampleRate).toFixed(2)}s) in ${totalChunks} chunks`);
     }
     
     // Process chunks recursively
@@ -679,7 +679,7 @@ export class ModernBrowserAudioService implements IAudioService {
       // Tab exists, send the message
       chrome.tabs.sendMessage(tabId, message, (_response: any) => {
         if (chrome.runtime.lastError) {
-          console.warn(`[Sokuji] [ModernBrowserAudio] Error sending to tab ${tabId}: ${chrome.runtime.lastError.message}`);
+          console.warn(`[MAO Chat] [ModernBrowserAudio] Error sending to tab ${tabId}: ${chrome.runtime.lastError.message}`);
         }
       });
     });
@@ -705,7 +705,7 @@ export class ModernBrowserAudioService implements IAudioService {
         chrome.tabs.sendMessage(tab.id, message, (_response: any) => {
           // Ignore errors, as not all tabs will have our content script
           if (chrome.runtime.lastError) {
-            console.debug(`[Sokuji] [ModernBrowserAudio] Tab ${tab.id} not ready: ${chrome.runtime.lastError.message}`);
+            console.debug(`[MAO Chat] [ModernBrowserAudio] Tab ${tab.id} not ready: ${chrome.runtime.lastError.message}`);
           }
         });
       }
@@ -765,7 +765,7 @@ export class ModernBrowserAudioService implements IAudioService {
       this.virtualSpeakerPlayer.clearInterruptedTracks();
     }
     
-    console.debug('[Sokuji] [ModernBrowserAudio] Cleared interrupted tracks');
+    console.debug('[MAO Chat] [ModernBrowserAudio] Cleared interrupted tracks');
   }
 
   /**
@@ -780,14 +780,14 @@ export class ModernBrowserAudioService implements IAudioService {
   private async applyStartRecording(deviceId: string | undefined, callback: AudioRecordingCallback): Promise<void> {
     this.recordingCallback = callback;
 
-    console.debug(`[Sokuji] [ModernBrowserAudio] Starting recording from device: ${deviceId}`);
+    console.debug(`[MAO Chat] [ModernBrowserAudio] Starting recording from device: ${deviceId}`);
     
     // Check if we need to switch devices
     const recorderStatus = this.recorder.getStatus();
     const needsDeviceSwitch = this.currentRecordingDeviceId !== deviceId && recorderStatus !== 'ended';
     
     if (needsDeviceSwitch) {
-      console.info(`[Sokuji] [ModernBrowserAudio] Switching recording device from ${this.currentRecordingDeviceId} to ${deviceId}`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Switching recording device from ${this.currentRecordingDeviceId} to ${deviceId}`);
       // Need to end current recording session to switch devices
       await this.recorder.end();
     }
@@ -860,11 +860,11 @@ export class ModernBrowserAudioService implements IAudioService {
 
   private async applySwitchRecordingDevice(deviceId: string | undefined): Promise<void> {
     if (this.currentRecordingDeviceId === deviceId) {
-      console.debug(`[Sokuji] [ModernBrowserAudio] Already using device: ${deviceId}`);
+      console.debug(`[MAO Chat] [ModernBrowserAudio] Already using device: ${deviceId}`);
       return;
     }
 
-    console.info(`[Sokuji] [ModernBrowserAudio] Switching recording device from ${this.currentRecordingDeviceId} to ${deviceId}`);
+    console.info(`[MAO Chat] [ModernBrowserAudio] Switching recording device from ${this.currentRecordingDeviceId} to ${deviceId}`);
     
     // Save the current recording state
     const wasRecording = this.recorder.getStatus() === 'recording';
@@ -981,16 +981,16 @@ export class ModernBrowserAudioService implements IAudioService {
       // Check if platform supports system audio capture
       const supported = await window.electron.invoke('supports-system-audio-capture');
       if (!supported) {
-        console.info('[Sokuji] [ModernBrowserAudio] System audio capture not supported on this platform');
+        console.info('[MAO Chat] [ModernBrowserAudio] System audio capture not supported on this platform');
         return [];
       }
 
       // Get list of audio sinks from the main process
       const sources = await window.electron.invoke('list-system-audio-sources');
-      console.info('[Sokuji] [ModernBrowserAudio] Found system audio sources:', sources?.length || 0);
+      console.info('[MAO Chat] [ModernBrowserAudio] Found system audio sources:', sources?.length || 0);
       return sources || [];
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error getting system audio sources:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error getting system audio sources:', error);
       return [];
     }
   }
@@ -1007,7 +1007,7 @@ export class ModernBrowserAudioService implements IAudioService {
     }
 
     try {
-      console.info(`[Sokuji] [ModernBrowserAudio] Connecting system audio source: ${sourceDeviceId}`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Connecting system audio source: ${sourceDeviceId}`);
       const result = await window.electron.invoke('connect-system-audio-source', sourceDeviceId);
 
       if (result?.success === false) {
@@ -1026,7 +1026,7 @@ export class ModernBrowserAudioService implements IAudioService {
         this.currentMonitorDeviceId = await this.resolveMonitorDeviceId(result.monitorLabel);
         if (!this.currentMonitorDeviceId) {
           console.warn(
-            '[Sokuji] [ModernBrowserAudio] Application capture monitor not found; ' +
+            '[MAO Chat] [ModernBrowserAudio] Application capture monitor not found; ' +
             'falling back to whole-system audio'
           );
         }
@@ -1036,9 +1036,9 @@ export class ModernBrowserAudioService implements IAudioService {
       this.systemAudioSourceConnected = true;
       this.currentSystemAudioSinkId = sourceDeviceId;
 
-      console.info(`[Sokuji] [ModernBrowserAudio] System audio source connected: ${sourceDeviceId}`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] System audio source connected: ${sourceDeviceId}`);
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Failed to connect system audio source:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Failed to connect system audio source:', error);
       // Reset state on failure
       this.systemAudioSourceConnected = false;
       this.currentSystemAudioSinkId = undefined;
@@ -1075,7 +1075,7 @@ export class ModernBrowserAudioService implements IAudioService {
    * Called when user deselects the system audio device
    */
   public async disconnectSystemAudioSource(): Promise<void> {
-    console.info('[Sokuji] [ModernBrowserAudio] Disconnecting system audio source');
+    console.info('[MAO Chat] [ModernBrowserAudio] Disconnecting system audio source');
 
     // Stop recording first if active
     if (this.systemAudioRecordingActive) {
@@ -1087,7 +1087,7 @@ export class ModernBrowserAudioService implements IAudioService {
       try {
         await window.electron.invoke('disconnect-system-audio-source');
       } catch (error) {
-        console.warn('[Sokuji] [ModernBrowserAudio] Error disconnecting system audio source:', error);
+        console.warn('[MAO Chat] [ModernBrowserAudio] Error disconnecting system audio source:', error);
       }
     }
 
@@ -1095,7 +1095,7 @@ export class ModernBrowserAudioService implements IAudioService {
     this.currentSystemAudioSinkId = undefined;
     this.currentCaptureMode = 'system';
     this.currentMonitorDeviceId = null;
-    console.info('[Sokuji] [ModernBrowserAudio] System audio source disconnected');
+    console.info('[MAO Chat] [ModernBrowserAudio] System audio source disconnected');
   }
 
   /**
@@ -1130,7 +1130,7 @@ export class ModernBrowserAudioService implements IAudioService {
         // getDisplayMedia so an unbuilt helper does not kill the session.
         if (!isApplicationSource(this.currentSystemAudioSinkId)) {
           console.warn(
-            '[Sokuji] [ModernBrowserAudio] Application helper failed for system capture; falling back to loopback:',
+            '[MAO Chat] [ModernBrowserAudio] Application helper failed for system capture; falling back to loopback:',
             error
           );
           await this.startLoopbackRecording(callback);
@@ -1154,7 +1154,7 @@ export class ModernBrowserAudioService implements IAudioService {
    */
   private async startLoopbackRecording(callback: AudioRecordingCallback): Promise<void> {
     try {
-      console.info(`[Sokuji] [ModernBrowserAudio] Starting system audio recording via electron-audio-loopback`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Starting system audio recording via electron-audio-loopback`);
 
       // Create loopback recorder (uses electron-audio-loopback library)
       this.systemAudioRecorder = new LoopbackRecorder(24000);
@@ -1174,9 +1174,9 @@ export class ModernBrowserAudioService implements IAudioService {
       });
 
       this.systemAudioRecordingActive = true;
-      console.info(`[Sokuji] [ModernBrowserAudio] System audio recording started successfully`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] System audio recording started successfully`);
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Failed to start loopback recording:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Failed to start loopback recording:', error);
       // Clean up on failure
       await this.stopSystemAudioRecording();
       throw error;
@@ -1192,7 +1192,7 @@ export class ModernBrowserAudioService implements IAudioService {
     callback: AudioRecordingCallback
   ): Promise<void> {
     try {
-      console.info(`[Sokuji] [ModernBrowserAudio] Starting application capture from device ${deviceId}`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Starting application capture from device ${deviceId}`);
       this.systemAudioRecorder = new DeviceCaptureRecorder(24000);
       this.systemAudioCallback = callback;
 
@@ -1205,9 +1205,9 @@ export class ModernBrowserAudioService implements IAudioService {
       });
 
       this.systemAudioRecordingActive = true;
-      console.info('[Sokuji] [ModernBrowserAudio] Device audio capture started');
+      console.info('[MAO Chat] [ModernBrowserAudio] Device audio capture started');
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Failed to start device capture:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Failed to start device capture:', error);
       await this.stopSystemAudioRecording();
       throw error;
     }
@@ -1224,7 +1224,7 @@ export class ModernBrowserAudioService implements IAudioService {
     callback: AudioRecordingCallback
   ): Promise<void> {
     try {
-      console.info(`[Sokuji] [ModernBrowserAudio] Starting application capture for ${deviceId}`);
+      console.info(`[MAO Chat] [ModernBrowserAudio] Starting application capture for ${deviceId}`);
       const recorder = new AppAudioRecorder(24000);
       this.systemAudioRecorder = recorder;
       this.systemAudioCallback = callback;
@@ -1232,14 +1232,14 @@ export class ModernBrowserAudioService implements IAudioService {
       recorder.onWarning = (code) => this.onParticipantWarning?.(code);
 
       recorder.onLost = () => {
-        console.warn('[Sokuji] [ModernBrowserAudio] Capture helper lost; falling back to system audio');
+        console.warn('[MAO Chat] [ModernBrowserAudio] Capture helper lost; falling back to system audio');
         this.currentCaptureMode = 'system';
         // The user chose one application; this widens capture to everything the
         // machine plays, so audio they never meant to share starts reaching the
         // translation provider. That has to be visible, not just logged.
         this.onParticipantWarning?.('app_capture_lost_using_system_audio');
         this.startSystemAudioRecording(callback).catch((e) =>
-          console.error('[Sokuji] [ModernBrowserAudio] Fallback to system audio failed:', e));
+          console.error('[MAO Chat] [ModernBrowserAudio] Fallback to system audio failed:', e));
       };
 
       const success = await recorder.begin({ deviceId });
@@ -1254,9 +1254,9 @@ export class ModernBrowserAudioService implements IAudioService {
       });
 
       this.systemAudioRecordingActive = true;
-      console.info('[Sokuji] [ModernBrowserAudio] Application capture started');
+      console.info('[MAO Chat] [ModernBrowserAudio] Application capture started');
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Failed to start application capture:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Failed to start application capture:', error);
       await this.stopSystemAudioRecording();
       throw error;
     }
@@ -1286,12 +1286,12 @@ export class ModernBrowserAudioService implements IAudioService {
 
   private async applyParticipantSource(sourceDeviceId: string): Promise<void> {
     if (this.currentSystemAudioSinkId === sourceDeviceId) {
-      console.debug(`[Sokuji] [ModernBrowserAudio] Participant source unchanged: ${sourceDeviceId}`);
+      console.debug(`[MAO Chat] [ModernBrowserAudio] Participant source unchanged: ${sourceDeviceId}`);
       return;
     }
 
     console.info(
-      `[Sokuji] [ModernBrowserAudio] Switching participant source from ` +
+      `[MAO Chat] [ModernBrowserAudio] Switching participant source from ` +
       `${this.currentSystemAudioSinkId} to ${sourceDeviceId}`
     );
 
@@ -1312,7 +1312,7 @@ export class ModernBrowserAudioService implements IAudioService {
       // happened; without putting the previous source back the session would
       // keep running with no participant audio at all.
       console.warn(
-        `[Sokuji] [ModernBrowserAudio] Failed to connect ${sourceDeviceId}; ` +
+        `[MAO Chat] [ModernBrowserAudio] Failed to connect ${sourceDeviceId}; ` +
         `restoring ${previousSourceId ?? 'whole-system capture'}`
       );
       const fallback = previousSourceId ?? 'desktop-audio-loopback';
@@ -1320,7 +1320,7 @@ export class ModernBrowserAudioService implements IAudioService {
         await this.connectSystemAudioSource(fallback);
         if (savedCallback) await this.startSystemAudioRecording(savedCallback);
       } catch (restoreError) {
-        console.error('[Sokuji] [ModernBrowserAudio] Restore failed too:', restoreError);
+        console.error('[MAO Chat] [ModernBrowserAudio] Restore failed too:', restoreError);
       }
       throw error;
     }
@@ -1335,7 +1335,7 @@ export class ModernBrowserAudioService implements IAudioService {
    * Called when session ends
    */
   public async stopSystemAudioRecording(): Promise<void> {
-    console.info('[Sokuji] [ModernBrowserAudio] Stopping system audio recording');
+    console.info('[MAO Chat] [ModernBrowserAudio] Stopping system audio recording');
 
     if (this.systemAudioRecorder) {
       // Detach the fallback before ending: end() kills the capture helper, and
@@ -1346,14 +1346,14 @@ export class ModernBrowserAudioService implements IAudioService {
       try {
         await this.systemAudioRecorder.end();
       } catch (error) {
-        console.warn('[Sokuji] [ModernBrowserAudio] Error ending system audio recorder:', error);
+        console.warn('[MAO Chat] [ModernBrowserAudio] Error ending system audio recorder:', error);
       }
       this.systemAudioRecorder = null;
     }
 
     this.systemAudioCallback = null;
     this.systemAudioRecordingActive = false;
-    console.info('[Sokuji] [ModernBrowserAudio] System audio recording stopped');
+    console.info('[MAO Chat] [ModernBrowserAudio] System audio recording stopped');
   }
 
   /**
@@ -1381,39 +1381,39 @@ export class ModernBrowserAudioService implements IAudioService {
 
     // Check if running in Electron
     if (!ServiceFactory.isElectron() || !window.electron) {
-      console.info('[Sokuji] [ModernBrowserAudio] requestLoopbackAudioStream: Not in Electron, skipping');
+      console.info('[MAO Chat] [ModernBrowserAudio] requestLoopbackAudioStream: Not in Electron, skipping');
       return true;
     }
 
     try {
-      console.info('[Sokuji] [ModernBrowserAudio] Checking screen recording permission...');
+      console.info('[MAO Chat] [ModernBrowserAudio] Checking screen recording permission...');
 
       // Check screen recording permission (macOS only, Windows always returns 'granted')
       const permissionResult = await window.electron.invoke('check-screen-recording-permission');
-      console.info('[Sokuji] [ModernBrowserAudio] Screen recording permission check result:', permissionResult);
+      console.info('[MAO Chat] [ModernBrowserAudio] Screen recording permission check result:', permissionResult);
 
       // Permission already granted - no need to show dialog
       if (permissionResult.status === 'granted') {
-        console.info('[Sokuji] [ModernBrowserAudio] Screen recording permission already granted');
+        console.info('[MAO Chat] [ModernBrowserAudio] Screen recording permission already granted');
         return true;
       }
 
       // Permission explicitly denied - user must manually enable in System Preferences
       // Don't try to call enable-loopback-audio because it will crash the app with unhandled rejection
       if (permissionResult.status === 'denied') {
-        console.warn('[Sokuji] [ModernBrowserAudio] Screen recording permission denied. User must enable in System Preferences.');
+        console.warn('[MAO Chat] [ModernBrowserAudio] Screen recording permission denied. User must enable in System Preferences.');
         return false;
       }
 
       console.info(
-        '[Sokuji] [ModernBrowserAudio] Screen recording permission is',
+        '[MAO Chat] [ModernBrowserAudio] Screen recording permission is',
         permissionResult.status,
         '- deferring the one permission request to LoopbackRecorder',
       );
       return true;
 
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error checking screen recording permission:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error checking screen recording permission:', error);
       return false;
     }
   }
@@ -1474,7 +1474,7 @@ export class ModernBrowserAudioService implements IAudioService {
         };
       });
     } catch (error) {
-      console.warn('[Sokuji] [ModernBrowserAudio] listBrowserTabs failed:', error);
+      console.warn('[MAO Chat] [ModernBrowserAudio] listBrowserTabs failed:', error);
       return [];
     }
   }
@@ -1495,7 +1495,7 @@ export class ModernBrowserAudioService implements IAudioService {
     }
     const previous = this.targetTabId;
     this.targetTabId = tabId;
-    console.info('[Sokuji] [ModernBrowserAudio] Target tab set to', tabId, '(was', previous, ')');
+    console.info('[MAO Chat] [ModernBrowserAudio] Target tab set to', tabId, '(was', previous, ')');
 
     // Mid-session switch: tear down and re-acquire the new tab's audio.
     if (this.tabAudioRecordingActive && this.tabAudioCallback) {
@@ -1529,7 +1529,7 @@ export class ModernBrowserAudioService implements IAudioService {
         }
       }
     } catch (error) {
-      console.error('[Sokuji] [ModernBrowserAudio] Error getting tabId:', error);
+      console.error('[MAO Chat] [ModernBrowserAudio] Error getting tabId:', error);
     }
 
     // Side panel often loads as chrome-extension://…/fullpage.html without
@@ -1554,7 +1554,7 @@ export class ModernBrowserAudioService implements IAudioService {
         return this.targetTabId;
       }
     } catch (error) {
-      console.warn('[Sokuji] [ModernBrowserAudio] RESOLVE_CAPTURE_TAB failed:', error);
+      console.warn('[MAO Chat] [ModernBrowserAudio] RESOLVE_CAPTURE_TAB failed:', error);
     }
 
     return null;
@@ -1584,7 +1584,7 @@ export class ModernBrowserAudioService implements IAudioService {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         console.info(
-          `[Sokuji] [ModernBrowserAudio] Starting tab audio recording (attempt ${attempt}/${maxAttempts})`,
+          `[MAO Chat] [ModernBrowserAudio] Starting tab audio recording (attempt ${attempt}/${maxAttempts})`,
         );
 
         // Get the target tab ID (picker / URL param / background resolve)
@@ -1613,12 +1613,12 @@ export class ModernBrowserAudioService implements IAudioService {
         });
 
         this.tabAudioRecordingActive = true;
-        console.info('[Sokuji] [ModernBrowserAudio] Tab audio recording started successfully');
+        console.info('[MAO Chat] [ModernBrowserAudio] Tab audio recording started successfully');
         return;
       } catch (error) {
         lastError = error;
         console.error(
-          `[Sokuji] [ModernBrowserAudio] Failed to start tab audio recording (attempt ${attempt}):`,
+          `[MAO Chat] [ModernBrowserAudio] Failed to start tab audio recording (attempt ${attempt}):`,
           error,
         );
         await this.stopTabAudioRecording();
@@ -1640,20 +1640,20 @@ export class ModernBrowserAudioService implements IAudioService {
    * Called when session ends
    */
   public async stopTabAudioRecording(): Promise<void> {
-    console.info('[Sokuji] [ModernBrowserAudio] Stopping tab audio recording');
+    console.info('[MAO Chat] [ModernBrowserAudio] Stopping tab audio recording');
 
     if (this.tabAudioRecorder) {
       try {
         await this.tabAudioRecorder.end();
       } catch (error) {
-        console.warn('[Sokuji] [ModernBrowserAudio] Error ending tab audio recorder:', error);
+        console.warn('[MAO Chat] [ModernBrowserAudio] Error ending tab audio recorder:', error);
       }
       this.tabAudioRecorder = null;
     }
 
     this.tabAudioCallback = null;
     this.tabAudioRecordingActive = false;
-    console.info('[Sokuji] [ModernBrowserAudio] Tab audio recording stopped');
+    console.info('[MAO Chat] [ModernBrowserAudio] Tab audio recording stopped');
   }
 
   /**
@@ -1688,13 +1688,13 @@ export class ModernBrowserAudioService implements IAudioService {
   ): Promise<void> {
     // Extension environment: use tab audio capture
     if (isExtension()) {
-      console.info('[Sokuji] [ModernBrowserAudio] Starting participant audio via tab capture');
+      console.info('[MAO Chat] [ModernBrowserAudio] Starting participant audio via tab capture');
       return this.startTabAudioRecording(callback, options?.outputDeviceId);
     }
 
     // Electron environment: use system audio capture
     if (this.systemAudioSourceConnected) {
-      console.info('[Sokuji] [ModernBrowserAudio] Starting participant audio via system audio');
+      console.info('[MAO Chat] [ModernBrowserAudio] Starting participant audio via system audio');
       return this.startSystemAudioRecording(callback);
     }
 
@@ -1707,16 +1707,16 @@ export class ModernBrowserAudioService implements IAudioService {
   public async stopParticipantAudioRecording(): Promise<void> {
     // Stop whichever recording is active
     if (this.tabAudioRecordingActive) {
-      console.info('[Sokuji] [ModernBrowserAudio] Stopping participant audio (tab capture)');
+      console.info('[MAO Chat] [ModernBrowserAudio] Stopping participant audio (tab capture)');
       return this.stopTabAudioRecording();
     }
 
     if (this.systemAudioRecordingActive) {
-      console.info('[Sokuji] [ModernBrowserAudio] Stopping participant audio (system audio)');
+      console.info('[MAO Chat] [ModernBrowserAudio] Stopping participant audio (system audio)');
       return this.stopSystemAudioRecording();
     }
 
-    console.info('[Sokuji] [ModernBrowserAudio] No participant audio recording to stop');
+    console.info('[MAO Chat] [ModernBrowserAudio] No participant audio recording to stop');
   }
 
   /**

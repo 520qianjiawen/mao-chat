@@ -152,14 +152,14 @@ class NativeHostManager {
         if (port) {
           // Duration in the log = the field observability for "engine starts
           // slowly" reports (normal ~0.2s; post-install writeback can stretch it).
-          console.log(`[Sokuji] [native-host] handshake in ${Date.now() - spawnedAt} ms (source: ${launch.source}, port ${port})`);
+          console.log(`[MAO Chat] [native-host] handshake in ${Date.now() - spawnedAt} ms (source: ${launch.source}, port ${port})`);
           this.port = port; rl.off('line', onLine); resolve({ port });
         }
       };
       rl.on('line', onLine);
-      child.stderr.on('data', (d) => console.error('[Sokuji] [native-host]', d.toString().trim()));
+      child.stderr.on('data', (d) => console.error('[MAO Chat] [native-host]', d.toString().trim()));
       child.on('exit', (code) => {
-        console.warn('[Sokuji] [native-host] exited', code);
+        console.warn('[MAO Chat] [native-host] exited', code);
         const preHandshake = !this.port;
         this.proc = null; this.port = null; this._starting = null;
         // A crash before the handshake must fail fast — without this the

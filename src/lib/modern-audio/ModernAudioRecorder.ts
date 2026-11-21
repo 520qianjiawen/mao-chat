@@ -94,7 +94,7 @@ export class ModernAudioRecorder extends BaseAudioRecorder {
   }
 
   protected getLogPrefix(): string {
-    return '[Sokuji] [ModernAudioRecorder]';
+    return '[MAO Chat] [ModernAudioRecorder]';
   }
 
   protected shouldConnectToDestination(): boolean {

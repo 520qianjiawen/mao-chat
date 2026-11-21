@@ -17,28 +17,28 @@ const audioHost = require('./audio-host.js');
  */
 async function createVirtualAudioDevices() {
   try {
-    console.log('[Sokuji] [macOS Audio] Checking for Sokuji Virtual Audio devices...');
+    console.log('[MAO Chat] [macOS Audio] Checking for Sokuji Virtual Audio devices...');
 
     // Check if our custom driver is installed
     const isInstalled = await isSokujiVirtualAudioInstalled();
 
     if (isInstalled) {
-      console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio is installed and ready');
+      console.log('[MAO Chat] [macOS Audio] Sokuji Virtual Audio is installed and ready');
       return true;
     }
 
-    console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio not detected');
-    console.log('[Sokuji] [macOS Audio] Virtual audio driver not found. This may happen if:');
-    console.log('[Sokuji] [macOS Audio] - The application was not installed via the official PKG installer');
-    console.log('[Sokuji] [macOS Audio] - The PKG installer driver installation failed');
-    console.log('[Sokuji] [macOS Audio] - macOS security settings blocked the driver');
-    console.log('[Sokuji] [macOS Audio] - System requires restart to load the driver');
-    console.log('[Sokuji] [macOS Audio] Please reinstall Sokuji using the official PKG installer');
-    console.log('[Sokuji] [macOS Audio] If the problem persists, try restarting your Mac');
-    console.log('[Sokuji] [macOS Audio] Application will continue without virtual microphone support');
+    console.log('[MAO Chat] [macOS Audio] Sokuji Virtual Audio not detected');
+    console.log('[MAO Chat] [macOS Audio] Virtual audio driver not found. This may happen if:');
+    console.log('[MAO Chat] [macOS Audio] - The application was not installed via the official PKG installer');
+    console.log('[MAO Chat] [macOS Audio] - The PKG installer driver installation failed');
+    console.log('[MAO Chat] [macOS Audio] - macOS security settings blocked the driver');
+    console.log('[MAO Chat] [macOS Audio] - System requires restart to load the driver');
+    console.log('[MAO Chat] [macOS Audio] Please reinstall Sokuji using the official PKG installer');
+    console.log('[MAO Chat] [macOS Audio] If the problem persists, try restarting your Mac');
+    console.log('[MAO Chat] [macOS Audio] Application will continue without virtual microphone support');
     return false;
   } catch (error) {
-    console.error('[Sokuji] [macOS Audio] Error checking virtual audio devices:', error);
+    console.error('[MAO Chat] [macOS Audio] Error checking virtual audio devices:', error);
     return false;
   }
 }
@@ -48,8 +48,8 @@ async function createVirtualAudioDevices() {
  * Note: Sokuji Virtual Audio devices are system-level and don't need cleanup
  */
 function removeVirtualAudioDevices() {
-  console.log('[Sokuji] [macOS Audio] Virtual audio device cleanup...');
-  console.log('[Sokuji] [macOS Audio] Note: Sokuji Virtual Audio devices are system-level and persist after application exit');
+  console.log('[MAO Chat] [macOS Audio] Virtual audio device cleanup...');
+  console.log('[MAO Chat] [macOS Audio] Note: Sokuji Virtual Audio devices are system-level and persist after application exit');
   // Sokuji Virtual Audio doesn't require cleanup - it's a system driver
 }
 
@@ -59,18 +59,18 @@ function removeVirtualAudioDevices() {
  */
 async function isMacOSAudioAvailable() {
   try {
-    console.log('[Sokuji] [macOS Audio] Checking Core Audio availability...');
+    console.log('[MAO Chat] [macOS Audio] Checking Core Audio availability...');
 
     // Check if we can list audio devices using system_profiler
     const { stdout } = await execPromise('system_profiler SPAudioDataType 2>/dev/null');
 
     // Core Audio is available if we can get audio device information
     const isAvailable = stdout.includes('Audio:') || stdout.includes('Devices:');
-    console.log('[Sokuji] [macOS Audio] Core Audio available:', isAvailable);
+    console.log('[MAO Chat] [macOS Audio] Core Audio available:', isAvailable);
 
     return isAvailable;
   } catch (error) {
-    console.error('[Sokuji] [macOS Audio] Error checking Core Audio availability:', error);
+    console.error('[MAO Chat] [macOS Audio] Error checking Core Audio availability:', error);
     return false;
   }
 }
@@ -81,15 +81,15 @@ async function isMacOSAudioAvailable() {
  * @returns {Promise<boolean>} Always returns true
  */
 async function cleanupOrphanedDevices() {
-  console.log('[Sokuji] [macOS Audio] Orphaned device check...');
-  console.log('[Sokuji] [macOS Audio] Sokuji Virtual Audio manages its own state automatically');
+  console.log('[MAO Chat] [macOS Audio] Orphaned device check...');
+  console.log('[MAO Chat] [macOS Audio] Sokuji Virtual Audio manages its own state automatically');
 
   // Check if there are any stuck audio processes we should clean
   try {
     // Kill any orphaned coreaudiod processes if needed (rare)
     const { stdout } = await execPromise('ps aux | grep -i "sokuji.*audio" | grep -v grep');
     if (stdout) {
-      console.log('[Sokuji] [macOS Audio] Found Sokuji Virtual Audio-related processes:', stdout.trim());
+      console.log('[MAO Chat] [macOS Audio] Found Sokuji Virtual Audio-related processes:', stdout.trim());
     }
   } catch (error) {
     // No processes found, which is fine
@@ -179,7 +179,7 @@ async function isSokujiVirtualAudioInstalled() {
  */
 async function getAudioDevices() {
   try {
-    console.log('[Sokuji] [macOS Audio] Enumerating audio devices...');
+    console.log('[MAO Chat] [macOS Audio] Enumerating audio devices...');
 
     const inputs = [];
     const outputs = [];
@@ -238,14 +238,14 @@ async function getAudioDevices() {
       });
     }
 
-    console.log(`[Sokuji] [macOS Audio] Found ${inputs.length} input devices and ${outputs.length} output devices`);
+    console.log(`[MAO Chat] [macOS Audio] Found ${inputs.length} input devices and ${outputs.length} output devices`);
 
     return {
       inputs,
       outputs
     };
   } catch (error) {
-    console.error('[Sokuji] [macOS Audio] Error enumerating audio devices:', error);
+    console.error('[MAO Chat] [macOS Audio] Error enumerating audio devices:', error);
     return {
       inputs: [],
       outputs: [],
@@ -264,7 +264,7 @@ async function getAudioDevices() {
  * @returns {Promise<boolean>} True if system audio capture is supported
  */
 async function supportsSystemAudioCapture() {
-  console.log('[Sokuji] [macOS Audio] System audio capture is supported via electron-audio-loopback');
+  console.log('[MAO Chat] [macOS Audio] System audio capture is supported via electron-audio-loopback');
   return true;
 }
 
@@ -284,9 +284,9 @@ async function listSystemAudioSources({ host = audioHost } = {}) {
   try {
     apps = await host.listAppSources();
   } catch (e) {
-    console.warn('[Sokuji] [macOS Audio] Application source listing failed:', e.message);
+    console.warn('[MAO Chat] [macOS Audio] Application source listing failed:', e.message);
   }
-  console.log(`[Sokuji] [macOS Audio] Listing system audio sources: ${apps.length} application(s)`);
+  console.log(`[MAO Chat] [macOS Audio] Listing system audio sources: ${apps.length} application(s)`);
   return [system, ...apps];
 }
 
@@ -299,7 +299,7 @@ async function listSystemAudioSources({ host = audioHost } = {}) {
  * @returns {Promise<{success: boolean, capture: 'app'|'system', error?: string}>}
  */
 async function connectSystemAudioSource(sourceId, { host = audioHost } = {}) {
-  console.log(`[Sokuji] [macOS Audio] Connect system audio source: ${sourceId}`);
+  console.log(`[MAO Chat] [macOS Audio] Connect system audio source: ${sourceId}`);
   // Both paths go through the helper on macOS when it is present. Whole-system
   // capture used to use getDisplayMedia, which requires Screen Recording; a
   // global Core Audio tap does the same job under the audio-capture grant the
@@ -314,7 +314,7 @@ async function connectSystemAudioSource(sourceId, { host = audioHost } = {}) {
  * @returns {Promise<{success: boolean}>} Result object
  */
 async function disconnectSystemAudioSource({ host = audioHost } = {}) {
-  console.log('[Sokuji] [macOS Audio] Disconnect system audio source');
+  console.log('[MAO Chat] [macOS Audio] Disconnect system audio source');
   host.stopCapture();
   return { success: true };
 }

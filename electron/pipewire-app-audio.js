@@ -237,7 +237,7 @@ async function listAppSources({ exec = defaultExec, windowTitles = listWindowTit
       // let the user capture Sokuji's own tap.
       .filter((s) => s.label !== CAPTURE_SINK_DESCRIPTION);
   } catch (e) {
-    console.warn('[Sokuji] [PipeWire] Failed to list application audio sources:', e.message);
+    console.warn('[MAO Chat] [PipeWire] Failed to list application audio sources:', e.message);
     return [];
   }
 
@@ -248,7 +248,7 @@ async function listAppSources({ exec = defaultExec, windowTitles = listWindowTit
   try {
     titles = await windowTitles();
   } catch (e) {
-    console.warn('[Sokuji] [PipeWire] Window titles unavailable:', e.message);
+    console.warn('[MAO Chat] [PipeWire] Window titles unavailable:', e.message);
   }
 
   return streams.map((s) => {
@@ -382,7 +382,7 @@ async function disconnectAppSourceUnsafe({ exec = defaultExec } = {}) {
     try {
       await exec(`pactl unload-module ${captureSourceModuleId}`);
     } catch (e) {
-      console.warn('[Sokuji] [PipeWire] Failed to unload capture source:', e.message);
+      console.warn('[MAO Chat] [PipeWire] Failed to unload capture source:', e.message);
     }
     captureSourceModuleId = null;
   }
@@ -390,7 +390,7 @@ async function disconnectAppSourceUnsafe({ exec = defaultExec } = {}) {
     try {
       await exec(`pactl unload-module ${captureModuleId}`);
     } catch (e) {
-      console.warn('[Sokuji] [PipeWire] Failed to unload capture sink:', e.message);
+      console.warn('[MAO Chat] [PipeWire] Failed to unload capture sink:', e.message);
     }
     captureModuleId = null;
   }

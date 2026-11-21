@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Per favore non selezionare questo dispositivo qui. Invece, usa questo microfono virtuale nelle tue applicazioni di videoconferenza (come Google Meet, Zoom, Microsoft Teams, ecc.) per ricevere l'output di traduzione vocale in tempo reale.",
     "virtualMicWarningText2": "Perché MAO Chat funzioni correttamente, seleziona il tuo microfono fisico reale dall'elenco.",
     "virtualSpeakerWarningTitle": "Questo è un altoparlante virtuale creato da MAO Chat.",
-    "virtualSpeakerWarningText1": "Per favore non selezionare questo dispositivo come monitor. Il Sokuji_Virtual_Speaker è usato da MAO Chat per inviare audio alle tue applicazioni di conferenza.",
+    "virtualSpeakerWarningText1": "Per favore non selezionare questo dispositivo come monitor. Il MAO_Virtual_Speaker è usato da MAO Chat per inviare audio alle tue applicazioni di conferenza.",
     "virtualSpeakerWarningText2": "Collegare il tuo monitor al dispositivo di output di MAO Chat creerebbe un loop di feedback audio, causando che il tuo input contenga il tuo stesso output monitorato.",
     "virtualSpeakerWarningText3": "L'interruttore \"Accendi\" collega l'altoparlante virtuale al tuo dispositivo monitor selezionato, permettendoti di sentire cosa viene inviato alla tua applicazione di conferenza. L'interruttore \"Spegni\" disconnette questa connessione di monitoraggio.",
     "virtualSpeakerWarningText4": "Per un funzionamento corretto, seleziona un dispositivo monitor diverso (come le tue cuffie o altoparlanti) dall'elenco.",

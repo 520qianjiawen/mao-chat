@@ -226,12 +226,12 @@ export class EphemeralTokenService {
         : data.client_secret?.value;
       const secret = flatValue ?? nestedValue;
       if (!secret) {
-        console.error('[Sokuji] [EphemeralTokenService] Unexpected client_secret response shape:', data);
+        console.error('[MAO Chat] [EphemeralTokenService] Unexpected client_secret response shape:', data);
         throw new Error('Translation client_secret missing from response');
       }
       return secret;
     } catch (error) {
-      console.error('[Sokuji] [EphemeralTokenService] Error minting translation client secret:', error);
+      console.error('[MAO Chat] [EphemeralTokenService] Error minting translation client secret:', error);
       throw error;
     }
   }

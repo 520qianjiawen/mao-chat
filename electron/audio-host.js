@@ -62,7 +62,7 @@ async function listAppSources({ spawn = nodeSpawn, resolvePath = resolveAudioHos
     // and the only visible symptom would be a source list with nothing in it.
     if (process.platform !== 'linux') {
       console.warn(
-        '[Sokuji] [AudioHost] Capture helper not found; per-application capture ' +
+        '[MAO Chat] [AudioHost] Capture helper not found; per-application capture ' +
         'is unavailable. Run `npm run build:audio-host` (CI does this before packaging).'
       );
     }

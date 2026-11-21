@@ -15,7 +15,7 @@ import { ParticipantAudioOptions } from './IParticipantAudioRecorder';
  */
 export class DeviceCaptureRecorder extends ParticipantRecorder {
   protected getLogPrefix(): string {
-    return '[Sokuji] [DeviceCaptureRecorder]';
+    return '[MAO Chat] [DeviceCaptureRecorder]';
   }
 
   /**

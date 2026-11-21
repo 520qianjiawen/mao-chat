@@ -33,14 +33,14 @@ if (process.platform === 'linux') {
   // For other platforms, provide stub implementations
   audioUtils = {
     createVirtualAudioDevices: async () => {
-      console.log('[Sokuji] [Main] Virtual audio devices not supported on this platform');
+      console.log('[MAO Chat] [Main] Virtual audio devices not supported on this platform');
       return false;
     },
     removeVirtualAudioDevices: () => {
-      console.log('[Sokuji] [Main] Virtual audio device cleanup not needed on this platform');
+      console.log('[MAO Chat] [Main] Virtual audio device cleanup not needed on this platform');
     },
     cleanupOrphanedDevices: async () => {
-      console.log('[Sokuji] [Main] No orphaned devices to clean on this platform');
+      console.log('[MAO Chat] [Main] No orphaned devices to clean on this platform');
       return true;
     }
   };
@@ -63,13 +63,13 @@ const {
 {
   const { initMain } = require('electron-audio-loopback');
   initMain();
-  console.log('[Sokuji] [Main] electron-audio-loopback initialized for', process.platform);
+  console.log('[MAO Chat] [Main] electron-audio-loopback initialized for', process.platform);
 }
 
 // Set application name for PulseAudio
 app.setName('MAO Chat');
 app.commandLine.appendSwitch('application-name', 'MAO Chat');
-app.commandLine.appendSwitch('jack-name', 'sokuji');
+app.commandLine.appendSwitch('jack-name', 'mao-chat');
 
 // Enable WebGPU for ONNX Runtime acceleration
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
@@ -360,10 +360,10 @@ function createWindow() {
 
   // Set custom User Agent for the window
   mainWindow.webContents.setUserAgent(customUserAgent);
-  console.log('[Sokuji] [Main] Custom User Agent set:', customUserAgent);
+  console.log('[MAO Chat] [Main] Custom User Agent set:', customUserAgent);
 
   // Load the app
-  console.log('[Sokuji] [Main] Development mode:', isDev, 'MODE:', import.meta.env.MODE, 'isPackaged:', app.isPackaged);
+  console.log('[MAO Chat] [Main] Development mode:', isDev, 'MODE:', import.meta.env.MODE, 'isPackaged:', app.isPackaged);
   
   // Track window load time
   const loadStartTime = Date.now();
@@ -371,7 +371,7 @@ function createWindow() {
   // Add performance tracking for page load
   mainWindow.webContents.on('did-finish-load', () => {
     const loadEndTime = Date.now();
-    console.log(`[Sokuji] [Main] Page loaded in ${loadEndTime - loadStartTime}ms`);
+    console.log(`[MAO Chat] [Main] Page loaded in ${loadEndTime - loadStartTime}ms`);
 
     // Forward the virtual-audio-device status computed during startup, now
     // that the renderer is actually able to receive it.
@@ -382,15 +382,15 @@ function createWindow() {
   
   mainWindow.webContents.on('dom-ready', () => {
     const domReadyTime = Date.now();
-    console.log(`[Sokuji] [Main] DOM ready in ${domReadyTime - loadStartTime}ms`);
+    console.log(`[MAO Chat] [Main] DOM ready in ${domReadyTime - loadStartTime}ms`);
   });
   
   if (isDev) {
-    console.log(`[Sokuji] [Main] Loading from http://localhost:5173 at ${loadStartTime}`);
+    console.log(`[MAO Chat] [Main] Loading from http://localhost:5173 at ${loadStartTime}`);
     mainWindow.loadURL('http://localhost:5173');
   } else {
     const indexPath = path.join(app.getAppPath(), 'build/index.html');
-    console.log('[Sokuji] [Main] Loading from:', indexPath);
+    console.log('[MAO Chat] [Main] Loading from:', indexPath);
     mainWindow.loadFile(indexPath);
   }
 
@@ -430,15 +430,15 @@ app.whenReady().then(async () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8787';
     const origin = isDev ? 'http://localhost:5173' : `file://${__dirname}`;
 
-    console.log(`[Sokuji] [Main] Initializing Better Auth adapter with backend: ${backendUrl}, origin: ${origin}`);
+    console.log(`[MAO Chat] [Main] Initializing Better Auth adapter with backend: ${backendUrl}, origin: ${origin}`);
 
     betterAuthAdapter({
       backendUrl,
       origin
     });
-    console.log('[Sokuji] [Main] Better Auth adapter initialized');
+    console.log('[MAO Chat] [Main] Better Auth adapter initialized');
   } catch (error) {
-    console.error('[Sokuji] [Main] Error initializing Better Auth adapter:', error);
+    console.error('[MAO Chat] [Main] Error initializing Better Auth adapter:', error);
   }
 
   // Initialize WebSocket header injection (must be before any WebSocket connections)
@@ -447,9 +447,9 @@ app.whenReady().then(async () => {
   // Clean up any orphaned devices
   try {
     await cleanupOrphanedDevices();
-    console.log('[Sokuji] [Main] Orphaned devices cleaned up successfully');
+    console.log('[MAO Chat] [Main] Orphaned devices cleaned up successfully');
   } catch (error) {
-    console.error('[Sokuji] [Main] Error cleaning up orphaned devices:', error);
+    console.error('[MAO Chat] [Main] Error cleaning up orphaned devices:', error);
   }
 
   // Start virtual audio devices before creating the window
@@ -457,10 +457,10 @@ app.whenReady().then(async () => {
     const devicesCreated = await createVirtualAudioDevices();
     lastAudioStatus = await buildAudioStatus(devicesCreated);
     if (!devicesCreated) {
-      console.error('[Sokuji] [Main] Virtual audio device status:', lastAudioStatus.reason, '-', lastAudioStatus.message);
+      console.error('[MAO Chat] [Main] Virtual audio device status:', lastAudioStatus.reason, '-', lastAudioStatus.message);
     }
     if (devicesCreated) {
-      console.log('[Sokuji] [Main] Virtual audio devices created successfully');
+      console.log('[MAO Chat] [Main] Virtual audio devices created successfully');
       
       // Connect the virtual speaker to the default output device
       // try {
@@ -473,18 +473,18 @@ app.whenReady().then(async () => {
       //   // Connect virtual speaker to default output
       //   const connected = await connectVirtualSpeakerToOutput(defaultDeviceInfo);
       //   if (connected) {
-      //     console.log('[Sokuji] [Main] Successfully connected virtual speaker to default output device');
+      //     console.log('[MAO Chat] [Main] Successfully connected virtual speaker to default output device');
       //   } else {
-      //     console.error('[Sokuji] [Main] Failed to connect virtual speaker to default output device');
+      //     console.error('[MAO Chat] [Main] Failed to connect virtual speaker to default output device');
       //   }
       // } catch (connectionError) {
-      //   console.error('[Sokuji] [Main] Error connecting virtual speaker to default output:', connectionError);
+      //   console.error('[MAO Chat] [Main] Error connecting virtual speaker to default output:', connectionError);
       // }
     } else {
-      console.error('[Sokuji] [Main] Failed to create virtual audio devices');
+      console.error('[MAO Chat] [Main] Failed to create virtual audio devices');
     }
   } catch (error) {
-    console.error('[Sokuji] [Main] Error creating virtual audio devices:', error);
+    console.error('[MAO Chat] [Main] Error creating virtual audio devices:', error);
     lastAudioStatus = { ok: false, platform: process.platform, reason: 'other', message: error?.message || 'Failed to create virtual audio devices' };
   }
 
@@ -494,13 +494,13 @@ app.whenReady().then(async () => {
   // Request microphone permission on macOS before creating window
   if (process.platform === 'darwin') {
     const micStatus = systemPreferences.getMediaAccessStatus('microphone');
-    console.log('[Sokuji] [Main] Microphone permission status:', micStatus);
+    console.log('[MAO Chat] [Main] Microphone permission status:', micStatus);
 
     if (micStatus === 'not-determined') {
       const granted = await systemPreferences.askForMediaAccess('microphone');
-      console.log('[Sokuji] [Main] Microphone permission granted:', granted);
+      console.log('[MAO Chat] [Main] Microphone permission granted:', granted);
     } else if (micStatus === 'denied') {
-      console.warn('[Sokuji] [Main] Microphone permission denied - please enable in System Preferences > Privacy & Security > Microphone');
+      console.warn('[MAO Chat] [Main] Microphone permission denied - please enable in System Preferences > Privacy & Security > Microphone');
     }
   }
 
@@ -567,30 +567,30 @@ function checkAndPromptAccessibilityOnUpdate(parentWindow) {
       }, 1500);
     }
   } catch (err) {
-    console.warn('[Sokuji] [Main] Error checking accessibility on update:', err);
+    console.warn('[MAO Chat] [Main] Error checking accessibility on update:', err);
   }
 }
 
 // Ensure cleanup happens before app exits
 const cleanupAndExit = () => {
-  console.log('[Sokuji] [Main] Cleaning up virtual audio devices before exit...');
+  console.log('[MAO Chat] [Main] Cleaning up virtual audio devices before exit...');
   removeVirtualAudioDevices();
   try {
     if (typeof disconnectSystemAudioSource === 'function') {
       disconnectSystemAudioSource();
     }
   } catch (error) {
-    console.warn('[Sokuji] [Main] Failed to disconnect system audio source on exit:', error);
+    console.warn('[MAO Chat] [Main] Failed to disconnect system audio source on exit:', error);
   }
   nativeHost.stop();
   cleanupQuickTranslate();
   cleanupTray();
-  console.log('[Sokuji] [Main] Virtual audio devices cleaned up successfully');
+  console.log('[MAO Chat] [Main] Virtual audio devices cleaned up successfully');
 };
 
 // Create a more robust exit handler that ensures cleanup happens
 const handleExit = (signal) => {
-  console.log(`[Sokuji] [Main] Received ${signal} signal. Ensuring cleanup before exit...`);
+  console.log(`[MAO Chat] [Main] Received ${signal} signal. Ensuring cleanup before exit...`);
   
   // Perform cleanup synchronously
   cleanupAndExit();
@@ -610,11 +610,11 @@ app.on('before-quit', () => {
 process.on('SIGINT', () => handleExit('SIGINT'));
 process.on('SIGTERM', () => handleExit('SIGTERM'));
 process.on('uncaughtException', (error) => {
-  console.error('[Sokuji] [Main] Uncaught exception:', error);
+  console.error('[MAO Chat] [Main] Uncaught exception:', error);
   handleExit('uncaughtException');
 });
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Sokuji] [Main] Unhandled rejection at:', promise, 'reason:', reason);
+  console.error('[MAO Chat] [Main] Unhandled rejection at:', promise, 'reason:', reason);
   handleExit('unhandledRejection');
 });
 
@@ -881,10 +881,10 @@ ipcMain.handle('check-audio-system', async () => {
       systemType,
       platform: process.platform,
       note: process.platform === 'win32' ? 'VB-CABLE detection happens in renderer process' :
-            process.platform === 'darwin' ? 'Sokuji Virtual Audio driver installed by PKG installer' : null
+            process.platform === 'darwin' ? 'MAO Chat Virtual Audio driver installed by installer' : null
     };
   } catch (error) {
-    console.error('[Sokuji] [Main] Error checking audio system status:', error);
+    console.error('[MAO Chat] [Main] Error checking audio system status:', error);
     return {
       audioSystemAvailable: false,
       systemType: 'none',
@@ -913,7 +913,7 @@ ipcMain.handle('check-vbcable', async () => {
       };
     }
   } catch (error) {
-    console.error('[Sokuji] [Main] Error in VB-CABLE check:', error);
+    console.error('[MAO Chat] [Main] Error in VB-CABLE check:', error);
     return {
       error: error.message
     };
@@ -924,7 +924,7 @@ ipcMain.handle('check-vbcable', async () => {
 ipcMain.handle('install-vbcable', async () => {
   try {
     if (process.platform === 'win32') {
-      console.log('[Sokuji] [Main] VB-CABLE installation requested from renderer');
+      console.log('[MAO Chat] [Main] VB-CABLE installation requested from renderer');
       const installer = require('./vb-cable-installer');
       const result = await installer.ensureVBCableInstalled();
       return {
@@ -939,7 +939,7 @@ ipcMain.handle('install-vbcable', async () => {
       };
     }
   } catch (error) {
-    console.error('[Sokuji] [Main] Error installing VB-CABLE:', error);
+    console.error('[MAO Chat] [Main] Error installing VB-CABLE:', error);
     return {
       success: false,
       error: error.message
@@ -1013,7 +1013,7 @@ ipcMain.handle('play-file-to-virtual-mic', async (_event, payload) => {
         fs.writeFileSync(filePath, buffer);
         isTemp = true;
       } catch (err) {
-        console.error('[Sokuji] [Main] Error writing temp TTS file for virtual mic:', err);
+        console.error('[MAO Chat] [Main] Error writing temp TTS file for virtual mic:', err);
       }
     } else if (!filePath && payload?.buffer) {
       try {
@@ -1029,7 +1029,7 @@ ipcMain.handle('play-file-to-virtual-mic', async (_event, payload) => {
         fs.writeFileSync(filePath, buffer);
         isTemp = true;
       } catch (err) {
-        console.error('[Sokuji] [Main] Error writing temp TTS file for virtual mic:', err);
+        console.error('[MAO Chat] [Main] Error writing temp TTS file for virtual mic:', err);
       }
     }
 
@@ -1089,7 +1089,7 @@ ipcMain.handle('open-directory', (event, dirPath) => {
     shell.openPath(dirPath);
     return { success: true };
   } catch (error) {
-    console.error('[Sokuji] [Main] Error opening directory:', error);
+    console.error('[MAO Chat] [Main] Error opening directory:', error);
     return { success: false, error: error.message };
   }
 });
@@ -1101,7 +1101,7 @@ ipcMain.handle('open-external', async (event, url) => {
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
-    console.error('[Sokuji] [Main] Error opening external URL:', error);
+    console.error('[MAO Chat] [Main] Error opening external URL:', error);
     return { success: false, error: error.message };
   }
 });
@@ -1120,7 +1120,7 @@ ipcMain.handle('create-virtual-speaker', async () => {
       message: result ? 'Virtual audio devices created successfully' : status.message
     };
   } catch (error) {
-    console.error('[Sokuji] [Main] Error creating virtual audio devices:', error);
+    console.error('[MAO Chat] [Main] Error creating virtual audio devices:', error);
     sendAudioStatus({ ok: false, platform: process.platform, reason: 'other', message: error?.message || 'Failed to create virtual audio devices' });
     return {
       success: false,
@@ -1182,7 +1182,7 @@ ipcMain.handle('start-app-audio-capture', async (event, deviceId) => {
     );
     return ok ? { ok: true } : { ok: false, error: 'Capture helper unavailable' };
   } catch (error) {
-    console.error('[Sokuji] [Main] Failed to start application audio capture:', error);
+    console.error('[MAO Chat] [Main] Failed to start application audio capture:', error);
     return { ok: false, error: error.message };
   }
 });
@@ -1196,7 +1196,7 @@ ipcMain.handle('stop-app-audio-capture', async () => {
     const { stopCapture } = require(helperModule);
     stopCapture();
   } catch (error) {
-    console.warn('[Sokuji] [Main] Failed to stop application audio capture:', error);
+    console.warn('[MAO Chat] [Main] Failed to stop application audio capture:', error);
   }
   return { ok: true };
 });
@@ -1221,10 +1221,10 @@ ipcMain.handle('fix-monitor-volume', async () => {
     await execFileAsync('pactl', ['set-source-volume', monitorName, '100%'], {
       timeout: 2000,
     });
-    console.log(`[Sokuji] [Main] Fixed monitor volume for ${monitorName}`);
+    console.log(`[MAO Chat] [Main] Fixed monitor volume for ${monitorName}`);
     return { ok: true, monitor: monitorName };
   } catch (err) {
-    console.error('[Sokuji] [Main] Failed to fix monitor volume:', err.message);
+    console.error('[MAO Chat] [Main] Failed to fix monitor volume:', err.message);
     return { ok: false, error: err.message };
   }
 });
@@ -1330,7 +1330,7 @@ function initWebSocketHeaderInjection() {
     }
   );
 
-  console.log('[Sokuji] [Main] Combined header injection initialized');
+  console.log('[MAO Chat] [Main] Combined header injection initialized');
 }
 
 // IPC: renderer registers headers for a host before opening a WebSocket
@@ -1345,7 +1345,7 @@ ipcMain.handle('ws-headers-set', (event, { host, headers }) => {
     .map(([k, v]) => [k, String(v)]);
   const headerMap = new Map(entries);
   wsHeaderRules.set(host, headerMap);
-  console.log(`[Sokuji] [Main] WS headers registered for ${host}: ${[...headerMap.keys()].join(', ')}`);
+  console.log(`[MAO Chat] [Main] WS headers registered for ${host}: ${[...headerMap.keys()].join(', ')}`);
   return { success: true };
 });
 
@@ -1355,7 +1355,7 @@ ipcMain.handle('ws-headers-clear', (event, { host }) => {
     return { success: false, error: 'Invalid arguments: host required' };
   }
   wsHeaderRules.delete(host);
-  console.log(`[Sokuji] [Main] WS headers cleared for ${host}`);
+  console.log(`[MAO Chat] [Main] WS headers cleared for ${host}`);
   return { success: true };
 });
 
@@ -1395,7 +1395,7 @@ ipcMain.handle('open-privacy-settings', async (event, pane) => {
     await shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${anchor}`);
     return { ok: true };
   } catch (error) {
-    console.error('[Sokuji] [Main] Failed to open privacy settings:', error);
+    console.error('[MAO Chat] [Main] Failed to open privacy settings:', error);
     return { ok: false, error: error.message };
   }
 });
@@ -1411,12 +1411,12 @@ ipcMain.handle('check-screen-recording-permission', async () => {
 
   try {
     const status = systemPreferences.getMediaAccessStatus('screen');
-    console.log('[Sokuji] [Main] Screen recording permission status:', status);
+    console.log('[MAO Chat] [Main] Screen recording permission status:', status);
     // Just return the raw status - don't try to trigger permission here
     // Calling desktopCapturer.getSources() would change 'not-determined' to 'denied'
     return { status, platform: 'darwin' };
   } catch (error) {
-    console.error('[Sokuji] [Main] Error checking screen recording permission:', error);
+    console.error('[MAO Chat] [Main] Error checking screen recording permission:', error);
     return { status: 'unknown', platform: 'darwin', error: error.message };
   }
 });

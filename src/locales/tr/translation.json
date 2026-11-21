@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Lütfen burada bu cihazı seçmeyin. Bunun yerine, canlı konuşma çevirisi çıktısını almak için bu sanal mikrofonu video konferans uygulamalarınızda (Google Meet, Zoom, Microsoft Teams vb.) kullanın.",
     "virtualMicWarningText2": "MAO Chat'nin düzgün çalışması için lütfen listeden gerçek fiziksel mikrofonunuzu seçin.",
     "virtualSpeakerWarningTitle": "Bu, MAO Chat tarafından oluşturulan bir sanal hoparlördür.",
-    "virtualSpeakerWarningText1": "Lütfen bu cihazı izleme cihazınız olarak seçmeyin. Sokuji_Virtual_Speaker, MAO Chat tarafından konferans uygulamalarınıza ses göndermek için kullanılır.",
+    "virtualSpeakerWarningText1": "Lütfen bu cihazı izleme cihazınız olarak seçmeyin. MAO_Virtual_Speaker, MAO Chat tarafından konferans uygulamalarınıza ses göndermek için kullanılır.",
     "virtualSpeakerWarningText2": "İzleme cihazınızı MAO Chat'nin çıkış cihazına bağlamak, girişinizin kendi izlenen çıktınızı içermesine yol açan bir ses geri besleme döngüsü oluşturur.",
     "virtualSpeakerWarningText3": "\"Aç\" anahtarı, sanal hoparlörü seçtiğiniz izleme cihazına bağlayarak konferans uygulamanıza gönderilenleri duymanızı sağlar. \"Kapat\" anahtarı bu izleme bağlantısını keser.",
     "virtualSpeakerWarningText4": "Düzgün çalışması için lütfen listeden farklı bir izleme cihazı (kulaklığınız veya hoparlörleriniz gibi) seçin.",

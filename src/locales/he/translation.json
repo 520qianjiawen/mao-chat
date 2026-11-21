@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "אנא אל תבחר התקן זה כאן. במקום זאת, השתמש במיקרופון הוירטואלי הזה באפליקציות ועידת הווידאו שלך (כמו Google Meet, Zoom, Microsoft Teams וכו') כדי לקבל פלט תרגום קולי בזמן אמת.",
     "virtualMicWarningText2": "כדי ש-MAO Chat יעבוד כראוי, בחר את המיקרופון הפיזי האמיתי שלך מהרשימה.",
     "virtualSpeakerWarningTitle": "זהו רמקול וירטואלי שנוצר על ידי MAO Chat.",
-    "virtualSpeakerWarningText1": "אנא אל תבחר התקן זה כמוניטור שלך. Sokuji_Virtual_Speaker משמש את MAO Chat לשליחת אודיו לאפליקציות הוועידה שלך.",
+    "virtualSpeakerWarningText1": "אנא אל תבחר התקן זה כמוניטור שלך. MAO_Virtual_Speaker משמש את MAO Chat לשליחת אודיו לאפליקציות הוועידה שלך.",
     "virtualSpeakerWarningText2": "חיבור המוניטור שלך להתקן הפלט של MAO Chat ייצור לולאת משוב אודיו, מה שיגרום לקלט שלך להכיל את הפלט המנוטר שלך.",
     "virtualSpeakerWarningText3": "מתג \"הפעל\" מחבר את הרמקול הוירטואלי להתקן הניטור שנבחר, מה שמאפשר לך לשמוע מה שנשלח לאפליקציית הוועידה שלך. מתג \"כבה\" מנתק את חיבור הניטור הזה.",
     "virtualSpeakerWarningText4": "לפעולה נכונה, בחר התקן ניטור שונה (כמו האוזניות או הרמקולים שלך) מהרשימה.",

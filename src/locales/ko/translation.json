@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "여기서 이 장치를 선택하지 마세요. 대신 비디오 회의 애플리케이션(Google Meet, Zoom, Microsoft Teams 등)에서 이 가상 마이크를 사용하여 실시간 음성 번역 출력을 받으세요.",
     "virtualMicWarningText2": "MAO Chat가 제대로 작동하려면 목록에서 실제 물리적 마이크를 선택하세요.",
     "virtualSpeakerWarningTitle": "이것은 MAO Chat에서 생성한 가상 스피커입니다.",
-    "virtualSpeakerWarningText1": "이 장치를 모니터로 선택하지 마세요. Sokuji_Virtual_Speaker는 MAO Chat가 회의 애플리케이션에 오디오를 출력하는 데 사용됩니다.",
+    "virtualSpeakerWarningText1": "이 장치를 모니터로 선택하지 마세요. MAO_Virtual_Speaker는 MAO Chat가 회의 애플리케이션에 오디오를 출력하는 데 사용됩니다.",
     "virtualSpeakerWarningText2": "모니터를 MAO Chat의 출력 장치에 연결하면 오디오 피드백 루프가 생성되어 입력에 자신의 모니터링된 출력이 포함됩니다.",
     "virtualSpeakerWarningText3": "\"켜기\" 스위치는 가상 스피커를 선택한 모니터 장치에 연결하여 회의 애플리케이션으로 전송되는 내용을 들을 수 있게 합니다. \"끄기\" 스위치는 이 모니터링 연결을 끊습니다.",
     "virtualSpeakerWarningText4": "올바른 작동을 위해 목록에서 다른 모니터 장치(헤드폰이나 스피커 등)를 선택하세요.",

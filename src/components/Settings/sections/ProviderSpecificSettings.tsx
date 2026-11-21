@@ -326,7 +326,7 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
     } else if (provider === Provider.ANT_LING) {
       updateAntLingSettings({ [key]: value });
     } else {
-      console.warn('[Sokuji][ProviderSpecificSettings] Unsupported provider:', provider);
+      console.warn('[MAO Chat][ProviderSpecificSettings] Unsupported provider:', provider);
     }
   };
 
@@ -809,7 +809,7 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
         
         await fetchAvailableModels(getAuthToken);
       } catch (error) {
-        console.error('[Sokuji][ProviderSpecificSettings] Error refreshing models:', error);
+        console.error('[MAO Chat][ProviderSpecificSettings] Error refreshing models:', error);
       }
     };
 

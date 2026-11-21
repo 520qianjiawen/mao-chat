@@ -200,7 +200,7 @@ function repairDirectory(dir, sids, deps) {
  * @returns {string}
  */
 function buildBackupLog(scanResults, isoStamp) {
-  let log = `Sokuji sandbox recovery backup — ${isoStamp}\n`;
+  let log = `MAO Chat sandbox recovery backup — ${isoStamp}\n`;
   log += `Issue:    ${ISSUE_URL}\n`;
   log += `Upstream: ${UPSTREAM_URL}\n`;
   log += `\nThe explicit orphan AppContainer ACEs listed below were removed with\n`;
@@ -234,7 +234,7 @@ function defaultDeps() {
     execFileSync: require('child_process').execFileSync,
     now: () => Date.now(),
     env: process.env,
-    log: (...a) => console.log('[Sokuji] [SandboxRecovery]', ...a),
+    log: (...a) => console.log('[MAO Chat] [SandboxRecovery]', ...a),
     // Runs before every app.exit()/relaunch this module triggers. app.exit()
     // skips before-quit/will-quit, so main.js's cleanupAndExit (which stops the
     // native sidecar and releases its Windows file locks) would otherwise never
@@ -404,10 +404,10 @@ function showConfirmedDialog(dialog, confirmed) {
     type: 'warning',
     title: 'MAO Chat — Sandbox Startup Problem',
     message:
-      "Another program corrupted Windows permissions, preventing Sokuji's security sandbox from starting.",
+      "Another program corrupted Windows permissions, preventing MAO Chat's security sandbox from starting.",
     detail:
       'This is a known problem caused by leftover sandbox permissions from tools such as ' +
-      'OpenAI Codex CLI or Google Antigravity. Sokuji can repair it without administrator ' +
+      'OpenAI Codex CLI or Google Antigravity. MAO Chat can repair it without administrator ' +
       'rights — only the orphaned permission entries are removed; nothing else is touched.\n\n' +
       `Affected locations:\n${dirs}\n\n` +
       `More details: ${ISSUE_URL}`,
@@ -422,7 +422,7 @@ function showUnconfirmedDialog(dialog) {
   return dialog.showMessageBoxSync({
     type: 'warning',
     title: 'MAO Chat — Sandbox Startup Problem',
-    message: "Sokuji's security sandbox process repeatedly failed to start.",
+    message: "MAO Chat's security sandbox process repeatedly failed to start.",
     detail:
       'The cause could not be confirmed automatically. It is often corrupted Windows ' +
       'permissions or antivirus injection. You can continue with the sandbox disabled ' +

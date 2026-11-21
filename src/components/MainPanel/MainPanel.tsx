@@ -731,7 +731,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       setParticipantItems(pItems);
     },
     onReconnecting: () => {
-      console.info('[Sokuji] [MainPanel] Participant session reconnecting...');
+      console.info('[MAO Chat] [MainPanel] Participant session reconnecting...');
       addRealtimeEvent(
         { type: 'session.reconnecting', data: { timestamp: Date.now() } },
         'client',
@@ -740,7 +740,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       );
     },
     onReconnected: () => {
-      console.info('[Sokuji] [MainPanel] Participant session reconnected successfully');
+      console.info('[MAO Chat] [MainPanel] Participant session reconnected successfully');
       addRealtimeEvent(
         { type: 'session.reconnected', data: { timestamp: Date.now() } },
         'client',
@@ -756,7 +756,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       // emit a duplicate analytics event and trip the re-entry guard.
       if (!useSessionStore.getState().isSessionActive) return;
 
-      console.info('[Sokuji] [MainPanel] Participant client closed, tearing down session');
+      console.info('[MAO Chat] [MainPanel] Participant client closed, tearing down session');
 
       // Track disconnection (analytics distinguishes unexpected client-side close from user stop)
       trackEvent('connection_status', {
@@ -963,7 +963,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         await audioService.initialize();
         await audioService.ensureVirtualSpeakerOutput();
       } catch (error) {
-        console.error('[Sokuji] [MainPanel] Failed to initialize audio service:', error);
+        console.error('[MAO Chat] [MainPanel] Failed to initialize audio service:', error);
       }
     };
     
@@ -1028,7 +1028,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     audioService.setupPassthrough(enabled, volume);
 
     if (enabled) {
-      console.debug('[Sokuji] [MainPanel] Updated passthrough settings: enabled=', enabled, 'volume=', volume, 'mode=', currentTurnDetectionMode);
+      console.debug('[MAO Chat] [MainPanel] Updated passthrough settings: enabled=', enabled, 'volume=', volume, 'mode=', currentTurnDetectionMode);
     }
   }, [
     currentTurnDetectionMode,
@@ -1051,7 +1051,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       .getRecorder()
       .setNoiseSuppressionMode(noiseSuppressionMode)
       .catch((error: unknown) => {
-        console.error('[Sokuji] [MainPanel] Failed to set noise suppression mode:', error);
+        console.error('[MAO Chat] [MainPanel] Failed to set noise suppression mode:', error);
       });
   }, [noiseSuppressionMode, isSessionActive, speakerChannelActive]);
 
@@ -1491,7 +1491,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           during_session: true,
         });
       } catch (error: unknown) {
-        console.error('[Sokuji] [MainPanel] Failed to switch participant source:', error);
+        console.error('[MAO Chat] [MainPanel] Failed to switch participant source:', error);
         activeParticipantSourceRef.current = previousId;
         addRealtimeEvent(
           {
@@ -1649,7 +1649,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         }
       },
       onError: (event: any) => {
-        console.error('[Sokuji] [MainPanel]', event);
+        console.error('[MAO Chat] [MainPanel]', event);
 
         // Surface error to LogsPanel so users can see it
         const errorMessage = event.message || event.error || 'Unknown error';
@@ -1676,7 +1676,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         });
       },
       onReconnecting: () => {
-        console.info('[Sokuji] [MainPanel] Session reconnecting...');
+        console.info('[MAO Chat] [MainPanel] Session reconnecting...');
         setIsReconnecting(true);
         addRealtimeEvent(
           { type: 'session.reconnecting', data: { timestamp: Date.now() } },
@@ -1685,7 +1685,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         );
       },
       onReconnected: () => {
-        console.info('[Sokuji] [MainPanel] Session reconnected successfully');
+        console.info('[MAO Chat] [MainPanel] Session reconnected successfully');
         setIsReconnecting(false);
         addRealtimeEvent(
           { type: 'session.reconnected', data: { timestamp: Date.now() } },
@@ -1702,7 +1702,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         // permanent failures.
         if (!useSessionStore.getState().isSessionActive) return;
 
-        console.info('[Sokuji] [MainPanel] Speaker client closed, tearing down session', event);
+        console.info('[MAO Chat] [MainPanel] Speaker client closed, tearing down session', event);
 
         // Track disconnection (analytics distinguishes unexpected client-side close from user stop)
         trackEvent('connection_status', {
@@ -1889,7 +1889,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     // set to true, so a session-state-based guard would silently skip the
     // cleanup of the partially-opened recorder/client.
     if (disconnectInProgressRef.current) {
-      console.info('[Sokuji] [MainPanel] disconnectConversation re-entry blocked (already in progress)');
+      console.info('[MAO Chat] [MainPanel] disconnectConversation re-entry blocked (already in progress)');
       return;
     }
     disconnectInProgressRef.current = true;
@@ -1922,7 +1922,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         } catch (error: any) {
           // Silently ignore if recording was never started (expected in push-to-talk mode)
           if (!error?.message?.includes('begin()')) {
-            console.warn('[Sokuji] [MainPanel] Error pausing recorder during disconnect:', error);
+            console.warn('[MAO Chat] [MainPanel] Error pausing recorder during disconnect:', error);
           }
         }
 
@@ -1930,9 +1930,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         if (audioService.isSystemAudioRecordingActive()) {
           try {
             await audioService.stopSystemAudioRecording();
-            console.info('[Sokuji] [MainPanel] Stopped system audio recording');
+            console.info('[MAO Chat] [MainPanel] Stopped system audio recording');
           } catch (error) {
-            console.warn('[Sokuji] [MainPanel] Error stopping system audio recording:', error);
+            console.warn('[MAO Chat] [MainPanel] Error stopping system audio recording:', error);
           }
         }
         if (isElectron() && !isExtension() && systemAudioAcquiredRef.current) {
@@ -1940,7 +1940,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
             await audioService.disconnectSystemAudioSource();
             systemAudioAcquiredRef.current = false;
           } catch (error) {
-            console.warn('[Sokuji] [MainPanel] Failed to disconnect system audio source:', error);
+            console.warn('[MAO Chat] [MainPanel] Failed to disconnect system audio source:', error);
           }
         }
 
@@ -1948,9 +1948,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         if (audioService.isTabAudioRecordingActive?.()) {
           try {
             await audioService.stopTabAudioRecording();
-            console.info('[Sokuji] [MainPanel] Stopped tab audio recording');
+            console.info('[MAO Chat] [MainPanel] Stopped tab audio recording');
           } catch (error) {
-            console.warn('[Sokuji] [MainPanel] Error stopping tab audio recording:', error);
+            console.warn('[MAO Chat] [MainPanel] Error stopping tab audio recording:', error);
           }
         }
       }
@@ -1988,9 +1988,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           await participantClient.disconnect();
           participantClient.reset();
           participantClientRef.current = null;
-          console.info('[Sokuji] [MainPanel] Disconnected participant client');
+          console.info('[MAO Chat] [MainPanel] Disconnected participant client');
         } catch (error) {
-          console.warn('[Sokuji] [MainPanel] Error disconnecting participant client:', error);
+          console.warn('[MAO Chat] [MainPanel] Error disconnecting participant client:', error);
         }
       }
 
@@ -2001,7 +2001,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         } catch (error: any) {
           // Silently ignore if recording was never started (expected in push-to-talk mode)
           if (!error?.message?.includes('begin()')) {
-            console.warn('[Sokuji] [MainPanel] Error ending recorder:', error);
+            console.warn('[MAO Chat] [MainPanel] Error ending recorder:', error);
           }
         }
 
@@ -2022,7 +2022,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       // This ensures the wallet balance is updated after usage
       if (refetchAll) {
         refetchAll().catch(error => {
-          console.warn('[Sokuji] [MainPanel] Error refreshing user profile:', error);
+          console.warn('[MAO Chat] [MainPanel] Error refreshing user profile:', error);
         });
       }
     } finally {
@@ -2183,7 +2183,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           // Recording will be started below based on turn detection mode
           // Passthrough is already configured via the useEffect hook
         } else {
-          console.warn('[Sokuji] [MainPanel] No input device selected, cannot connect to microphone');
+          console.warn('[MAO Chat] [MainPanel] No input device selected, cannot connect to microphone');
         }
 
         // If monitor is in scope (pure speaker mode) and not muted, ensure the
@@ -2192,7 +2192,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         // skip the reconnect in participant/both even if isMonitorMuted is false
         // (a preserved opt-in preference).
         if (currentMode === 'speaker' && !isMonitorMuted && selectedMonitorDevice && !isVirtualDevice(selectedMonitorDevice as any)) {
-          console.debug('[Sokuji] [MainPanel] Setting up monitor device to:', selectedMonitorDevice.label);
+          console.debug('[MAO Chat] [MainPanel] Setting up monitor device to:', selectedMonitorDevice.label);
 
           // Trigger the selectMonitorDevice function to reconnect the monitor
           // This will use the audio service properly through the AudioContext
@@ -2234,7 +2234,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         } catch (connectError: any) {
           // If WebRTC connection failed, try fallback to WebSocket
           if (useWebRTC) {
-            console.warn('[Sokuji] [MainPanel] WebRTC connection failed, falling back to WebSocket:', connectError);
+            console.warn('[MAO Chat] [MainPanel] WebRTC connection failed, falling back to WebSocket:', connectError);
 
             // Create a new client with WebSocket transport
             useWebRTC = false;
@@ -2269,7 +2269,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                 'client', 'session.webrtc_fallback'
               );
 
-              console.info('[Sokuji] [MainPanel] WebSocket fallback connection established');
+              console.info('[MAO Chat] [MainPanel] WebSocket fallback connection established');
             } catch (fallbackError: any) {
               // Track fallback connection failure
               trackEvent('api_error', {
@@ -2326,7 +2326,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
               }
               if (!shouldForwardMicToSpeakerAsr(data.mono)) return;
               if (p2tCallbackCount % 100 === 0) {
-                console.debug(`[Sokuji] [MainPanel] P2T: Sending audio to client: chunk ${p2tCallbackCount}, PCM length: ${data.mono.length}`);
+                console.debug(`[MAO Chat] [MainPanel] P2T: Sending audio to client: chunk ${p2tCallbackCount}, PCM length: ${data.mono.length}`);
               }
               p2tCallbackCount++;
 
@@ -2347,7 +2347,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
               if (!shouldForwardMicToSpeakerAsr(data.mono)) return;
               // Debug logging every 100 calls to verify AI client receives data
               if (audioCallbackCount % 100 === 0) {
-                console.debug(`[Sokuji] [MainPanel] Sending audio to client: chunk ${audioCallbackCount}, PCM length: ${data.mono.length}`);
+                console.debug(`[MAO Chat] [MainPanel] Sending audio to client: chunk ${audioCallbackCount}, PCM length: ${data.mono.length}`);
               }
               audioCallbackCount++;
               speakerClientRef.current.appendInputAudio(data.mono);
@@ -2355,12 +2355,12 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           }
           // else: pure PTT — recorder stays idle until space keydown.
         } else if (usesNativeCapture) {
-          console.info('[Sokuji] [MainPanel] Native MediaStreamTrack mode - audio flows automatically');
+          console.info('[MAO Chat] [MainPanel] Native MediaStreamTrack mode - audio flows automatically');
 
           // Apply initial mute state based on isMonitorMuted (WebRTC only, not PalabraAI)
           if (useWebRTC && typeof speakerClientRef.current?.setOutputMuted === 'function') {
             speakerClientRef.current.setOutputMuted(isMonitorMuted);
-            console.debug('[Sokuji] [MainPanel] WebRTC initial mute state:', isMonitorMuted);
+            console.debug('[MAO Chat] [MainPanel] WebRTC initial mute state:', isMonitorMuted);
           }
         }
 
@@ -2437,7 +2437,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           // Official / auto captions drive the participant channel. Skip tab ASR.
         } else try {
           const captureMode = isExtension() ? 'tab' : 'system';
-          console.info(`[Sokuji] [MainPanel] Starting participant audio client (${captureMode} capture)...`);
+          console.info(`[MAO Chat] [MainPanel] Starting participant audio client (${captureMode} capture)...`);
 
           // Electron: check loopback permission at session start. For a fresh
           // permission, requestLoopbackAudioStream deliberately does not open a
@@ -2481,11 +2481,11 @@ const MainPanel: React.FC<MainPanelProps> = () => {
             // Create and connect with participant session config
             const participantSessionConfig = createParticipantSessionConfig();
             if (!participantSessionConfig) {
-              console.info('[Sokuji] [MainPanel] Participant skipped — no suitable models');
+              console.info('[MAO Chat] [MainPanel] Participant skipped — no suitable models');
               participantClientRef.current = null;
             } else {
               await participantClient.connect(participantSessionConfig);
-              console.info(`[Sokuji] [MainPanel] Participant audio client connected (${captureMode}, text-only, swapped languages, semantic VAD)`);
+              console.info(`[MAO Chat] [MainPanel] Participant audio client connected (${captureMode}, text-only, swapped languages, semantic VAD)`);
 
               // Start recording from appropriate source based on environment
               let participantAudioCallbackCount = 0;
@@ -2497,7 +2497,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                 if (useAudioStore.getState().isParticipantMuted) return;
                 if (!shouldForwardSystemToParticipantAsr(data.mono)) return;
                 if (participantAudioCallbackCount % 100 === 0) {
-                  console.debug(`[Sokuji] [MainPanel] Sending ${captureMode} audio to client: chunk ${participantAudioCallbackCount}, PCM length: ${data.mono.length}`);
+                  console.debug(`[MAO Chat] [MainPanel] Sending ${captureMode} audio to client: chunk ${participantAudioCallbackCount}, PCM length: ${data.mono.length}`);
                 }
                 participantAudioCallbackCount++;
                 client.appendInputAudio(data.mono);
@@ -2507,7 +2507,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                 // Extension: start tab audio recording. Passthrough always uses
                 // the system default output device (selectedParticipantOutput removed
                 // per on/off pipeline-gate spec — D-Task 6).
-                console.info('[Sokuji] [MainPanel] Starting tab audio recording');
+                console.info('[MAO Chat] [MainPanel] Starting tab audio recording');
                 await audioServiceRef.current!.startTabAudioRecording(
                   createAudioDataCallback(participantClient)
                 );
@@ -2519,7 +2519,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                 );
               }
 
-              console.info(`[Sokuji] [MainPanel] Participant audio recording started (${captureMode})`);
+              console.info(`[MAO Chat] [MainPanel] Participant audio recording started (${captureMode})`);
               // Set the active flag only after recording wiring succeeds — mirrors
               // the speaker block, where the flag means "channel is end-to-end
               // active" not "connect resolved". If startTab/SystemAudioRecording
@@ -2527,7 +2527,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
               setParticipantChannelActive(true);
           }
         } catch (error: any) {
-          console.error('[Sokuji] [MainPanel] Failed to start participant audio client:', error);
+          console.error('[MAO Chat] [MainPanel] Failed to start participant audio client:', error);
           // GPU OOM is fatal — propagate so the session doesn't start
           if (error?.isGpuOom) {
             throw error;
@@ -2564,7 +2564,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           try {
             await participantClientRef.current?.disconnect();
           } catch (disconnectError) {
-            console.warn('[Sokuji] [MainPanel] Failed to disconnect inactive participant client:', disconnectError);
+            console.warn('[MAO Chat] [MainPanel] Failed to disconnect inactive participant client:', disconnectError);
           }
           participantClientRef.current = null;
           addRealtimeEvent(
@@ -2580,7 +2580,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       // happening. Errors above were caught non-fatally and continued; this
       // is where we detect total failure.
       if (!speakerClientRef.current && !participantClientRef.current && !youtubeCaptionControllerRef.current) {
-        console.error('[Sokuji] [MainPanel] Both speaker and participant channels failed to initialize; aborting session start');
+        console.error('[MAO Chat] [MainPanel] Both speaker and participant channels failed to initialize; aborting session start');
         setIsInitializing(false);
         // Preserve the actionable participant failure (permission, missing
         // loopback track, closing stream) instead of replacing it with the
@@ -2646,7 +2646,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         }
       }, 30000); // Every 30 seconds
     } catch (error: any) {
-      console.error('[Sokuji] [MainPanel] Failed to initialize session:', error);
+      console.error('[MAO Chat] [MainPanel] Failed to initialize session:', error);
 
       const errorMessage = error.message || 'Network connection error';
       addRealtimeEvent(
@@ -2722,7 +2722,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
   const startRecording = useCallback(async () => {
     // Don't start recording if mic is muted
     if (isMicMuted) {
-      console.info('[Sokuji] [MainPanel] Mic is muted, not starting recording');
+      console.info('[MAO Chat] [MainPanel] Mic is muted, not starting recording');
       return;
     }
 
@@ -2740,7 +2740,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     const audioService = audioServiceRef.current;
 
     if (!audioService) {
-      console.error('[Sokuji] [MainPanel] Audio service not available');
+      console.error('[MAO Chat] [MainPanel] Audio service not available');
       setIsRecording(false);
       return;
     }
@@ -2765,7 +2765,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       const recorder = audioService.getRecorder();
       if (recorder.isRecording()) {
         // If somehow we're already recording, pause first
-        console.warn('[Sokuji] [MainPanel] ModernAudioRecorder was already recording, pausing first');
+        console.warn('[MAO Chat] [MainPanel] ModernAudioRecorder was already recording, pausing first');
         await audioService.pauseRecording();
       }
 
@@ -2776,7 +2776,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         if (client) {
           // Debug logging for push-to-talk (every 50 chunks)
           if (pttAudioCallbackCount % 50 === 0) {
-            console.debug(`[Sokuji] [MainPanel] PTT: Sending audio to client: chunk ${pttAudioCallbackCount}, PCM length: ${data.mono.length}`);
+            console.debug(`[MAO Chat] [MainPanel] PTT: Sending audio to client: chunk ${pttAudioCallbackCount}, PCM length: ${data.mono.length}`);
           }
           pttAudioCallbackCount++;
 
@@ -2791,7 +2791,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         }
       });
     } catch (error) {
-      console.error('[Sokuji] [MainPanel] Error starting recording:', error);
+      console.error('[MAO Chat] [MainPanel] Error starting recording:', error);
       setIsRecording(false);
     }
   }, [isMicMuted, isRecording, selectedInputDevice, currentTurnDetectionMode, shouldForwardMicToSpeakerAsr]);
@@ -2848,7 +2848,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
             // New buffer each iteration — worker postMessage transfers (detaches) the ArrayBuffer
             client.appendInputAudio(new Int16Array(silenceFrameSize));
           }
-          console.debug(`[Sokuji] [MainPanel] PTT: Sent ${silenceFrames * 100}ms silence frames for VAD end detection`);
+          console.debug(`[MAO Chat] [MainPanel] PTT: Sent ${silenceFrames * 100}ms silence frames for VAD end detection`);
         }
 
         // Stop recording — but only for pure PTT. Push-to-translate keeps the recorder
@@ -2872,18 +2872,18 @@ const MainPanel: React.FC<MainPanelProps> = () => {
             // No meaningful speech detected — reset speaking state without sending
             // activityEnd so Gemini doesn't generate a response for silence
             client.cancelPttTurn?.();
-            console.debug(`[Sokuji] [MainPanel] PTT: Gemini turn cancelled - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${MIN_VOICE_CHUNKS})`);
+            console.debug(`[MAO Chat] [MainPanel] PTT: Gemini turn cancelled - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${MIN_VOICE_CHUNKS})`);
           }
         } else if (client && effectiveProvider !== Provider.VOLCENGINE_AST2 && pttVoiceChunkCountRef.current >= minRequiredChunks) {
           // Model drift prevention is handled by the silent anchor mechanism (useEffect)
           client.createResponse();
         } else if (client && effectiveProvider !== Provider.VOLCENGINE_AST2) {
-          console.debug(`[Sokuji] [MainPanel] PTT: Skipping response - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${minRequiredChunks})`);
+          console.debug(`[MAO Chat] [MainPanel] PTT: Skipping response - only ${pttVoiceChunkCountRef.current} voice chunks detected (minimum: ${minRequiredChunks})`);
         }
       }
     } catch (error) {
       // If there's an error during pause (e.g., already paused), log it but don't crash
-      console.error('[Sokuji] [MainPanel] Error stopping recording:', error);
+      console.error('[MAO Chat] [MainPanel] Error stopping recording:', error);
 
       // Reset the recording state to ensure UI is consistent
       setIsRecording(false);
@@ -2976,7 +2976,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     try {
       const audioService = audioServiceRef.current;
       if (!audioService) {
-        console.error('[Sokuji] [MainPanel] Audio service not available');
+        console.error('[MAO Chat] [MainPanel] Audio service not available');
         return;
       }
 
@@ -2996,7 +2996,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       
       // Check if the item has audio data
       if (!item.formatted?.audio) {
-        console.error('[Sokuji] [MainPanel] No audio data found in the item');
+        console.error('[MAO Chat] [MainPanel] No audio data found in the item');
         return;
       }
 
@@ -3018,7 +3018,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       } else if (itemAudioData instanceof ArrayBuffer) {
         audioService.addAudioData(new Int16Array(itemAudioData), item.id, shouldPlayAudio, { itemId: item.id });
       } else {
-        console.error('[Sokuji] [MainPanel] Unsupported audio data type');
+        console.error('[MAO Chat] [MainPanel] Unsupported audio data type');
         return;
       }
       
@@ -3035,26 +3035,26 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       if (audioData instanceof Int16Array) {
         // If it's a proper Int16Array, use its length
         audioLength = audioData.length;
-        console.debug('[Sokuji] [MainPanel] Audio is Int16Array with length: ' + audioLength);
+        console.debug('[MAO Chat] [MainPanel] Audio is Int16Array with length: ' + audioLength);
       } else if (audioData && typeof audioData === 'object') {
         if ('byteLength' in audioData && typeof audioData.byteLength === 'number') {
           // If it has byteLength property
           audioLength = audioData.byteLength / 2; // 2 bytes per Int16 sample
-          console.debug('[Sokuji] [MainPanel] Audio has byteLength: ' + audioData.byteLength + ', calculated length: ' + audioLength);
+          console.debug('[MAO Chat] [MainPanel] Audio has byteLength: ' + audioData.byteLength + ', calculated length: ' + audioLength);
         } else if ('length' in audioData && typeof audioData.length === 'number') {
           // If it has a numeric length property
           audioLength = audioData.length;
-          console.debug('[Sokuji] [MainPanel] Audio has length property: ' + audioLength);
+          console.debug('[MAO Chat] [MainPanel] Audio has length property: ' + audioLength);
         } else {
           // Last resort: count the keys in the object
           audioLength = Object.keys(audioData).length;
-          console.debug('[Sokuji] [MainPanel] Audio length calculated from object keys: ' + audioLength);
+          console.debug('[MAO Chat] [MainPanel] Audio length calculated from object keys: ' + audioLength);
         }
       }
       
       // Calculate duration in milliseconds (24kHz sample rate)
       const durationMs = (audioLength / 24000) * 1000;
-      console.debug('[Sokuji] [MainPanel] Audio duration: ' + durationMs + 'ms');
+      console.debug('[MAO Chat] [MainPanel] Audio duration: ' + durationMs + 'ms');
       
       // Use a minimum duration if calculated duration is too short
       const actualDurationMs = Math.max(durationMs, 1000);
@@ -3067,9 +3067,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
         }
       }, actualDurationMs + 50); // Add 50ms buffer
 
-      console.info('[Sokuji] [MainPanel] Playing audio from item ' + item.id);
+      console.info('[MAO Chat] [MainPanel] Playing audio from item ' + item.id);
     } catch (error) {
-      console.error('[Sokuji] [MainPanel] Error playing audio:', error);
+      console.error('[MAO Chat] [MainPanel] Error playing audio:', error);
       setPlayingItem(null);
     }
   }, [isMonitorMuted, selectedMonitorDevice, selectMonitorDevice, playingItemId, setPlayingItem]);
@@ -3081,7 +3081,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     try {
       const audioService = audioServiceRef.current;
       if (!audioService) {
-        console.error('[Sokuji] [MainPanel] Audio service not available');
+        console.error('[MAO Chat] [MainPanel] Audio service not available');
         return;
       }
 
@@ -3089,7 +3089,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       if (isTestTonePlaying) {
         await audioService.interruptAudio();
         setIsTestTonePlaying(false);
-        console.info('[Sokuji] [MainPanel] Stopped test tone');
+        console.info('[MAO Chat] [MainPanel] Stopped test tone');
         return;
       }
 
@@ -3100,15 +3100,15 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       
       // Add debug logging to check ModernAudioPlayer's interruptedTracks
       const modernAudioPlayer = audioService.getWavStreamPlayer();
-      console.debug('[Sokuji] [MainPanel] ModernAudioPlayer before playing test tone');
+      console.debug('[MAO Chat] [MainPanel] ModernAudioPlayer before playing test tone');
       
       // Check if test-tone is in interrupted tracks
       const interruptedTracks = (modernAudioPlayer as any).interruptedTracks;
       if (interruptedTracks instanceof Set && interruptedTracks.has('test-tone')) {
-        console.debug('[Sokuji] [MainPanel] test-tone is in interrupted tracks, will be cleared by clearInterruptedTracks');
+        console.debug('[MAO Chat] [MainPanel] test-tone is in interrupted tracks, will be cleared by clearInterruptedTracks');
       }
       
-      console.debug('[Sokuji] [MainPanel] Cleared interrupted tracks before playing test tone');
+      console.debug('[MAO Chat] [MainPanel] Cleared interrupted tracks before playing test tone');
 
       // Fetch the test tone file
       let testToneUrl = '/assets/test-tone.mp3';
@@ -3130,12 +3130,12 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       const tempContext = new AudioContext({ sampleRate: targetSampleRate });
       const audioBuffer = await tempContext.decodeAudioData(arrayBuffer);
 
-      console.debug(`[Sokuji] [MainPanel] Test tone audio info - Sample rate: ${audioBuffer.sampleRate}Hz, Duration: ${audioBuffer.duration}s, Channels: ${audioBuffer.numberOfChannels}`);
+      console.debug(`[MAO Chat] [MainPanel] Test tone audio info - Sample rate: ${audioBuffer.sampleRate}Hz, Duration: ${audioBuffer.duration}s, Channels: ${audioBuffer.numberOfChannels}`);
 
       // Check if we need to resample
       let processedBuffer = audioBuffer;
       if (audioBuffer.sampleRate !== targetSampleRate) {
-        console.debug(`[Sokuji] [MainPanel] Resampling from ${audioBuffer.sampleRate}Hz to ${targetSampleRate}Hz`);
+        console.debug(`[MAO Chat] [MainPanel] Resampling from ${audioBuffer.sampleRate}Hz to ${targetSampleRate}Hz`);
         // Create an offline context for resampling
         const offlineContext = new OfflineAudioContext(
           audioBuffer.numberOfChannels,
@@ -3155,7 +3155,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       // Mix down to mono if stereo by averaging channels
       let monoData;
       if (processedBuffer.numberOfChannels > 1) {
-        console.debug('[Sokuji] [MainPanel] Converting stereo to mono');
+        console.debug('[MAO Chat] [MainPanel] Converting stereo to mono');
         monoData = new Float32Array(processedBuffer.length);
         // Get the data from both channels
         const leftChannel = new Float32Array(processedBuffer.length);
@@ -3190,16 +3190,16 @@ const MainPanel: React.FC<MainPanelProps> = () => {
 
       // If monitor is not muted, ensure monitor device is connected immediately
       if (!isMonitorMuted && selectedMonitorDevice && !isVirtualDevice(selectedMonitorDevice as any)) {
-        console.info('[Sokuji] [MainPanel] Test tone: Ensuring monitor device is connected:', selectedMonitorDevice.label);
+        console.info('[MAO Chat] [MainPanel] Test tone: Ensuring monitor device is connected:', selectedMonitorDevice.label);
 
         // Trigger the selectMonitorDevice function to reconnect the monitor
         // This will use the audio service properly through the AudioContext
         selectMonitorDevice(selectedMonitorDevice);
       }
 
-      console.info('[Sokuji] [MainPanel] Playing test tone');
+      console.info('[MAO Chat] [MainPanel] Playing test tone');
     } catch (error) {
-      console.error('[Sokuji] [MainPanel] Error playing test tone:', error);
+      console.error('[MAO Chat] [MainPanel] Error playing test tone:', error);
       setIsTestTonePlaying(false);
     }
   }, [isMonitorMuted, selectedMonitorDevice, selectMonitorDevice, isTestTonePlaying]);
@@ -3440,7 +3440,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
                 0,
                 8
               );
-              console.warn('[Sokuji] [MainPanel] Error getting frequencies from WavStreamPlayer:', error);
+              console.warn('[MAO Chat] [MainPanel] Error getting frequencies from WavStreamPlayer:', error);
             }
           }
         }
@@ -3497,20 +3497,20 @@ const MainPanel: React.FC<MainPanelProps> = () => {
       try {
         // Check if the selectedMonitorDevice is a virtual device (which shouldn't be used as monitor)
         if (selectedMonitorDevice && isVirtualDevice(selectedMonitorDevice as any)) {
-          console.info('[Sokuji] [MainPanel] Selected monitor device is a virtual device - not using as monitor');
+          console.info('[MAO Chat] [MainPanel] Selected monitor device is a virtual device - not using as monitor');
           return;
         }
 
         // If monitor is not muted, connect the monitor
         if (!isMonitorMuted && selectedMonitorDevice) {
-          console.info(`[Sokuji] [MainPanel] Setting up monitor output to: ${selectedMonitorDevice.label}`);
+          console.info(`[MAO Chat] [MainPanel] Setting up monitor output to: ${selectedMonitorDevice.label}`);
 
           // Trigger the selectMonitorDevice function to reconnect the monitor
           // This will use the audio service properly through the AudioContext
           selectMonitorDevice(selectedMonitorDevice);
         }
       } catch (error) {
-        console.error('[Sokuji] [MainPanel] Error setting up monitor device:', error);
+        console.error('[MAO Chat] [MainPanel] Error setting up monitor device:', error);
       }
     };
 
@@ -3779,7 +3779,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     // Handle device switching
     const handleDeviceSwitch = async () => {
       try {
-        console.info(`[Sokuji] [MainPanel] Switching recording device during active session to: ${selectedInputDevice?.label}`);
+        console.info(`[MAO Chat] [MainPanel] Switching recording device during active session to: ${selectedInputDevice?.label}`);
         await audioService.switchRecordingDevice!(selectedInputDevice?.deviceId);
         
         // Track successful device change during active session
@@ -3790,7 +3790,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
           during_session: true
         });
       } catch (error: any) {
-        console.error('[Sokuji] [MainPanel] Failed to switch recording device:', error);
+        console.error('[MAO Chat] [MainPanel] Failed to switch recording device:', error);
         
         // Track failed device change
         trackEvent('audio_error', {
@@ -3825,7 +3825,7 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     // Check if client supports muting
     if (typeof client.setOutputMuted === 'function') {
       client.setOutputMuted(isMonitorMuted);
-      console.debug('[Sokuji] [MainPanel] WebRTC output muted:', isMonitorMuted);
+      console.debug('[MAO Chat] [MainPanel] WebRTC output muted:', isMonitorMuted);
     }
   }, [isMonitorMuted, isSessionActive, isUsingWebRTC]);
 
@@ -3843,9 +3843,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     if (selectedInputDevice?.deviceId && typeof client.switchInputDevice === 'function') {
       client.switchInputDevice(selectedInputDevice.deviceId)
         .then(() => {
-          console.debug('[Sokuji] [MainPanel] WebRTC input device switched to:', selectedInputDevice.deviceId);
+          console.debug('[MAO Chat] [MainPanel] WebRTC input device switched to:', selectedInputDevice.deviceId);
         })
-        .catch(err => console.error('[Sokuji] [MainPanel] Failed to switch WebRTC input device:', err));
+        .catch(err => console.error('[MAO Chat] [MainPanel] Failed to switch WebRTC input device:', err));
     }
   }, [selectedInputDevice?.deviceId, isSessionActive, isUsingWebRTC]);
 
@@ -3860,9 +3860,9 @@ const MainPanel: React.FC<MainPanelProps> = () => {
     if (selectedMonitorDevice?.deviceId && typeof client.switchOutputDevice === 'function') {
       client.switchOutputDevice(selectedMonitorDevice.deviceId)
         .then(() => {
-          console.debug('[Sokuji] [MainPanel] WebRTC output device switched to:', selectedMonitorDevice.deviceId);
+          console.debug('[MAO Chat] [MainPanel] WebRTC output device switched to:', selectedMonitorDevice.deviceId);
         })
-        .catch(err => console.error('[Sokuji] [MainPanel] Failed to switch WebRTC output device:', err));
+        .catch(err => console.error('[MAO Chat] [MainPanel] Failed to switch WebRTC output device:', err));
     }
   }, [selectedMonitorDevice?.deviceId, isSessionActive, isUsingWebRTC]);
 

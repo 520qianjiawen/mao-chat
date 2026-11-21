@@ -121,7 +121,7 @@ contextBridge.exposeInMainWorld(
       // Fail loud on the security boundary: a channel outside the allowlist is
       // a bug (all real channels are registered), not a graceful-degradation
       // path. Reject + warn instead of silently resolving to undefined.
-      console.warn(`[Sokuji] [Preload] Blocked unauthorized invoke for channel: ${channel}`);
+      console.warn(`[MAO Chat] [Preload] Blocked unauthorized invoke for channel: ${channel}`);
       return Promise.reject(new Error(`Blocked unauthorized invoke for channel: ${channel}`));
     }
   }

@@ -1232,7 +1232,7 @@ const useSettingsStore = create<SettingsStore>()(
                   // a no-op here.
                   break;
               }
-              console.info(`[Sokuji] Model "${currentModel || '(empty)'}" not available, auto-selected "${latestModel}"`);
+              console.info(`[MAO Chat] Model "${currentModel || '(empty)'}" not available, auto-selected "${latestModel}"`);
             }
           }
         }

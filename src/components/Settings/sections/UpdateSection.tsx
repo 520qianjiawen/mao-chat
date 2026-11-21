@@ -48,7 +48,7 @@ const UpdateSection: React.FC = () => {
 
   const handleClick = () => {
     if (status === 'checking') return;
-    if (status === 'available') {
+    if (status === 'available' || status === 'downloading' || status === 'downloaded') {
       openDialog();
       return;
     }
@@ -57,7 +57,10 @@ const UpdateSection: React.FC = () => {
 
   const getButtonText = (): string => {
     if (status === 'checking') return t('update.checking', '正在检查更新...');
+    if (status === 'downloading') return t('update.downloadingShort', '正在下载更新...');
+    if (status === 'downloaded') return t('update.restartNow', '重启并安装更新');
     if (status === 'available' && newVersion) return t('update.upgradeTo', { version: newVersion, defaultValue: `立即升级到 v${newVersion}` });
+    if (status === 'error') return t('update.retryCheck', '检查更新失败，点击重试');
     if (showUpToDate) return t('update.upToDate', '已是最新版本');
     return t('update.checkButton', '检查更新');
   };

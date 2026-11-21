@@ -47,7 +47,7 @@ const useAudioSystemStore = create<AudioSystemStore>()((set, get) => ({
       // Result also arrives via the 'audio-status' push below; this just
       // guards against a broken IPC round trip leaving the spinner stuck.
     } catch (error) {
-      console.error('[Sokuji] [AudioSystemStore] Failed to retry virtual speaker creation:', error);
+      console.error('[MAO Chat] [AudioSystemStore] Failed to retry virtual speaker creation:', error);
     } finally {
       set({ retrying: false });
     }

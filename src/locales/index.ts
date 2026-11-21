@@ -71,7 +71,7 @@ export async function loadTranslation(languageCode: string): Promise<void> {
   const loader = translationLoaders[languageCode];
   if (loader) {
     try {
-      console.log(`[Sokuji] Loading translation for ${languageCode}...`);
+      console.log(`[MAO Chat] Loading translation for ${languageCode}...`);
       const startTime = performance.now();
       
       const module = await loader();
@@ -84,9 +84,9 @@ export async function loadTranslation(languageCode: string): Promise<void> {
       i18n.addResourceBundle(languageCode, 'translation', translation, true, true);
       
       const endTime = performance.now();
-      console.log(`[Sokuji] Loaded ${languageCode} translation in ${Math.round(endTime - startTime)}ms`);
+      console.log(`[MAO Chat] Loaded ${languageCode} translation in ${Math.round(endTime - startTime)}ms`);
     } catch (error) {
-      console.error(`[Sokuji] Failed to load translation for ${languageCode}:`, error);
+      console.error(`[MAO Chat] Failed to load translation for ${languageCode}:`, error);
     }
   }
 }

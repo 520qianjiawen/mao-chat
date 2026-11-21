@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Sila jangan pilih peranti ini di sini. Sebaliknya, gunakan mikrofon maya ini dalam aplikasi persidangan video anda (seperti Google Meet, Zoom, Microsoft Teams, dll.) untuk menerima output terjemahan suara masa nyata.",
     "virtualMicWarningText2": "Untuk MAO Chat berfungsi dengan betul, pilih mikrofon fizikal sebenar anda dari senarai.",
     "virtualSpeakerWarningTitle": "Ini adalah pembesar suara maya yang dicipta oleh MAO Chat.",
-    "virtualSpeakerWarningText1": "Sila jangan pilih peranti ini sebagai monitor anda. Sokuji_Virtual_Speaker digunakan oleh MAO Chat untuk menghantar audio ke aplikasi persidangan anda.",
+    "virtualSpeakerWarningText1": "Sila jangan pilih peranti ini sebagai monitor anda. MAO_Virtual_Speaker digunakan oleh MAO Chat untuk menghantar audio ke aplikasi persidangan anda.",
     "virtualSpeakerWarningText2": "Menyambungkan monitor anda ke peranti output MAO Chat akan mencipta gelung maklum balas audio, menyebabkan input anda mengandungi output monitor anda sendiri.",
     "virtualSpeakerWarningText3": "Suis \"Hidupkan\" menyambungkan pembesar suara maya ke peranti monitor pilihan anda, membolehkan anda mendengar apa yang dihantar ke aplikasi persidangan anda. Suis \"Matikan\" memutuskan sambungan monitor ini.",
     "virtualSpeakerWarningText4": "Untuk operasi yang betul, pilih peranti monitor yang berbeza (seperti fon kepala atau pembesar suara anda) dari senarai.",

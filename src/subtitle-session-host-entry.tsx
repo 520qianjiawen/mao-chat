@@ -32,7 +32,7 @@ if (typeof window !== 'undefined') {
       event.error?.name === 'NotFoundError'
     ) {
       event.preventDefault();
-      console.warn('[Sokuji] [SubtitleHost] Benign removeChild error suppressed during unmount');
+      console.warn('[MAO Chat] [SubtitleHost] Benign removeChild error suppressed during unmount');
     }
   });
 }
@@ -44,7 +44,7 @@ function send(message: Record<string, unknown>): void {
   try {
     chrome.runtime.sendMessage(message);
   } catch (error) {
-    console.error('[Sokuji] [SubtitleHost] Failed to notify background:', error);
+    console.error('[MAO Chat] [SubtitleHost] Failed to notify background:', error);
   }
 }
 
@@ -75,12 +75,12 @@ function SessionHostController() {
       try {
         await useSettingsStore.getState().validateApiKey();
       } catch (err) {
-        console.warn('[Sokuji] [SubtitleHost] Initial validateApiKey caught:', err);
+        console.warn('[MAO Chat] [SubtitleHost] Initial validateApiKey caught:', err);
       } finally {
         setValidationSettled(true);
       }
     }).catch((error) => {
-      console.error('[Sokuji] [SubtitleHost] Store hydration failed:', error);
+      console.error('[MAO Chat] [SubtitleHost] Store hydration failed:', error);
       send({ type: 'SUBTITLE_SESSION_HOST_ERROR', error: String(error) });
     });
   }, [initializeAudioService]);
@@ -100,7 +100,7 @@ function SessionHostController() {
     if (!startRequested || isSessionActive || !validationSettled) return;
     if (!startGate.canStart) {
       if (startGate.reason) {
-        console.warn('[Sokuji] [SubtitleHost] startGate blocked start:', startGate.reason);
+        console.warn('[MAO Chat] [SubtitleHost] startGate blocked start:', startGate.reason);
         send({
           type: 'SUBTITLE_SESSION_HOST_ERROR',
           error: startGate.reason,
@@ -243,6 +243,6 @@ async function bootstrap() {
 }
 
 void bootstrap().catch((error) => {
-  console.error('[Sokuji] [SubtitleHost] Bootstrap failed:', error);
+  console.error('[MAO Chat] [SubtitleHost] Bootstrap failed:', error);
   send({ type: 'SUBTITLE_SESSION_HOST_ERROR', error: String(error) });
 });

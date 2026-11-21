@@ -60,7 +60,7 @@ async function migrateFromLegacyStore(db: IDBPDatabase): Promise<void> {
         }
         await tx.done;
         await legacy.clear(LEGACY_STORE);
-        console.info(`[Sokuji] [NativeVoiceStorage] migrated ${records.length} voice(s) out of the shared models DB`);
+        console.info(`[MAO Chat] [NativeVoiceStorage] migrated ${records.length} voice(s) out of the shared models DB`);
       }
     } finally {
       legacy.close();
@@ -68,7 +68,7 @@ async function migrateFromLegacyStore(db: IDBPDatabase): Promise<void> {
   } catch (err) {
     // Migration is best-effort: a failure must not take down the voice
     // library itself (the legacy records stay put for a later retry).
-    console.warn('[Sokuji] [NativeVoiceStorage] legacy voice migration skipped:', err);
+    console.warn('[MAO Chat] [NativeVoiceStorage] legacy voice migration skipped:', err);
   }
 }
 

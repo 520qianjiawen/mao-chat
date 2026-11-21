@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "Jangan pilih perangkat ini di sini. Gunakan mikrofon virtual ini di aplikasi konferensi video Anda (seperti Google Meet, Zoom, Microsoft Teams, dll.) untuk menerima output terjemahan suara real-time.",
     "virtualMicWarningText2": "Agar MAO Chat berfungsi dengan benar, pilih mikrofon fisik asli Anda dari daftar.",
     "virtualSpeakerWarningTitle": "Ini adalah speaker virtual yang dibuat oleh MAO Chat.",
-    "virtualSpeakerWarningText1": "Jangan pilih perangkat ini sebagai monitor Anda. Sokuji_Virtual_Speaker digunakan oleh MAO Chat untuk mengirim audio ke aplikasi konferensi Anda.",
+    "virtualSpeakerWarningText1": "Jangan pilih perangkat ini sebagai monitor Anda. MAO_Virtual_Speaker digunakan oleh MAO Chat untuk mengirim audio ke aplikasi konferensi Anda.",
     "virtualSpeakerWarningText2": "Menghubungkan monitor Anda ke perangkat output MAO Chat akan menciptakan loop umpan balik audio, menyebabkan input Anda berisi output monitor Anda sendiri.",
     "virtualSpeakerWarningText3": "Tombol \"Nyalakan\" menghubungkan speaker virtual ke perangkat monitor yang dipilih, memungkinkan Anda mendengar apa yang dikirim ke aplikasi konferensi Anda. Tombol \"Matikan\" memutuskan koneksi monitoring ini.",
     "virtualSpeakerWarningText4": "Untuk operasi yang tepat, pilih perangkat monitor yang berbeda (seperti headphone atau speaker Anda) dari daftar.",

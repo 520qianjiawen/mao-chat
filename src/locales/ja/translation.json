@@ -271,7 +271,7 @@
     "virtualMicWarningText1": "このデバイスをここで選択しないでください。代わりに、ビデオ会議アプリケーション（Google Meet、Zoom、Microsoft Teamsなど）でこの仮想マイクを使用して、リアルタイム音声翻訳出力を受信してください。",
     "virtualMicWarningText2": "MAO Chatが正常に動作するには、リストから実際の物理マイクを選択してください。",
     "virtualSpeakerWarningTitle": "これはMAO Chatによって作成された仮想スピーカーです。",
-    "virtualSpeakerWarningText1": "このデバイスをモニターとして選択しないでください。Sokuji_Virtual_Speakerは、MAO Chatが会議アプリケーションに音声を出力するために使用されます。",
+    "virtualSpeakerWarningText1": "このデバイスをモニターとして選択しないでください。MAO_Virtual_Speakerは、MAO Chatが会議アプリケーションに音声を出力するために使用されます。",
     "virtualSpeakerWarningText2": "モニターをMAO Chatの出力デバイスに接続すると、音声フィードバックループが発生し、入力に自分のモニター出力が含まれてしまいます。",
     "virtualSpeakerWarningText3": "「オンにする」スイッチは、仮想スピーカーを選択したモニターデバイスに接続し、会議アプリケーションに送信されている音声を聞くことができます。「オフにする」スイッチは、このモニター接続を切断します。",
     "virtualSpeakerWarningText4": "正常な動作のために、リストから別のモニターデバイス（ヘッドフォンやスピーカーなど）を選択してください。",
