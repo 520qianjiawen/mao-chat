@@ -33,6 +33,42 @@
   &.expanded-stream {
     padding-top: 36px;
   }
+
+  // Windowed Electron compact mode: dock the control bar directly above the
+  // bottom-anchored subtitle capsule instead of pinning it to the top of the
+  // transparent window, eliminating the empty gap between them. Auto-hiding
+  // only toggles opacity/pointer-events so the capsule never shifts vertically.
+  &.compact-docked {
+    justify-content: flex-end;
+
+    .subtitle-bar {
+      position: relative;
+      top: auto;
+      left: auto;
+      right: auto;
+      margin: 0 12px 6px;
+    }
+
+    .subtitle-stream.compact {
+      flex: 0 1 auto;
+      padding-top: 0;
+    }
+
+    @media (max-height: 120px) {
+      .subtitle-bar {
+        position: absolute;
+        top: 6px;
+        left: 12px;
+        right: 12px;
+        margin: 0;
+      }
+
+      .subtitle-stream.compact {
+        flex: 1;
+        padding-top: 10px;
+      }
+    }
+  }
 }
 
 // Resize affordance for the extension-overlay surface — 4 corners + 4

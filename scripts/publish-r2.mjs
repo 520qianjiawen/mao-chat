@@ -279,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>端侧语音识别过滤与净化增强：有效消除无声背景幻觉（如日语感谢收看等标签）与杂音语气词，识别更干净准确</li><li>会议纪要与 Obsidian 导出支持：新增 Markdown 导出与自动同步到本地文件夹，支持 Frontmatter 标签与词频统计</li><li>虚拟麦克风播报体验优化：自动过滤提示前缀，发音更自然纯粹</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>紧凑字幕控制栏贴靠优化：在窗口化紧凑模式下控制栏紧贴字幕胶囊停靠，消除透明窗口下的多余空隙</li><li>端侧模型下载进度平滑优化：完善 Hugging Face 与 Xet 下载实时字节流回调，模型下载进度平滑显示不卡顿</li><li>端侧语音识别过滤与净化增强：有效消除无声背景幻觉与杂音语气词，识别更干净准确</li><li>会议纪要与 Obsidian 导出支持：新增 Markdown 导出与自动同步到本地文件夹，支持 Frontmatter 标签与词频统计</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,

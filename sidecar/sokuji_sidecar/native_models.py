@@ -485,6 +485,68 @@ _PROGRESS_POLL_S = 0.5
 _LLAMA_FLAVOR_EST_BYTES = 30_000_000
 
 
+def _make_progress_tqdm(on_bytes):
+    """Lightweight tqdm-compatible progress sink for hf_hub_download (both HTTP
+    and Xet). Defining update_transfer makes XetDownloadProgressReporter route
+    network-transfer progress through the same instance, so Xet repos report
+    real-time bytes instead of sitting at 0% until reconstruction finishes."""
+    class _ProgressTqdm:
+        def __init__(self, *args, **kwargs):
+            self.n = int(kwargs.get("initial") or 0)
+            self.total = kwargs.get("total")
+            self._transferred = self.n
+            self._reconstructed = self.n
+
+        def update(self, n=1):
+            if n:
+                self._reconstructed += int(n)
+                self.n = max(self._reconstructed, self._transferred)
+                on_bytes(self.n)
+
+        def update_transfer(self, n=1):
+            if n:
+                self._transferred += int(n)
+                self.n = max(self._reconstructed, self._transferred)
+                on_bytes(self.n)
+
+        def set_postfix_str(self, *args, **kwargs):
+            pass
+
+        def set_transfer_postfix_str(self, *args, **kwargs):
+            pass
+
+        def refresh(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    return _ProgressTqdm
+
+
+def _hf_download_file(hf_download_fn, repo, fname, on_bytes):
+    """Invoke hf_hub_download with tqdm_class when supported (skipping it for
+    2-arg test stubs that don't accept keyword arguments)."""
+    import inspect
+    try:
+        sig = inspect.signature(hf_download_fn)
+        accepts_tqdm = (
+            "tqdm_class" in sig.parameters
+            or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+        )
+    except (TypeError, ValueError):
+        accepts_tqdm = False
+    if accepts_tqdm:
+        return hf_download_fn(repo, fname, tqdm_class=_make_progress_tqdm(on_bytes))
+    return hf_download_fn(repo, fname)
+
+
 def _incomplete_bytes(repo):
     """Bytes of the repo's in-flight `.incomplete` blobs — hf_hub_download
     streams into `<cache>/models--org--repo/blobs/<etag>.incomplete`, so their
@@ -636,16 +698,22 @@ async def download(model_id, send, should_cancel=None, repo=None):
             await send({"type": "model_progress", "model": model_id,
                         "downloaded": done_units, "total": total_units})
 
-    async def _fetch(fn, *args, poll_repo=None, est=0):
+    async def _fetch(fn, *args, poll_repo=None, est=0, live_bytes=None):
         """Run one blocking fetch in a thread; while it runs, stream the
-        in-flight blob size (byte mode only). Returns the fetch's result."""
+        in-flight byte count (byte mode only). Combines live tqdm/Xet callbacks
+        with `.incomplete` blob polling so both Xet and HTTP downloads move the
+        progress bar smoothly. Returns the fetch's result."""
         nonlocal done_bytes, done_units
         stop = asyncio.Event()
 
         async def _poll():
+            last_sent = -1
             while not stop.is_set():
-                cur = _incomplete_bytes(poll_repo)
-                if cur:
+                cb_cur = live_bytes[0] if live_bytes is not None else 0
+                blob_cur = _incomplete_bytes(poll_repo) if poll_repo else 0
+                cur = max(cb_cur, blob_cur)
+                if cur and cur != last_sent:
+                    last_sent = cur
                     await send({"type": "model_progress", "model": model_id,
                                 "downloaded": min(done_bytes + cur, total_bytes - 1),
                                 "total": total_bytes})
@@ -654,7 +722,8 @@ async def download(model_id, send, should_cancel=None, repo=None):
                 except asyncio.TimeoutError:
                     pass
 
-        poller = asyncio.create_task(_poll()) if (total_bytes and poll_repo) else None
+        poller = (asyncio.create_task(_poll())
+                  if (total_bytes and (poll_repo or live_bytes is not None)) else None)
         try:
             result = await asyncio.to_thread(fn, *args)
         finally:
@@ -676,7 +745,14 @@ async def download(model_id, send, should_cancel=None, repo=None):
     for i, (r, fname) in enumerate(files):
         if cancelled():
             return "cancelled"
-        await _fetch(hf_hub_download, r, fname, poll_repo=r)
+        file_live = [0]
+
+        def _on_file_bytes(n, _box=file_live):
+            if n > _box[0]:
+                _box[0] = n
+
+        await _fetch(_hf_download_file, hf_hub_download, r, fname, _on_file_bytes,
+                     poll_repo=r, live_bytes=file_live)
         await progress(final=is_last_stage and i == len(files) - 1)
     for i, archive in enumerate(archives):
         if cancelled():

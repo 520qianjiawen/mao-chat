@@ -398,10 +398,19 @@ const SubtitleApp: React.FC<{ surface?: SubtitleSurfaceKind }> = ({ surface = 'e
     && !(surface === 'extension-overlay')
     && !subtitle.compactMode;
 
+  // In windowed Electron compact mode, dock the floating control bar right
+  // above the bottom-anchored subtitle capsule so tall transparent windows
+  // don't leave a large empty gap between the bar and the caption.
+  const compactDocked = !fullscreen
+    && surface === 'electron'
+    && !streamExpanded
+    && isSessionActive
+    && !(canHoldToSpeak && combinedItems.length === 0);
+
   return (
     <div
       ref={rootRef}
-      className={`subtitle-app${fullscreen ? ' fullscreen' : ''}${streamExpanded ? ' expanded-stream' : ''}`}
+      className={`subtitle-app${fullscreen ? ' fullscreen' : ''}${streamExpanded ? ' expanded-stream' : ''}${compactDocked ? ' compact-docked' : ''}`}
       style={rootStyle}
       onMouseEnter={revealBar}
       onMouseMove={revealBar}
