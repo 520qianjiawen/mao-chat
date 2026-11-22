@@ -20,7 +20,7 @@ export interface OpenAICompatibleSettingsBase {
   semanticEagerness: 'Auto' | 'Low' | 'Medium' | 'High';
   temperature: number;
   maxTokens: number | 'inf';
-  transcriptModel: 'gpt-4o-mini-transcribe' | 'gpt-4o-transcribe' | 'whisper-1';
+  transcriptModel: 'gpt-transcribe' | 'gpt-4o-mini-transcribe' | 'gpt-4o-transcribe' | 'whisper-1';
   noiseReduction: 'None' | 'Near field' | 'Far field';
   transportType: TransportType;
   // Persisted across model switches so the user's preference is preserved
@@ -233,7 +233,7 @@ export class OpenAIProviderConfig extends BaseProviderDescriptor {
       voices: OpenAIProviderConfig.VOICES,
       models: OpenAIProviderConfig.MODELS,
       noiseReductionModes: ['None', 'Near field', 'Far field'],
-      transcriptModels: ['gpt-4o-mini-transcribe', 'gpt-4o-transcribe', 'whisper-1'],
+      transcriptModels: ['gpt-transcribe', 'gpt-4o-mini-transcribe', 'gpt-4o-transcribe', 'whisper-1'],
       reasoningEfforts: OpenAIProviderConfig.REASONING_EFFORTS,
 
       capabilities: {

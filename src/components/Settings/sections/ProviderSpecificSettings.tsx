@@ -1032,7 +1032,7 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
           <select
             className="select-dropdown"
             value={compatibleSettings?.transcriptModel}
-            onChange={(e) => updateOpenAICompatibleSettingsHelper({ transcriptModel: e.target.value as 'gpt-4o-mini-transcribe' | 'gpt-4o-transcribe' | 'whisper-1' })}
+            onChange={(e) => updateOpenAICompatibleSettingsHelper({ transcriptModel: e.target.value as 'gpt-transcribe' | 'gpt-4o-mini-transcribe' | 'gpt-4o-transcribe' | 'whisper-1' })}
             disabled={isSessionActive}
           >
             {config.transcriptModels.map((model) => (

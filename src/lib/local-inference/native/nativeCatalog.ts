@@ -72,18 +72,19 @@ function isLanguageSpecificAsr(model: NativeModelInfo, srcLang: string): boolean
 
 /**
  * Rank a compatible ASR for the Recommended badge. Lower is better:
- * runnable, then this-language specialist + streaming, then any recommended
- * streaming model, then catalog quality order.
+ * runnable, then recommended this-language specialist (streaming preferred on
+ * ties), then catalog-recommended models by quality order (`model.order`),
+ * rather than letting heavy generic streaming models crowd out dedicated
+ * language models (e.g. Moonshine Base Japanese) or top-WER flagships.
  */
 function asrRecommendKey(model: NativeModelInfo, srcLang: string): number[] {
-  const specificStreaming = isLanguageSpecificAsr(model, srcLang) && isStreamingAsr(model);
-  const recommendedStreaming = isStreamingAsr(model) && !!model.recommended;
+  const specificRecommended = isLanguageSpecificAsr(model, srcLang) && !!model.recommended;
+  const specificStreaming = specificRecommended && isStreamingAsr(model);
   return [
     hardwareGated(model) ? 1 : 0,
+    specificRecommended ? 0 : 1,
     specificStreaming ? 0 : 1,
-    recommendedStreaming ? 0 : 1,
     model.recommended ? 0 : 1,
-    isStreamingAsr(model) ? 0 : 1,
     model.order,
   ];
 }
@@ -529,12 +530,20 @@ export function infoToCard(m: NativeModelInfo): NativeModelCardSpec {
   };
 }
 
-/** ASR cards compatible with the source language, recommended/order first. */
+/** ASR cards compatible with the source language, ranked by recommendation order then catalog order. */
 export function nativeAsrCards(srcLang: string, catalog: Record<string, NativeModelInfo>): NativeModelCardSpec[] {
   const recommendedIds = recommendedNativeAsrIds(srcLang, catalog);
+  const recommendedRank = new Map([...recommendedIds].map((id, idx) => [id, idx]));
   return compatibleNativeAsr(srcLang, catalog)
     .map((model) => ({ ...infoToCard(model), recommended: recommendedIds.has(model.id) }))
-    .sort((a, b) => Number(!!b.recommended) - Number(!!a.recommended) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    .sort((a, b) => {
+      const aRec = recommendedRank.get(a.selectId);
+      const bRec = recommendedRank.get(b.selectId);
+      if (aRec !== undefined && bRec !== undefined) return aRec - bRec;
+      if (aRec !== undefined) return -1;
+      if (bRec !== undefined) return 1;
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    });
 }
 
 /** ASR cards that do NOT support the source language (for the "show all" toggle). */

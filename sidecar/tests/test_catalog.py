@@ -136,10 +136,28 @@ def test_roster_is_wer_ranked():
     ]
     # Curated roster: live-caption Sherpa + quality GGUF flagships (no long-tail
     # Whisper/Moonshine/Parakeet duplicates from the 2026-07-20 expansion).
-    assert len(ids) == 28
+    assert len(ids) == 29
     orders = [m.sort_order for m in catalog.asr_models()]
     assert orders == sorted(orders)                        # rows stay rank-ordered
-    assert sum(1 for m in catalog.asr_models() if m.recommended) == 16
+    assert sum(1 for m in catalog.asr_models() if m.recommended) == 17
+
+
+def test_parakeet_ultra_row():
+    m = catalog.asr_model("parakeet-ultra")
+    assert m is not None
+    assert m.name == "Parakeet Ultra (0.6B)"
+    assert len(m.languages) == 25
+    assert "en" in m.languages and "de" in m.languages and "uk" in m.languages
+    assert m.recommended is True
+    assert m.sort_order == 60
+    d = m.deployments[0]
+    assert (d.backend, d.tier, d.compute_type, d.artifact) == (
+        "transcribe_cpp", "gpu-vulkan", "q8_0",
+        "handy-computer/parakeet-ultra-gguf/parakeet-ultra-Q8_0.gguf",
+    )
+    assert m.size_bytes == 740_000_000
+    ct_rank = {dep.compute_type: dep.rank for dep in m.deployments}
+    assert ct_rank == {"q8_0": 2.0, "f16": 0.5, "q6_k": 1.0, "q5_k_m": 0.5, "q4_k_m": 1.0}
 
 
 def test_native_sherpa_live_caption_rows():

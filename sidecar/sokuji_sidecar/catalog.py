@@ -318,6 +318,12 @@ ASR_MODELS: list[AsrModel] = [
             "handy-computer/Fun-ASR-Nano-2512-gguf", "Fun-ASR-Nano-2512",
             55, {"F16": 1667503872, "Q8_0": 891270912, "Q6_K": 690744064,
                  "Q5_K_M": 631128832, "Q4_K_M": 556974848}, default="Q6_K"),
+    # WER 1.80 — Moondream post-trained upgrade over parakeet-tdt-0.6b-v3 (25 EU langs, built-in VAD head).
+    _tc_row("parakeet-ultra", "Parakeet Ultra (0.6B)", _HAYAMIMI_EU_LANGS,
+            "handy-computer/parakeet-ultra-gguf", "parakeet-ultra",
+            60, {"F16": 1_260_000_000, "Q8_0": 740_000_000, "Q6_K": 611_000_000,
+                 "Q5_K_M": 550_000_000, "Q4_K_M": 486_000_000},
+            default="Q8_0", recommended=True),
     # WER 1.81 — 99-language quality reference.
     _tc_row("canary-180m-flash", "Canary 180M Flash", ("en", "de", "es", "fr"),
             "handy-computer/canary-180m-flash-gguf", "canary-180m-flash",

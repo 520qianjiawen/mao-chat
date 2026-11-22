@@ -174,6 +174,27 @@ describe('nativeCatalog', () => {
     expect(nativeAsrIncompatibleCards('zh', catalog).every((c) => !c.recommended)).toBe(true);
   });
 
+  it('ranks Japanese specialist Moonshine Base ahead of generic streaming models', () => {
+    const offline = [{ tier: 'cpu', backend: 'sherpa_offline', available: true }];
+    const tc = [{ tier: 'gpu-metal', backend: 'transcribe_cpp', available: true }];
+    const tcStream = [{ tier: 'gpu-metal', backend: 'transcribe_cpp_stream', available: true }];
+    const catalog: Record<string, NativeModelInfo> = {
+      'hayamimi-asr': M('hayamimi-asr', 'asr', ['multi'], -1, true, { tiers: offline }),
+      'sherpa-moonshine-base-ja-int8': M('sherpa-moonshine-base-ja-int8', 'asr', ['ja'], 0, true, { tiers: offline }),
+      'cohere-transcribe-03-2026': M('cohere-transcribe-03-2026', 'asr', ['en', 'ja', 'zh'], 10, true, { tiers: tc }),
+      'qwen3-asr-1.7b': M('qwen3-asr-1.7b', 'asr', ['zh', 'en', 'ja'], 40, true, { tiers: tc }),
+      'voxtral-mini-4b-realtime': M('voxtral-mini-4b-realtime', 'asr', ['en', 'ja', 'zh'], 100, true, { tiers: tcStream }),
+      'nemotron-3.5-asr-streaming': M('nemotron-3.5-asr-streaming', 'asr', ['en', 'ja', 'zh'], 128, true, { tiers: tcStream }),
+    };
+
+    const jaCards = nativeAsrCards('ja', catalog);
+    expect(jaCards.filter((c) => c.recommended).map((c) => c.selectId)).toEqual([
+      'sherpa-moonshine-base-ja-int8',
+      'hayamimi-asr',
+      'cohere-transcribe-03-2026',
+    ]);
+  });
+
   it('builds per-stage cards with the selectId/downloadId split', () => {
     // ASR cards from catalog: cohere leads for zh (recommended, order 0)
     expect(nativeAsrCards('zh', FIXTURE_ASR)[0]).toMatchObject({
