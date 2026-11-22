@@ -76,6 +76,48 @@ def _ends_sentence(text):
 _CJK_RE = re.compile(r'[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]')
 _HAN_KANA_RE = re.compile(r'[\u3400-\u9fff\u3040-\u30ff]')
 _TRAIL_PUNCT_RE = re.compile(r'[.!?。！？…、,;；]+$')
+_SPECIAL_TAG_RE = re.compile(r'<\|[^|]*\|>|\[(?:music|applause|laughter|silence|inaudible|noise)\]', re.IGNORECASE)
+_PUNCT_ONLY_RE = re.compile(r'^[。．.、，,！!？?…ー～〜・♪♫\s]+$')
+_SILENCE_HALLUCINATIONS = {
+    'ご視聴ありがとうございました',
+    'ご視聴ありがとう',
+    '字幕視聴ありがとうございました',
+    'チャンネル登録よろしくお願いします',
+    'thanks for watching',
+    'thank you for watching',
+    'music',
+    'applause',
+}
+# Bare noise/grunt fillers emitted on BGM or breathing bursts (e.g. Hayamimi/ReazonSpeech "うん").
+# Deliberately excludes meaningful confirmations like はい / yes / ok / 好.
+_NOISE_FILLER_ONLY_RE = re.compile(
+    r'^(?:うん+|うーん+|ん+|あっ+|あー+|えー+|えっと|あのー+|'
+    r'嗯+|啊+|呃+|额+|唔+|哦+|喔+|'
+    r'hmm+|uh+|um+|mhm+|mm+)[.!?。！？…、,]*$',
+    re.IGNORECASE,
+)
+_SHORT_CJK_LOOP_RE = re.compile(r'([\u3400-\u9fff\u3040-\u30ff]{2,11})\1{2,}')
+_SHORT_WORD_LOOP_RE = re.compile(r'\b(\w+(?:\s+\w+){0,3})(?:\s+\1){2,}\b', re.IGNORECASE)
+
+
+def clean_asr_text(text):
+    """Strip ASR noise tags, silence/BGM hallucinations, bare grunt fillers, and >=3x short loops."""
+    cleaned = _SPECIAL_TAG_RE.sub(' ', str(text or ''))
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    if not cleaned:
+        return ''
+    if _PUNCT_ONLY_RE.match(cleaned):
+        return ''
+    core = _TRAIL_PUNCT_RE.sub('', cleaned).strip()
+    if not core:
+        return ''
+    if core.lower() in _SILENCE_HALLUCINATIONS:
+        return ''
+    if _NOISE_FILLER_ONLY_RE.match(cleaned):
+        return ''
+    cleaned = _SHORT_CJK_LOOP_RE.sub(r'\1', cleaned)
+    cleaned = _SHORT_WORD_LOOP_RE.sub(r'\1', cleaned)
+    return cleaned.strip()
 
 
 def _mostly_cjk(text):
@@ -533,9 +575,9 @@ class AsrEngine:
             result = (method(pcm, self._language) if method is not None
                       else self._backend.transcribe(pcm, self._language))
             if isinstance(result, str):
-                return AsrResult(result.strip(), self._language)
+                return AsrResult(clean_asr_text(result), self._language)
             return AsrResult(
-                str(getattr(result, "text", "") or "").strip(),
+                clean_asr_text(getattr(result, "text", "") or ""),
                 getattr(result, "language", None) or self._language,
             )
         except Exception:

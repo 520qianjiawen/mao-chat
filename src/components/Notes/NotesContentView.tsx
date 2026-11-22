@@ -8,6 +8,7 @@ import { useMeetingStore } from '../../stores/meetingStore';
 import './NotesContentView.scss';
 
 interface NotesContentViewProps {
+  sessionId?: string;
   notes: MeetingNotes;
   isLive: boolean;
   freshPoints?: Set<string>;
@@ -17,6 +18,7 @@ interface NotesContentViewProps {
 }
 
 export const NotesContentView: React.FC<NotesContentViewProps> = ({
+  sessionId,
   notes,
   isLive,
   freshPoints = new Set(),
@@ -27,6 +29,45 @@ export const NotesContentView: React.FC<NotesContentViewProps> = ({
   const requestSessionStop = useSessionStore((s) => s.requestSessionStop);
   const setTab = useMeetingStore((s) => s.setTab);
   const setJumpToTimestamp = useMeetingStore((s) => s.setJumpToTimestamp);
+  const updateSessionNotes = useMeetingStore((s) => s.updateSessionNotes);
+
+  const [editingField, setEditingField] = useState<{ kind: 'summary' | 'conclusion' | 'todo'; index?: number } | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+
+  const startEdit = (kind: 'summary' | 'conclusion' | 'todo', value: string, index?: number) => {
+    if (!sessionId || isLive) return;
+    setEditingField({ kind, index });
+    setEditDraft(value);
+  };
+
+  const commitEdit = () => {
+    if (!editingField || !sessionId) {
+      setEditingField(null);
+      return;
+    }
+    const trimmed = editDraft.trim();
+    if (trimmed) {
+      updateSessionNotes(sessionId, (curr) => {
+        if (editingField.kind === 'summary') {
+          return { ...curr, summary: trimmed };
+        }
+        if (editingField.kind === 'conclusion' && editingField.index !== undefined) {
+          const nextConclusions = curr.conclusions.map((c, i) =>
+            i === editingField.index ? { ...c, text: trimmed } : c
+          );
+          return { ...curr, conclusions: nextConclusions };
+        }
+        if (editingField.kind === 'todo' && editingField.index !== undefined) {
+          const nextTodos = curr.todos.map((td, i) =>
+            i === editingField.index ? { ...td, text: trimmed } : td
+          );
+          return { ...curr, todos: nextTodos };
+        }
+        return curr;
+      });
+    }
+    setEditingField(null);
+  };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -121,7 +162,30 @@ export const NotesContentView: React.FC<NotesContentViewProps> = ({
               {notes.final ? '完整版' : isLive ? '速记版' : '速记版'}
             </span>
           </div>
-          <p className="notes-card__text">{notes.summary}</p>
+          {editingField?.kind === 'summary' ? (
+            <textarea
+              className="notes-inline-editor"
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setEditingField(null);
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') commitEdit();
+              }}
+              rows={3}
+              autoFocus
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #8b5cf6', font: 'inherit', resize: 'vertical' }}
+            />
+          ) : (
+            <p
+              className="notes-card__text"
+              onClick={() => startEdit('summary', notes.summary)}
+              title={!isLive && sessionId ? '点击原地编辑总结' : undefined}
+              style={!isLive && sessionId ? { cursor: 'text' } : undefined}
+            >
+              {notes.summary}
+            </p>
+          )}
         </section>
       )}
 
@@ -208,7 +272,29 @@ export const NotesContentView: React.FC<NotesContentViewProps> = ({
             {notes.conclusions.map((item, idx) => (
               <div key={`conclusion-${idx}`} className="notes-item-row">
                 <CheckCircle2 size={15} className="notes-item-row__icon icon-check" />
-                <span className="notes-item-row__text">{item.text}</span>
+                {editingField?.kind === 'conclusion' && editingField.index === idx ? (
+                  <input
+                    type="text"
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitEdit();
+                      if (e.key === 'Escape') setEditingField(null);
+                    }}
+                    autoFocus
+                    style={{ flex: 1, padding: '2px 6px', borderRadius: '4px', border: '1px solid #8b5cf6', font: 'inherit' }}
+                  />
+                ) : (
+                  <span
+                    className="notes-item-row__text"
+                    onClick={() => startEdit('conclusion', item.text, idx)}
+                    title={!isLive && sessionId ? '点击原地编辑结论' : undefined}
+                    style={!isLive && sessionId ? { cursor: 'text' } : undefined}
+                  >
+                    {item.text}
+                  </span>
+                )}
                 {item.t !== null && item.t !== undefined && (
                   <button
                     type="button"
@@ -223,12 +309,32 @@ export const NotesContentView: React.FC<NotesContentViewProps> = ({
             {notes.todos.map((item, idx) => (
               <div key={`todo-${idx}`} className="notes-item-row">
                 <Circle size={15} className="notes-item-row__icon icon-todo" />
-                <span className="notes-item-row__text">
-                  {item.text}
-                  {item.owner && (
-                    <span className="notes-item-row__owner">（{item.owner}）</span>
-                  )}
-                </span>
+                {editingField?.kind === 'todo' && editingField.index === idx ? (
+                  <input
+                    type="text"
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitEdit();
+                      if (e.key === 'Escape') setEditingField(null);
+                    }}
+                    autoFocus
+                    style={{ flex: 1, padding: '2px 6px', borderRadius: '4px', border: '1px solid #8b5cf6', font: 'inherit' }}
+                  />
+                ) : (
+                  <span
+                    className="notes-item-row__text"
+                    onClick={() => startEdit('todo', item.text, idx)}
+                    title={!isLive && sessionId ? '点击原地编辑待办' : undefined}
+                    style={!isLive && sessionId ? { cursor: 'text' } : undefined}
+                  >
+                    {item.text}
+                    {item.owner && (
+                      <span className="notes-item-row__owner">（{item.owner}）</span>
+                    )}
+                  </span>
+                )}
                 {item.t !== null && item.t !== undefined && (
                   <button
                     type="button"

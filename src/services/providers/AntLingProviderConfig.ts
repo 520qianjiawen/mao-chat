@@ -21,7 +21,7 @@ export interface AntLingSettings {
 }
 
 export const defaultAntLingSettings: AntLingSettings = {
-  apiKey: 'sk-studio-8e6cffe1bce9454cafde670c526822d4',
+  apiKey: '',
   customEndpoint: 'https://api.ant-ling.com/v1',
   asrModel: 'Ming-3.0-asr-tiny',
   chatModel: 'Ling-3.1-flash',

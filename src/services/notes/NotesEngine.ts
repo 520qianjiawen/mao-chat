@@ -8,6 +8,37 @@ export interface NotesEngineConfig {
   language?: string;
 }
 
+export interface CustomNotesAiConfig {
+  enabled: boolean;
+  endpoint: string;
+  apiKey: string;
+  model: string;
+}
+
+const NOTES_AI_CONFIG_KEY = 'mao_notes_ai_config_v1';
+
+export function getCustomNotesAiConfig(): CustomNotesAiConfig {
+  try {
+    const raw = localStorage.getItem(NOTES_AI_CONFIG_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        enabled: Boolean(parsed.enabled),
+        endpoint: String(parsed.endpoint || ''),
+        apiKey: String(parsed.apiKey || ''),
+        model: String(parsed.model || ''),
+      };
+    }
+  } catch {}
+  return { enabled: false, endpoint: '', apiKey: '', model: '' };
+}
+
+export function saveCustomNotesAiConfig(config: CustomNotesAiConfig): void {
+  try {
+    localStorage.setItem(NOTES_AI_CONFIG_KEY, JSON.stringify(config));
+  } catch {}
+}
+
 export class NotesEngine {
   private static parseEvidenceLineNumbers(evidence: unknown, totalLines: number): number[] {
     if (!Array.isArray(evidence)) return [];
@@ -341,15 +372,41 @@ Rules:
     const settings = useSettingsStore.getState();
     const provider = settings.provider;
 
-    // Check if we can call OpenAI / OpenAI-Compatible (Ling) / Gemini
+    // Check if we can call Custom Notes AI / OpenAI / OpenAI-Compatible (Ling) / Gemini
     let aiResponseText: string | null = null;
     try {
+      const customNotes = getCustomNotesAiConfig();
       const antLingKey = settings.antLing?.apiKey;
       const openAICompatibleKey = settings.openaiCompatible?.apiKey;
       const openAIKey = settings.openaiSettings?.apiKey || settings.openaiTranslate?.apiKey;
       const geminiKey = settings.geminiSettings?.apiKey;
 
-      if (provider === Provider.ANT_LING || (antLingKey && !openAIKey && !geminiKey)) {
+      if (customNotes.enabled && customNotes.endpoint.trim() && customNotes.model.trim()) {
+        const rawHost = customNotes.endpoint.trim().replace(/\/+$/, '');
+        const url = rawHost.endsWith('/chat/completions')
+          ? rawHost
+          : (rawHost.endsWith('/v1') ? `${rawHost}/chat/completions` : `${rawHost}/v1/chat/completions`);
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (customNotes.apiKey.trim()) {
+          headers['Authorization'] = `Bearer ${customNotes.apiKey.trim()}`;
+        }
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: customNotes.model.trim(),
+            messages: [
+              { role: 'system', content: `You are an expert meeting note keeper. Respond with JSON in ${language}.` },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.2,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          aiResponseText = data?.choices?.[0]?.message?.content || null;
+        }
+      } else if (provider === Provider.ANT_LING || (antLingKey && !openAIKey && !geminiKey)) {
         const slice = settings.antLing;
         const apiKey = slice?.apiKey;
         const endpoint = (slice?.customEndpoint || 'https://api.ant-ling.com/v1').replace(/\/+$/, '');
@@ -433,7 +490,7 @@ Rules:
         const apiKey = geminiKey;
         if (apiKey) {
           const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

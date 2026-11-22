@@ -305,11 +305,6 @@ export const useSpeakStore = create<SpeakState>((set, get) => {
             }
           } catch {}
 
-          if (!lingKey) {
-            // Default studio key if user has one configured locally
-            lingKey = 'sk-studio-8e6cffe1bce9454cafde670c526822d4';
-          }
-
           if (lingKey) {
             try {
               const response = await fetch('https://api.ant-ling.com/v1/audio/speech', {
@@ -367,7 +362,11 @@ export const useSpeakStore = create<SpeakState>((set, get) => {
     },
 
     speakVirtualMicText: async (text: string, langKey?: string) => {
-      if (!text || !text.trim()) return false;
+      // Strip accidental model prefixes like "翻译结果：" / "Translation:" before speaking into the meeting
+      const sanitized = (text || '')
+        .replace(/^(?:翻译结果|译文|翻译|translation|translated\s*text)\s*[:：]\s*/i, '')
+        .trim();
+      if (!sanitized) return false;
       const state = get();
       if (!state.speakEnabled) return false;
 
@@ -380,7 +379,7 @@ export const useSpeakStore = create<SpeakState>((set, get) => {
         if (voiceId.startsWith('ming:')) {
           try {
             const mingVoiceName = voiceId.slice(5);
-            let lingKey = 'sk-studio-8e6cffe1bce9454cafde670c526822d4';
+            let lingKey = '';
             try {
               const rawStored = localStorage.getItem('ling_api_key');
               if (rawStored) lingKey = rawStored;
@@ -391,36 +390,38 @@ export const useSpeakStore = create<SpeakState>((set, get) => {
               }
             } catch {}
 
-            const response = await fetch('https://api.ant-ling.com/v1/audio/speech', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${lingKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'Ming-3.0-tts-0.5B',
-                input: text.trim(),
-                voice: mingVoiceName,
-                response_format: 'wav',
-                ...(baseKey !== 'zh' && baseKey !== 'en' ? { language_id: baseKey } : {}),
-              }),
-            });
-
-            if (response.ok) {
-              const arrayBuffer = await response.arrayBuffer();
-              const bytes = new Uint8Array(arrayBuffer);
-              let binary = '';
-              const len = bytes.byteLength;
-              for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-              }
-              const base64 = window.btoa(binary);
-
-              const res = await (window as any).electron.invoke('play-file-to-virtual-mic', {
-                base64,
-                ext: 'wav',
+            if (lingKey) {
+              const response = await fetch('https://api.ant-ling.com/v1/audio/speech', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${lingKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'Ming-3.0-tts-0.5B',
+                  input: sanitized,
+                  voice: mingVoiceName,
+                  response_format: 'wav',
+                  ...(baseKey !== 'zh' && baseKey !== 'en' ? { language_id: baseKey } : {}),
+                }),
               });
-              if (res?.ok) return true;
+
+              if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+                let binary = '';
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+                }
+                const base64 = window.btoa(binary);
+
+                const res = await (window as any).electron.invoke('play-file-to-virtual-mic', {
+                  base64,
+                  ext: 'wav',
+                });
+                if (res?.ok) return true;
+              }
             }
           } catch (mingErr) {
             console.warn('[SpeakStore] Ming neural TTS to virtual mic failed, falling back to system speech:', mingErr);
@@ -435,7 +436,7 @@ export const useSpeakStore = create<SpeakState>((set, get) => {
           else if (cleanVoice.startsWith('灵')) cleanVoice = 'Ting-Ting';
 
           const res = await (window as any).electron.invoke('speak-to-virtual-mic', {
-            text: text.trim(),
+            text: sanitized,
             lang: targetLang,
             voice: cleanVoice,
           });

@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { MeetingSession, MeetingNotes, MeetingTranscriptLine } from '../types/meeting';
 import { NotesEngine } from '../services/notes/NotesEngine';
+import { autoSaveMeetingToFolder } from '../services/notes/meetingExport';
+import { applyWordListCorrections, learnWordCorrection, loadWordList } from '../services/notes/wordList';
 import type { ConversationItem } from '../services/interfaces/IClient';
 import useSettingsStore from './settingsStore';
 
@@ -62,6 +64,11 @@ interface MeetingState {
   selectSession: (id: string | null) => void;
   renameSession: (id: string, title: string) => void;
   deleteSession: (id: string) => void;
+  updateSessionNotes: (id: string, updater: (notes: MeetingNotes) => MeetingNotes) => void;
+  editTranscriptLine: (sessionId: string, lineId: string | number, patch: { src?: string; dst?: string }) => void;
+  batchReplaceInSession: (sessionId: string, findText: string, replaceText: string, learnToWordList?: boolean) => number;
+  undoLastTranscriptEdit: (sessionId: string) => boolean;
+  canUndoTranscriptEdit: (sessionId: string) => boolean;
   setTab: (tab: 'notes' | 'transcript') => void;
   setTranscriptViewMode: (mode: 'both' | 'src' | 'dst') => void;
   setShowQuotesSideBySide: (show: boolean) => void;
@@ -185,12 +192,23 @@ export function buildMeetingTranscriptLines(
     });
   }
 
+  // Apply global word list corrections to live/persisted lines
+  const wordList = loadWordList();
+  if (wordList.length > 0) {
+    return lines.map((l) => ({
+      ...l,
+      src: applyWordListCorrections(l.src, wordList),
+      dst: applyWordListCorrections(l.dst, wordList),
+    }));
+  }
+
   return lines;
 }
 
 // Timer reference outside react state
 let notesIntervalTimer: NodeJS.Timeout | null = null;
 let lastNotesUpdateTime = 0;
+const transcriptUndoMap = new Map<string, MeetingTranscriptLine[][]>();
 
 export const useMeetingStore = create<MeetingState>()(
   subscribeWithSelector((set, get) => ({
@@ -213,8 +231,127 @@ export const useMeetingStore = create<MeetingState>()(
           s.id === id ? { ...s, title, renamed: true } : s
         );
         savePersistedSessions(next);
+        const updated = next.find((s) => s.id === id);
+        if (updated) void autoSaveMeetingToFolder(updated);
         return { sessions: next };
       });
+    },
+
+    updateSessionNotes: (id, updater) => {
+      set((state) => {
+        const next = state.sessions.map((s) => {
+          if (s.id !== id) return s;
+          const baseNotes: MeetingNotes = s.notes || {
+            title: s.title,
+            summary: '',
+            topics: [],
+            conclusions: [],
+            todos: [],
+            terms: [],
+            covered: s.lines.length,
+            final: true,
+          };
+          return { ...s, notes: updater(baseNotes) };
+        });
+        savePersistedSessions(next);
+        const updated = next.find((s) => s.id === id);
+        if (updated) void autoSaveMeetingToFolder(updated);
+        return { sessions: next };
+      });
+    },
+
+    editTranscriptLine: (sessionId, lineId, patch) => {
+      set((state) => {
+        const target = state.sessions.find((s) => s.id === sessionId);
+        if (!target) return {};
+        const history = transcriptUndoMap.get(sessionId) || [];
+        history.push(target.lines.map((l) => ({ ...l })));
+        if (history.length > 20) history.shift();
+        transcriptUndoMap.set(sessionId, history);
+
+        const next = state.sessions.map((s) => {
+          if (s.id !== sessionId) return s;
+          return {
+            ...s,
+            lines: s.lines.map((l) =>
+              l.id === lineId
+                ? {
+                    ...l,
+                    ...(patch.src !== undefined ? { src: patch.src } : {}),
+                    ...(patch.dst !== undefined ? { dst: patch.dst } : {}),
+                  }
+                : l
+            ),
+          };
+        });
+        savePersistedSessions(next);
+        const updated = next.find((s) => s.id === sessionId);
+        if (updated) void autoSaveMeetingToFolder(updated);
+        return { sessions: next };
+      });
+    },
+
+    batchReplaceInSession: (sessionId, findText, replaceText, learnToWordList = true) => {
+      const needle = findText.trim();
+      const replacement = replaceText.trim();
+      if (!needle || !replacement || needle === replacement) return 0;
+
+      const state = get();
+      const target = state.sessions.find((s) => s.id === sessionId);
+      if (!target) return 0;
+
+      const history = transcriptUndoMap.get(sessionId) || [];
+      history.push(target.lines.map((l) => ({ ...l })));
+      if (history.length > 20) history.shift();
+      transcriptUndoMap.set(sessionId, history);
+
+      const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const isAsciiWord = /^[A-Za-z0-9][A-Za-z0-9\s._-]*[A-Za-z0-9]$/.test(needle) || /^[A-Za-z0-9]+$/.test(needle);
+      const regex = isAsciiWord ? new RegExp(`\\b${escaped}\\b`, 'gi') : new RegExp(escaped, 'g');
+
+      let count = 0;
+      const updatedLines = target.lines.map((l) => {
+        const nextSrc = l.src.replace(regex, () => { count++; return replacement; });
+        const nextDst = l.dst.replace(regex, () => { count++; return replacement; });
+        return { ...l, src: nextSrc, dst: nextDst };
+      });
+
+      if (count === 0) {
+        history.pop();
+        return 0;
+      }
+
+      if (learnToWordList) {
+        learnWordCorrection(needle, replacement);
+      }
+
+      set((curr) => {
+        const next = curr.sessions.map((s) => (s.id === sessionId ? { ...s, lines: updatedLines } : s));
+        savePersistedSessions(next);
+        const updated = next.find((s) => s.id === sessionId);
+        if (updated) void autoSaveMeetingToFolder(updated);
+        return { sessions: next };
+      });
+      return count;
+    },
+
+    undoLastTranscriptEdit: (sessionId) => {
+      const history = transcriptUndoMap.get(sessionId);
+      if (!history || history.length === 0) return false;
+      const previousLines = history.pop()!;
+      set((curr) => {
+        const next = curr.sessions.map((s) => (s.id === sessionId ? { ...s, lines: previousLines } : s));
+        savePersistedSessions(next);
+        const updated = next.find((s) => s.id === sessionId);
+        if (updated) void autoSaveMeetingToFolder(updated);
+        return { sessions: next };
+      });
+      return true;
+    },
+
+    canUndoTranscriptEdit: (sessionId) => {
+      const history = transcriptUndoMap.get(sessionId);
+      return Boolean(history && history.length > 0);
     },
 
     deleteSession: (id) => {
@@ -387,6 +524,8 @@ export const useMeetingStore = create<MeetingState>()(
               : s
           );
           savePersistedSessions(next);
+          const updated = next.find((s) => s.id === sessionId);
+          if (updated) void autoSaveMeetingToFolder(updated);
           return { sessions: next, isUpdatingNotes: false };
         });
       } catch (e) {

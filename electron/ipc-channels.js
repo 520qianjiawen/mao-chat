@@ -112,6 +112,9 @@ export const INVOKE_CHANNELS = [
   'quick-translate:apple-translate',
   'quick-translate:cloud-fetch',
   'quick-translate:install-apple-shortcut',
+  // Meeting notes auto-save folder export
+  'notes:select-export-folder',
+  'notes:write-markdown',
   // Externally-registered (electron-audio-loopback)
   ...EXTERNAL_INVOKE_CHANNELS,
 ];

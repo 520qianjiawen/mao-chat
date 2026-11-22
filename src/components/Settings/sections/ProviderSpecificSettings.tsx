@@ -415,7 +415,15 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
 
     try {
       if (provider === Provider.ANT_LING) {
-        const apiKey = antLingSettings.apiKey || 'sk-studio-8e6cffe1bce9454cafde670c526822d4';
+        const apiKey = antLingSettings.apiKey?.trim() || '';
+        if (!apiKey) {
+          const success = await speakText(sampleText, isEnglishVoice ? 'en' : 'zh', {
+            onEnd: () => setIsPlayingVoicePreview(false),
+            onError: () => setIsPlayingVoicePreview(false),
+          });
+          if (!success) setIsPlayingVoicePreview(false);
+          return;
+        }
         const rawHost = (antLingSettings.customEndpoint || 'https://api.ant-ling.com/v1').replace(/\/+$/, '');
         const host = rawHost.endsWith('/v1') ? rawHost : `${rawHost}/v1`;
 

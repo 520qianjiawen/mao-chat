@@ -1106,6 +1106,44 @@ ipcMain.handle('open-external', async (event, url) => {
   }
 });
 
+// Pick a local folder (e.g. Obsidian vault) for auto-saving meeting Markdown
+ipcMain.handle('notes:select-export-folder', async () => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow || undefined, {
+      title: '选择会议纪要自动保存文件夹',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (res.canceled || !res.filePaths || res.filePaths.length === 0) {
+      return { ok: false, canceled: true };
+    }
+    return { ok: true, folder: res.filePaths[0] };
+  } catch (error) {
+    console.error('[MAO Chat] [Main] Error selecting notes export folder:', error);
+    return { ok: false, error: error.message };
+  }
+});
+
+// Write a meeting's Markdown (with frontmatter) into the user-selected folder
+ipcMain.handle('notes:write-markdown', async (_event, payload) => {
+  try {
+    const folder = typeof payload?.folder === 'string' ? payload.folder.trim() : '';
+    const filename = typeof payload?.filename === 'string' ? path.basename(payload.filename.trim()) : '';
+    const content = typeof payload?.content === 'string' ? payload.content : '';
+    if (!folder || !filename || !filename.endsWith('.md')) {
+      return { ok: false, error: 'Invalid folder or markdown filename' };
+    }
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
+    }
+    const targetPath = path.join(folder, filename);
+    fs.writeFileSync(targetPath, content, 'utf8');
+    return { ok: true, path: targetPath };
+  } catch (error) {
+    console.error('[MAO Chat] [Main] Error writing notes markdown:', error);
+    return { ok: false, error: error.message };
+  }
+});
+
 
 
 

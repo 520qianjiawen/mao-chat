@@ -279,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>新增 Parakeet Ultra (0.6B) 语音识别模型支持，覆盖 25 种欧洲语言并自带高精度 VAD 头部</li><li>OpenAI 兼容语音识别模型新增 gpt-transcribe 官方最新推荐模型，转录精度更高、响应更快</li><li>优化端侧语音识别模型智能推荐与排序逻辑，优先推荐高适配率模型</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>端侧语音识别过滤与净化增强：有效消除无声背景幻觉（如日语感谢收看等标签）与杂音语气词，识别更干净准确</li><li>会议纪要与 Obsidian 导出支持：新增 Markdown 导出与自动同步到本地文件夹，支持 Frontmatter 标签与词频统计</li><li>虚拟麦克风播报体验优化：自动过滤提示前缀，发音更自然纯粹</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,

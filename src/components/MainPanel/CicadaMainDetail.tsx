@@ -1,6 +1,6 @@
 // src/components/MainPanel/CicadaMainDetail.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Columns, Copy, Check, FileText, Mic, Monitor, ArrowLeftRight, Minus, Maximize2, AlertCircle, X } from 'lucide-react';
+import { Download, Copy, Check, Mic, Monitor, ArrowLeftRight, Minus, Maximize2, AlertCircle, X, FolderOpen, Sparkles, BookOpen, Subtitles } from 'lucide-react';
 import { useMeetingStore } from '../../stores/meetingStore';
 import { formatClock, formatSessionDuration } from '../../types/meeting';
 import NotesContentView from '../Notes/NotesContentView';
@@ -10,6 +10,25 @@ import useSessionStore from '../../stores/sessionStore';
 import useAudioStore, { useMode } from '../../stores/audioStore';
 import { useCurrentTurnDetectionMode, useSetCurrentTurnDetectionMode } from '../../stores/settingsStore';
 import { useSpeakStore } from '../../stores/speakStore';
+import {
+  formatMeetingMarkdown,
+  formatMeetingSrt,
+  copyMeetingRichNotes,
+  getNotesExportFolder,
+  setNotesExportFolder,
+  autoSaveMeetingToFolder,
+} from '../../services/notes/meetingExport';
+import {
+  getCustomNotesAiConfig,
+  saveCustomNotesAiConfig,
+  type CustomNotesAiConfig,
+} from '../../services/notes/NotesEngine';
+import {
+  loadWordList,
+  saveWordList,
+  parseWordListText,
+  formatWordListText,
+} from '../../services/notes/wordList';
 import './CicadaMainDetail.scss';
 
 const formatShortcutKey = (key: string) => {
@@ -64,9 +83,19 @@ export const CicadaMainDetail: React.FC = () => {
   const [titleDraft, setTitleDraft] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Export menu popover state
+  // Export menu & utility panels state
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [exportFolder, setExportFolder] = useState<string>(() => getNotesExportFolder());
+  const [activeToolModal, setActiveToolModal] = useState<'none' | 'notes-ai' | 'word-list'>('none');
+  const [notesAiDraft, setNotesAiDraft] = useState<CustomNotesAiConfig>(() => getCustomNotesAiConfig());
+  const [wordListDraft, setWordListDraft] = useState<string>(() => formatWordListText(loadWordList()));
+  const [statusNotice, setStatusNotice] = useState<string>('');
+
+  const showNotice = (msg: string) => {
+    setStatusNotice(msg);
+    setTimeout(() => setStatusNotice(''), 2600);
+  };
 
   // Live timer
   const [liveElapsed, setLiveElapsed] = useState(0);
@@ -143,66 +172,69 @@ export const CicadaMainDetail: React.FC = () => {
     setIsEditingTitle(false);
   };
 
-  const handleExportMarkdown = (copyOnly = false) => {
-    let md = `# ${currentSession.title}\n\n`;
-    md += `*时间: ${new Date(currentSession.startedAt).toLocaleString()} · 时长: ${formatSessionDuration(currentSession.duration)}*\n\n`;
+  const triggerDownload = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-    if (notes.summary) {
-      md += `## 总结\n\n${notes.summary}\n\n`;
+  const handleCopyRichNotes = async () => {
+    await copyMeetingRichNotes(currentSession);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    setExportMenuOpen(false);
+    showNotice('已复制富文本纪要（可直接粘贴到飞书/Notion/Word）');
+  };
+
+  const handleExportMarkdown = () => {
+    const md = formatMeetingMarkdown(currentSession, true);
+    triggerDownload(md, `${currentSession.title}.md`, 'text/markdown;charset=utf-8');
+    setExportMenuOpen(false);
+  };
+
+  const handleExportSrt = () => {
+    const srt = formatMeetingSrt(currentSession);
+    triggerDownload(srt, `${currentSession.title}.srt`, 'application/x-subrip;charset=utf-8');
+    setExportMenuOpen(false);
+  };
+
+  const handlePickAutoSaveFolder = async () => {
+    setExportMenuOpen(false);
+    if (typeof window === 'undefined' || !(window as any).electron?.invoke) {
+      showNotice('自动保存文件夹仅在桌面端可用');
+      return;
     }
-
-    if (notes.topics.length > 0) {
-      md += `## 议题\n\n`;
-      notes.topics.forEach((t) => {
-        md += `### ${formatClock(t.start)} ${t.title}\n`;
-        if (t.summary) md += `${t.summary}\n\n`;
-        t.points.forEach((p, idx) => {
-          const pt = t.pointTimes?.[idx];
-          md += `- ${p} ${pt !== null && pt !== undefined ? `(${formatClock(pt)})` : ''}\n`;
-        });
-        md += `\n`;
-      });
+    const res = await (window as any).electron.invoke('notes:select-export-folder');
+    if (res?.ok && res.folder) {
+      setNotesExportFolder(res.folder);
+      setExportFolder(res.folder);
+      const saved = await autoSaveMeetingToFolder(currentSession);
+      showNotice(saved ? `已开启自动保存并写入：${res.folder}` : `已设置自动保存文件夹：${res.folder}`);
     }
+  };
 
-    if (notes.conclusions.length > 0) {
-      md += `## 结论\n\n`;
-      notes.conclusions.forEach((c) => {
-        md += `- ${c.text}\n`;
-      });
-      md += `\n`;
-    }
+  const handleClearAutoSaveFolder = () => {
+    setNotesExportFolder('');
+    setExportFolder('');
+    setExportMenuOpen(false);
+    showNotice('已关闭自动保存文件夹');
+  };
 
-    if (notes.todos.length > 0) {
-      md += `## 待办事项\n\n`;
-      notes.todos.forEach((td) => {
-        md += `- [ ] ${td.text} ${td.owner ? `(@${td.owner})` : ''}\n`;
-      });
-      md += `\n`;
-    }
+  const handleSaveNotesAiConfig = () => {
+    saveCustomNotesAiConfig(notesAiDraft);
+    setActiveToolModal('none');
+    showNotice(notesAiDraft.enabled ? `纪要独立模型已启用：${notesAiDraft.model}` : '已恢复跟随当前翻译服务');
+  };
 
-    md += `## 文字记录\n\n`;
-    lines.forEach((l) => {
-      md += `**[${formatClock(l.t)}] ${l.speaker === 'me' ? '你' : '对方'}:**\n`;
-      if (l.src) md += `${l.src}\n`;
-      if (l.dst && l.dst !== l.src) md += `*${l.dst}*\n`;
-      md += `\n`;
-    });
-
-    if (copyOnly) {
-      void navigator.clipboard.writeText(md);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      setExportMenuOpen(false);
-    } else {
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${currentSession.title}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setExportMenuOpen(false);
-    }
+  const handleSaveWordList = () => {
+    const parsed = parseWordListText(wordListDraft);
+    saveWordList(parsed);
+    setActiveToolModal('none');
+    showNotice(`全局词表已保存（${parsed.length} 条）`);
   };
 
   return (
@@ -437,36 +469,139 @@ export const CicadaMainDetail: React.FC = () => {
                 </div>
               )}
 
-              {/* Export Dropdown */}
+              {/* Export & Tools Dropdown */}
               <div className="cicada-export-wrapper">
                 <button
                   type="button"
                   className="cicada-export-btn"
                   onClick={() => setExportMenuOpen(!exportMenuOpen)}
                 >
-                  <span>导出...</span>
+                  <span>导出与工具...</span>
                 </button>
 
                 {exportMenuOpen && (
-                  <div className="cicada-export-menu">
-                    <button
-                      type="button"
-                      onClick={() => handleExportMarkdown(true)}
-                    >
+                  <div className="cicada-export-menu" style={{ minWidth: '210px' }}>
+                    <button type="button" onClick={() => void handleCopyRichNotes()}>
                       {copied ? <Check size={13} /> : <Copy size={13} />}
-                      <span>{copied ? '已复制！' : '复制为 Markdown'}</span>
+                      <span>{copied ? '已复制！' : '复制富文本纪要'}</span>
                     </button>
+                    <button type="button" onClick={handleExportMarkdown}>
+                      <Download size={13} />
+                      <span>导出 Markdown (.md)</span>
+                    </button>
+                    <button type="button" onClick={handleExportSrt}>
+                      <Subtitles size={13} />
+                      <span>导出双语字幕 (.srt)</span>
+                    </button>
+                    <div className="cicada-export-menu__divider" />
+                    <button type="button" onClick={() => void handlePickAutoSaveFolder()}>
+                      <FolderOpen size={13} />
+                      <span>{exportFolder ? '更改自动保存文件夹…' : '自动保存到文件夹 (Obsidian)…'}</span>
+                    </button>
+                    {exportFolder && (
+                      <button type="button" onClick={handleClearAutoSaveFolder}>
+                        <X size={13} />
+                        <span>关闭自动保存</span>
+                      </button>
+                    )}
                     <div className="cicada-export-menu__divider" />
                     <button
                       type="button"
-                      onClick={() => handleExportMarkdown(false)}
+                      onClick={() => {
+                        setNotesAiDraft(getCustomNotesAiConfig());
+                        setActiveToolModal('notes-ai');
+                        setExportMenuOpen(false);
+                      }}
                     >
-                      <Download size={13} />
-                      <span>导出 Markdown (.md)</span>
+                      <Sparkles size={13} />
+                      <span>独立纪要模型设置…</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWordListDraft(formatWordListText(loadWordList()));
+                        setActiveToolModal('word-list');
+                        setExportMenuOpen(false);
+                      }}
+                    >
+                      <BookOpen size={13} />
+                      <span>全局词表 / 错词纠错…</span>
                     </button>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {statusNotice && (
+          <div style={{ padding: '6px 16px', fontSize: '12px', color: '#8b5cf6' }}>
+            {statusNotice}
+          </div>
+        )}
+
+        {/* Inline Config Panel: Independent Notes AI Model */}
+        {activeToolModal === 'notes-ai' && (
+          <div style={{ margin: '8px 24px', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.35)', background: 'rgba(139,92,246,0.06)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
+              <span>独立纪要模型设置（支持任意 OpenAI 兼容端点 / 本地 Ollama）</span>
+              <button type="button" onClick={() => setActiveToolModal('none')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit' }}><X size={14} /></button>
+            </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={notesAiDraft.enabled}
+                onChange={(e) => setNotesAiDraft({ ...notesAiDraft, enabled: e.target.checked })}
+              />
+              <span>启用独立纪要模型（不跟随当前实时翻译服务）</span>
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder="API 地址（如 https://api.openai.com/v1）"
+                value={notesAiDraft.endpoint}
+                onChange={(e) => setNotesAiDraft({ ...notesAiDraft, endpoint: e.target.value })}
+                style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', fontSize: '12px' }}
+              />
+              <input
+                type="text"
+                placeholder="模型名（如 gpt-4o-mini / qwen3:8b）"
+                value={notesAiDraft.model}
+                onChange={(e) => setNotesAiDraft({ ...notesAiDraft, model: e.target.value })}
+                style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', fontSize: '12px' }}
+              />
+              <input
+                type="password"
+                placeholder="API Key（本地 Ollama 可留空）"
+                value={notesAiDraft.apiKey}
+                onChange={(e) => setNotesAiDraft({ ...notesAiDraft, apiKey: e.target.value })}
+                style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', fontSize: '12px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" onClick={() => setActiveToolModal('none')} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', background: 'transparent', cursor: 'pointer', color: 'inherit' }}>取消</button>
+              <button type="button" onClick={handleSaveNotesAiConfig} style={{ padding: '4px 12px', borderRadius: '6px', border: 'none', background: '#8b5cf6', color: '#fff', cursor: 'pointer' }}>保存</button>
+            </div>
+          </div>
+        )}
+
+        {/* Inline Config Panel: Global Word List */}
+        {activeToolModal === 'word-list' && (
+          <div style={{ margin: '8px 24px', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.35)', background: 'rgba(139,92,246,0.06)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
+              <span>全局词表（实时自动纠错，每行一条：误听词 -&gt; 正确词）</span>
+              <button type="button" onClick={() => setActiveToolModal('none')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit' }}><X size={14} /></button>
+            </div>
+            <textarea
+              rows={5}
+              placeholder={'每行一条，支持批量粘贴，例如：\n张伟 -> 章炜\nopen ai, openai -> OpenAI\nMAO Chat'}
+              value={wordListDraft}
+              onChange={(e) => setWordListDraft(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" onClick={() => setActiveToolModal('none')} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', background: 'transparent', cursor: 'pointer', color: 'inherit' }}>取消</button>
+              <button type="button" onClick={handleSaveWordList} style={{ padding: '4px 12px', borderRadius: '6px', border: 'none', background: '#8b5cf6', color: '#fff', cursor: 'pointer' }}>保存词表</button>
             </div>
           </div>
         )}
@@ -536,6 +671,7 @@ export const CicadaMainDetail: React.FC = () => {
           <div className="cicada-main-detail__side-by-side">
             <div className="cicada-side-col cicada-side-col--notes">
               <NotesContentView
+                sessionId={currentSession.id}
                 notes={notes}
                 isLive={isLive}
                 freshPoints={freshPoints}
@@ -546,6 +682,7 @@ export const CicadaMainDetail: React.FC = () => {
             <div className="cicada-side-divider" />
             <div className="cicada-side-col cicada-side-col--transcript">
               <CicadaTranscriptView
+                sessionId={currentSession.id}
                 lines={lines}
                 isLive={isLive}
                 viewMode={transcriptViewMode}
@@ -557,6 +694,7 @@ export const CicadaMainDetail: React.FC = () => {
         ) : currentTab === 'notes' ? (
           <div className="cicada-main-detail__single-view">
             <NotesContentView
+              sessionId={currentSession.id}
               notes={notes}
               isLive={isLive}
               freshPoints={freshPoints}
@@ -567,6 +705,7 @@ export const CicadaMainDetail: React.FC = () => {
         ) : (
           <div className="cicada-main-detail__single-view">
             <CicadaTranscriptView
+              sessionId={currentSession.id}
               lines={lines}
               isLive={isLive}
               viewMode={transcriptViewMode}
