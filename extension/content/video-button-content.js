@@ -234,6 +234,10 @@
       this.formattedSubtitles = []; // { start, end, text, translation, isTranslating }
       this.currentIndex = -1;
       this.lastExternalText = '';
+      this.lastTranslation = '';
+      this.lastMatchedCueEnd = 0;
+      this.externalTranslateTimer = null;
+      this.domObserverTimer = null;
       this.containerEl = null;
       this.paperEl = null;
       this.transEl = null;
@@ -626,8 +630,8 @@
     }
 
     setupDOMCaptionObserver() {
-      const observer = new MutationObserver(() => {
-        if (!isSubtitlesActive) return;
+      const runScan = () => {
+        if (!isSubtitlesActive || this.formattedSubtitles.length > 0) return;
 
         // Priority 1: Twitter styled caption spans
         const twitterCaption = this.readTwitterCaption();
@@ -635,8 +639,10 @@
           this.handleExternalCaption(twitterCaption.text);
           if (Array.isArray(twitterCaption.elements)) {
             twitterCaption.elements.forEach((el) => {
-              el.style.setProperty('opacity', '0', 'important');
-              el.style.setProperty('visibility', 'hidden', 'important');
+              if (el.style.visibility !== 'hidden') {
+                el.style.setProperty('opacity', '0', 'important');
+                el.style.setProperty('visibility', 'hidden', 'important');
+              }
             });
           }
           return;
@@ -646,16 +652,25 @@
         const domCaption = this.readDOMCaption();
         if (domCaption) {
           this.handleExternalCaption(domCaption.text);
-          if (domCaption.el) {
+          if (domCaption.el && domCaption.el.style.visibility !== 'hidden') {
             domCaption.el.style.setProperty('opacity', '0', 'important');
             domCaption.el.style.setProperty('visibility', 'hidden', 'important');
             const parent = domCaption.el.parentElement;
-            if (parent && parent !== this.container && !parent.querySelector('video') && !parent.querySelector('button')) {
+            if (parent && parent !== this.container && !parent.querySelector('video') && !parent.querySelector('button') && parent.style.visibility !== 'hidden') {
               parent.style.setProperty('opacity', '0', 'important');
               parent.style.setProperty('visibility', 'hidden', 'important');
             }
           }
         }
+      };
+
+      const observer = new MutationObserver(() => {
+        if (!isSubtitlesActive || this.formattedSubtitles.length > 0) return;
+        if (this.domObserverTimer) return;
+        this.domObserverTimer = setTimeout(() => {
+          this.domObserverTimer = null;
+          runScan();
+        }, 80);
       });
       observer.observe(this.container, { childList: true, subtree: true, characterData: true });
     }
@@ -725,20 +740,25 @@
         const idx = this.binarySearchSubtitle(currentTimeMs);
         if (idx !== -1) {
           const sub = this.formattedSubtitles[idx];
-          this.displaySubtitle(sub.text, sub.translation);
+          this.lastMatchedCueEnd = sub.end || currentTimeMs;
+          const displayTrans = sub.translation || this.lastTranslation || '';
+          this.displaySubtitle(sub.text, displayTrans);
           if (!sub.translation && !sub.isTranslating && currentDisplayMode !== 'source_only') {
             sub.isTranslating = true;
             translateText(sub.text).then((trans) => {
               sub.translation = trans;
               sub.isTranslating = false;
               if (this.currentIndex === idx && isSubtitlesActive) {
+                this.lastTranslation = trans;
                 this.displaySubtitle(sub.text, trans);
               }
             });
+          } else if (sub.translation) {
+            this.lastTranslation = sub.translation;
           }
-          // Pre-translate next 2 upcoming subtitles
+          // Pre-translate next 3 upcoming subtitles for fast-paced videos
           if (currentDisplayMode !== 'source_only') {
-            for (let n = 1; n <= 2; n++) {
+            for (let n = 1; n <= 3; n++) {
               const next = this.formattedSubtitles[idx + n];
               if (next && !next.translation && !next.isTranslating) {
                 next.isTranslating = true;
@@ -752,7 +772,12 @@
           this.currentIndex = idx;
           return;
         } else {
-          this.hideSubtitles();
+          // Avoid flashing hidden during tiny inter-cue gaps (< 500ms) and
+          // never fall through to DOM on-screen scraping when TimedText is loaded.
+          if (currentTimeMs - this.lastMatchedCueEnd > 500) {
+            this.hideSubtitles();
+          }
+          return;
         }
       }
 
@@ -851,6 +876,7 @@
 
     handleExternalCaption(text) {
       if (!text || !isSubtitlesActive) return;
+      if (this.formattedSubtitles.length > 0) return;
       if (this.lastExternalText === text) return;
       this.lastExternalText = text;
 
@@ -859,12 +885,50 @@
         return;
       }
 
-      this.displaySubtitle(text, '...');
-      translateText(text).then((trans) => {
-        if (this.lastExternalText === text && isSubtitlesActive) {
-          this.displaySubtitle(text, trans);
-        }
-      });
+      // Check cache immediately to avoid any delay or placeholder
+      const from = currentSourceLang === 'auto' ? 'auto' : currentSourceLang;
+      const cacheKey = `${currentEngine}:${from}:${currentTargetLang}:${text.trim().toLowerCase()}`;
+      const cached = translationCache.get(cacheKey);
+      if (cached) {
+        this.lastTranslation = cached;
+        this.displaySubtitle(text, cached);
+        return;
+      }
+
+      // Keep the previous translation visible instead of flashing '...' on every rolling word
+      this.displaySubtitle(text, this.lastTranslation || '...');
+
+      const fireTranslate = (targetText) => {
+        const seq = (this._translateSeq = (this._translateSeq || 0) + 1);
+        this._lastTranslateFiredAt = Date.now();
+        translateText(targetText).then((trans) => {
+          if (!isSubtitlesActive || this.formattedSubtitles.length > 0) return;
+          // Accept any translation newer than the last applied one so fast rolling captions
+          // never starve waiting for exact text equality.
+          if (seq >= (this._lastAppliedTranslateSeq || 0)) {
+            this._lastAppliedTranslateSeq = seq;
+            this.lastTranslation = trans;
+            this.displaySubtitle(this.lastExternalText || targetText, trans);
+          }
+        });
+      };
+
+      const now = Date.now();
+      const elapsed = now - (this._lastTranslateFiredAt || 0);
+      if (this.externalTranslateTimer) {
+        clearTimeout(this.externalTranslateTimer);
+        this.externalTranslateTimer = null;
+      }
+      if (elapsed >= 220) {
+        fireTranslate(text);
+      } else {
+        this.externalTranslateTimer = setTimeout(() => {
+          this.externalTranslateTimer = null;
+          if (this.lastExternalText && isSubtitlesActive) {
+            fireTranslate(this.lastExternalText);
+          }
+        }, 220 - elapsed);
+      }
     }
 
     displaySubtitle(origText, transText, options = {}) {
@@ -986,6 +1050,14 @@
       if (this.autoHideTimer) {
         clearTimeout(this.autoHideTimer);
         this.autoHideTimer = null;
+      }
+      if (this.externalTranslateTimer) {
+        clearTimeout(this.externalTranslateTimer);
+        this.externalTranslateTimer = null;
+      }
+      if (this.domObserverTimer) {
+        clearTimeout(this.domObserverTimer);
+        this.domObserverTimer = null;
       }
       this.videoEl.removeEventListener('timeupdate', this.onTimeUpdate);
       this.videoEl.removeEventListener('seeking', this.onSeeking);
@@ -1336,6 +1408,13 @@
     }
   }
 
+  function safeSendMessage(payload) {
+    try {
+      const p = chrome?.runtime?.sendMessage?.(payload);
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch { /* ignore invalidated extension context */ }
+  }
+
   function toggleSubtitles() {
     const nextState = !isSubtitlesActive;
     setAllButtonsState(nextState);
@@ -1360,7 +1439,7 @@
 
     const needASR = !hasNative && isAsrEnabled;
 
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'MAO_VIDEO_BUTTON_CLICK',
       active: nextState,
       url: window.location.href,
@@ -1368,7 +1447,7 @@
       hasNativeCaptions: hasNative,
       sourceLanguage: currentSourceLang,
       targetLanguage: currentTargetLang,
-    }).catch(() => {});
+    });
   }
 
   // Update Popover UI for all mounted buttons
@@ -1439,14 +1518,14 @@
       if (!hasNative) {
         if (enabled) {
           ensureSokujiPort();
-          chrome.runtime.sendMessage({
+          safeSendMessage({
             type: 'START_IN_VIDEO_ASR',
-          }).catch(() => {});
+          });
         } else {
           isAsrActive = false;
-          chrome.runtime.sendMessage({
+          safeSendMessage({
             type: 'STOP_IN_VIDEO_ASR',
-          }).catch(() => {});
+          });
           for (const group of activeButtons) {
             updateVisuals(group, isSubtitlesActive);
           }
@@ -1511,11 +1590,11 @@
     } catch { /* ignore */ }
     translationCache.clear();
     updateAllPopoversUI();
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'MAO_SET_LANGUAGES',
       sourceLanguage: currentSourceLang,
       targetLanguage: currentTargetLang,
-    }).catch(() => {});
+    });
     for (const m of activeVideoManagers.values()) {
       if (m.formattedSubtitles) {
         for (const s of m.formattedSubtitles) {
@@ -1535,11 +1614,11 @@
     } catch { /* ignore */ }
     translationCache.clear();
     updateAllPopoversUI();
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'MAO_SET_LANGUAGES',
       sourceLanguage: currentSourceLang,
       targetLanguage: currentTargetLang,
-    }).catch(() => {});
+    });
     for (const m of activeVideoManagers.values()) {
       if (m.formattedSubtitles) {
         for (const s of m.formattedSubtitles) {
@@ -1886,11 +1965,15 @@
       toggleSubtitles();
     });
 
-    const settingsBtn = controls.querySelector('.ytp-settings-button');
-    if (settingsBtn) {
-      controls.insertBefore(btn, settingsBtn);
-    } else {
-      controls.appendChild(btn);
+    try {
+      const settingsBtn = controls.querySelector('.ytp-settings-button');
+      if (settingsBtn && settingsBtn.parentNode && settingsBtn.parentNode.contains(settingsBtn)) {
+        settingsBtn.parentNode.insertBefore(btn, settingsBtn);
+      } else {
+        controls.appendChild(btn);
+      }
+    } catch {
+      try { controls.appendChild(btn); } catch { /* ignore */ }
     }
   }
 
