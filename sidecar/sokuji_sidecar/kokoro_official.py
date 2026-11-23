@@ -16,12 +16,78 @@ and the resolver simply omits the plan.
 from __future__ import annotations
 
 import os
+import re
 import time
 from pathlib import Path
 
 import numpy as np
 
 from .backends import register_backend, BackendLoadError
+
+_ZERO_WIDTH_RE = re.compile(r"[\u200b\u200c\u200d\ufeff]")
+_HORIZ_SPACE_RE = re.compile(r"[\t\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+")
+_MULTI_SPACE_RE = re.compile(r" {2,}")
+_SPACE_BEFORE_PUNCT_RE = re.compile(r" +([,.;:!?])")
+_PARA_SPLIT_RE = re.compile(r"\n[ \t]*\n+")
+_CJK_CHAR_RE = re.compile(r"[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff00-\uffef]")
+
+
+def _normalize_kokoro_text(text: str, lang_code: str = "a") -> str:
+    """Normalize whitespace and soft line breaks before KPipeline G2P.
+
+    KPipeline splits on ``r'\\n+'`` by default, which breaks mid-sentence soft
+    line wraps into separate model calls (resetting prosody and stacking
+    chunk-boundary silence). Collapse single newlines within a paragraph while
+    preserving intentional blank-line paragraph breaks as a single ``\\n``.
+    """
+    if not text:
+        return ""
+    s = text.replace("\r\n", "\n").replace("\r", "\n")
+    s = _ZERO_WIDTH_RE.sub("", s)
+    s = _HORIZ_SPACE_RE.sub(" ", s)
+
+    is_cjk = lang_code in ("z", "j")
+    paragraphs: list[str] = []
+    for raw_para in _PARA_SPLIT_RE.split(s):
+        lines = [line.strip() for line in raw_para.split("\n") if line.strip()]
+        if not lines:
+            continue
+        if is_cjk:
+            merged = lines[0]
+            for nxt in lines[1:]:
+                if _CJK_CHAR_RE.search(merged[-1]) or _CJK_CHAR_RE.search(nxt[0]):
+                    merged += nxt
+                else:
+                    merged += " " + nxt
+        else:
+            merged = " ".join(lines)
+        merged = _MULTI_SPACE_RE.sub(" ", merged)
+        if not is_cjk:
+            merged = _SPACE_BEFORE_PUNCT_RE.sub(r"\1", merged)
+        if merged:
+            paragraphs.append(merged)
+    return "\n".join(paragraphs)
+
+
+def _trim_silence(
+    samples: np.ndarray,
+    sr: int = 24000,
+    threshold: float = 0.005,
+    keep_lead_ms: float = 25.0,
+    keep_trail_ms: float = 55.0,
+) -> np.ndarray:
+    """Trim excessive leading/trailing near-silence while keeping natural margins."""
+    arr = np.asarray(samples, dtype=np.float32).reshape(-1)
+    if arr.size == 0:
+        return arr
+    active = np.flatnonzero(np.abs(arr) > threshold)
+    if active.size == 0:
+        return np.zeros(0, dtype=np.float32)
+    lead = max(0, int(sr * keep_lead_ms / 1000.0))
+    trail = max(0, int(sr * keep_trail_ms / 1000.0))
+    start = max(0, int(active[0]) - lead)
+    end = min(arr.size, int(active[-1]) + 1 + trail)
+    return arr[start:end]
 
 _DEFAULT_REPO = "hexgrad/Kokoro-82M"
 _MODEL_FILE = "kokoro-v1_0.pth"
@@ -295,23 +361,50 @@ class KokoroOfficialBackend:
     def generate(self, text, speed=1.0):
         if self._model is None:
             raise BackendLoadError("Kokoro model is not loaded")
-        text = (text or "").strip()
-        if not text:
+        code = _VOICE_LANG_CODE.get(self._voice[0], "a")
+        norm_text = _normalize_kokoro_text(text or "", lang_code=code)
+        if not norm_text:
             return np.zeros(0, dtype=np.float32), 0
 
         t0 = time.time()
         pipe = self._pipeline_for_voice(self._voice)
         voice_path = self._voice_path()
-        chunks: list[np.ndarray] = []
+        spd = float(speed) or 1.0
+        speed_scale = max(0.5, min(2.0, spd))
+        raw_chunks: list[tuple[int | None, np.ndarray]] = []
         try:
             # Absolute .pt path keeps voice load offline (skips hf_hub_download).
-            for _gs, _ps, audio in pipe(text, voice=voice_path, speed=float(speed) or 1.0):
+            for item in pipe(norm_text, voice=voice_path, speed=spd):
+                text_index = getattr(item, "text_index", None)
+                if hasattr(item, "audio"):
+                    audio = item.audio
+                else:
+                    _gs, _ps, audio = item
                 if audio is None:
                     continue
                 arr = audio.detach().cpu().numpy() if hasattr(audio, "detach") else np.asarray(audio)
-                chunks.append(np.asarray(arr, dtype=np.float32).reshape(-1))
+                raw_chunks.append((text_index, np.asarray(arr, dtype=np.float32).reshape(-1)))
         except Exception as exc:
             raise BackendLoadError(f"Kokoro synthesis failed: {exc}") from exc
+
+        chunks: list[np.ndarray] = []
+        total = len(raw_chunks)
+        for i, (cur_idx, arr) in enumerate(raw_chunks):
+            keep_lead_ms = 20.0 if i == 0 else (25.0 / speed_scale)
+            if i < total - 1:
+                next_idx = raw_chunks[i + 1][0]
+                is_para_break = cur_idx is not None and next_idx is not None and next_idx != cur_idx
+                keep_trail_ms = (140.0 if is_para_break else 55.0) / speed_scale
+            else:
+                keep_trail_ms = 60.0 / speed_scale
+            trimmed = _trim_silence(
+                arr,
+                sr=self.sample_rate,
+                keep_lead_ms=keep_lead_ms,
+                keep_trail_ms=keep_trail_ms,
+            )
+            if trimmed.size > 0:
+                chunks.append(trimmed)
 
         if not chunks:
             samples = np.zeros(0, dtype=np.float32)

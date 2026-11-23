@@ -95,3 +95,73 @@ def test_load_requires_weights(monkeypatch, tmp_path):
     # missing pth + voices
     with pytest.raises(BackendLoadError, match="incomplete"):
         b.load("hexgrad/Kokoro-82M", "cpu", "fp32")
+
+
+def test_normalize_kokoro_text_collapses_spaces_and_soft_wraps():
+    from sokuji_sidecar.kokoro_official import _normalize_kokoro_text
+
+    # Extra spaces, tabs, NBSP, zero-width chars, space before punctuation
+    raw = "Hello   world\u00a0\u00a0,  this\t\tis\u200b a   test .\nNext line in same para.\n\nSecond paragraph."
+    assert (
+        _normalize_kokoro_text(raw, lang_code="a")
+        == "Hello world, this is a test. Next line in same para.\nSecond paragraph."
+    )
+
+    # CJK soft line wraps should join without extra spaces, while keeping space around Latin words
+    zh_raw = "你好世界，\n今天天气不错。\n\n第二段  hello\nworld"
+    assert _normalize_kokoro_text(zh_raw, lang_code="z") == "你好世界，今天天气不错。\n第二段 hello world"
+
+
+def test_trim_silence_removes_excessive_padding():
+    from sokuji_sidecar.kokoro_official import _trim_silence
+
+    sr = 24000
+    # 500ms silence + 100ms speech + 500ms silence
+    wav = np.concatenate([
+        np.zeros(sr // 2, dtype=np.float32),
+        np.full(sr // 10, 0.4, dtype=np.float32),
+        np.zeros(sr // 2, dtype=np.float32),
+    ])
+    trimmed = _trim_silence(wav, sr=sr, keep_lead_ms=25.0, keep_trail_ms=55.0)
+    # Expected: 25ms + 100ms + 55ms = 180ms = 4320 samples
+    assert trimmed.size == int(sr * 0.18)
+    # All-silent chunk collapses to empty
+    assert _trim_silence(np.zeros(sr // 4, dtype=np.float32), sr=sr).size == 0
+
+
+def test_generate_trims_inter_chunk_silence_and_normalizes_text(tmp_path):
+    b = KokoroOfficialBackend()
+    b._root = tmp_path
+    b._model = object()
+    b._device = "cpu"
+    b._voice = "af_heart"
+    (tmp_path / "voices").mkdir()
+    (tmp_path / "voices" / "af_heart.pt").write_bytes(b"x")
+
+    sr = b.sample_rate
+    seen_text = []
+
+    class FakeResult:
+        def __init__(self, audio, text_index):
+            self.audio = audio
+            self.text_index = text_index
+
+    class FakePipe:
+        def __call__(self, text, voice, speed=1.0):
+            seen_text.append(text)
+            # Each chunk has 500ms leading + 100ms speech + 500ms trailing silence
+            speech = np.full(sr // 10, 0.5, dtype=np.float32)
+            pad = np.zeros(sr // 2, dtype=np.float32)
+            chunk = np.concatenate([pad, speech, pad])
+            yield FakeResult(chunk, 0)
+            yield FakeResult(chunk, 0)  # same-paragraph split
+            yield FakeResult(chunk, 1)  # paragraph break
+
+    b._pipelines["a"] = FakePipe()
+    samples, _ms = b.generate("Hello   world\nstill para one.\n\nPara two.", speed=1.0)
+    assert seen_text == ["Hello world still para one.\nPara two."]
+    # Chunk 0: 20ms + 100ms + 55ms = 175ms
+    # Chunk 1: 25ms + 100ms + 140ms = 265ms
+    # Chunk 2: 25ms + 100ms + 60ms = 185ms
+    # Total = 625ms (15000 samples) instead of 3300ms (79200 samples)!
+    assert samples.size == int(sr * 0.625)

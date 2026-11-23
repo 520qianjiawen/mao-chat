@@ -2025,6 +2025,7 @@
       isPopoverOpen = false;
       popover.classList.remove('open');
       catBtn.classList.remove('open');
+      showButton(true);
     };
 
     catBtn.addEventListener('click', (e) => {

@@ -279,7 +279,7 @@ async function main() {
     version,
     name: `MAO Chat ${version}`,
     pub_date: new Date().toISOString(),
-    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>紧凑字幕控制栏贴靠优化：在窗口化紧凑模式下控制栏紧贴字幕胶囊停靠，消除透明窗口下的多余空隙</li><li>端侧模型下载进度平滑优化：完善 Hugging Face 与 Xet 下载实时字节流回调，模型下载进度平滑显示不卡顿</li><li>端侧语音识别过滤与净化增强：有效消除无声背景幻觉与杂音语气词，识别更干净准确</li><li>会议纪要与 Obsidian 导出支持：新增 Markdown 导出与自动同步到本地文件夹，支持 Frontmatter 标签与词频统计</li></ul>`,
+    notes: `<h3>MAO Chat v${version} 更新说明</h3><ul><li>Kokoro 82M 官方端侧语音合成优化：新增多语言文本规范化与软折行合并，并在音频块间加入动态静音修剪，彻底消除卡顿、停顿冗长与语音断层，播报更连贯自然</li><li>视频浮钮与浏览器插件交互优化：优化弹窗关闭后的浮钮恢复显示，提升视频场景下的交互体验</li><li>紧凑字幕控制栏贴靠优化：在窗口化紧凑模式下控制栏紧贴字幕胶囊停靠，消除透明窗口下的多余空隙</li><li>端侧模型下载进度平滑优化：完善 Hugging Face 与 Xet 下载实时字节流回调，模型下载进度平滑显示不卡顿</li></ul>`,
     files: {
       'darwin-arm64': {
         url: dmgPublicUrl,
