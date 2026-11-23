@@ -245,12 +245,17 @@
       this.autoHideTimer = null;
       this.isYouTube = container.id === 'movie_player' || container.classList.contains('html5-video-player');
       this.isTwitter = Boolean(container.closest('[data-testid="videoComponent"], [data-testid="videoPlayer"], article[data-testid="tweet"]'));
+      this.currentVideoId = this.isYouTube && typeof window.__maoGetYouTubeVideoId === 'function'
+        ? (window.__maoGetYouTubeVideoId() || '')
+        : '';
 
       this.onTimeUpdate = this.onTimeUpdate.bind(this);
       this.onSeeked = this.onSeeked.bind(this);
       this.onSeeking = this.onSeeking.bind(this);
       this.onVideoPause = this.onVideoPause.bind(this);
       this.onVideoPlay = this.onVideoPlay.bind(this);
+      this.onYouTubeTimedTextReady = this.onYouTubeTimedTextReady.bind(this);
+      this.onYouTubeNavigate = this.onYouTubeNavigate.bind(this);
 
       this.createSubtitleElements();
       this.attachVideoListeners();
@@ -480,6 +485,11 @@
 
       // Always setup DOM caption observer for on-screen captions
       this.setupDOMCaptionObserver();
+
+      if (this.isYouTube) {
+        window.addEventListener('mao-youtube-timedtext-ready', this.onYouTubeTimedTextReady);
+        window.addEventListener('yt-navigate-finish', this.onYouTubeNavigate);
+      }
     }
 
     parseTrackCues(cues) {
@@ -675,9 +685,79 @@
       observer.observe(this.container, { childList: true, subtree: true, characterData: true });
     }
 
+    onYouTubeTimedTextReady(event) {
+      if (!this.isYouTube) return;
+      const detail = event && event.detail;
+      if (!detail || !Array.isArray(detail.events) || detail.events.length === 0) return;
+      const activeId = typeof window.__maoGetYouTubeVideoId === 'function'
+        ? (window.__maoGetYouTubeVideoId() || '')
+        : '';
+      if (detail.videoId && activeId && detail.videoId !== activeId) return;
+      if (activeId) this.currentVideoId = activeId;
+
+      this.parseYouTubeTimedText(detail.events, detail.lang || '');
+
+      // If ASR was started before timedtext arrived, stop ASR immediately and use native TimedText
+      if (isAsrActive) {
+        isAsrActive = false;
+        safeSendMessage({ type: 'STOP_IN_VIDEO_ASR' });
+        for (const group of activeButtons) {
+          updateVisuals(group, isSubtitlesActive);
+        }
+      }
+    }
+
+    onYouTubeNavigate() {
+      if (!this.isYouTube) return;
+      const nextId = typeof window.__maoGetYouTubeVideoId === 'function'
+        ? (window.__maoGetYouTubeVideoId() || '')
+        : '';
+      if (nextId && nextId !== this.currentVideoId) {
+        this.resetForNewYouTubeVideo(nextId);
+      }
+    }
+
+    resetForNewYouTubeVideo(nextVideoId) {
+      this.currentVideoId = nextVideoId || '';
+      this.formattedSubtitles = [];
+      this.currentIndex = -1;
+      this.lastExternalText = '';
+      this.lastTranslation = '';
+      this.lastMatchedCueEnd = 0;
+      this.hideSubtitles();
+      this.loadVideoCaptions();
+    }
+
+    pretranslateAround(currentTimeMs, count = 5) {
+      if (currentDisplayMode === 'source_only' || this.formattedSubtitles.length === 0) return;
+      let startIdx = this.binarySearchSubtitle(currentTimeMs);
+      if (startIdx === -1) {
+        startIdx = this.formattedSubtitles.findIndex((s) => s.start >= currentTimeMs);
+      }
+      if (startIdx < 0) startIdx = 0;
+      const endIdx = Math.min(this.formattedSubtitles.length, startIdx + count + 1);
+      for (let i = startIdx; i < endIdx; i++) {
+        const item = this.formattedSubtitles[i];
+        if (item && !item.translation && !item.isTranslating) {
+          item.isTranslating = true;
+          translateText(item.text).then((tr) => {
+            item.translation = tr;
+            item.isTranslating = false;
+            if (this.currentIndex === i && isSubtitlesActive) {
+              this.lastTranslation = tr;
+              this.displaySubtitle(item.text, tr);
+            }
+          });
+        }
+      }
+    }
+
     async loadVideoCaptions() {
       if (!this.isYouTube) return;
       try {
+        if (typeof window.__maoGetYouTubeVideoId === 'function') {
+          this.currentVideoId = window.__maoGetYouTubeVideoId() || this.currentVideoId;
+        }
         if (typeof window.__maoEnableNativeCaptions === 'function') {
           window.__maoEnableNativeCaptions();
         }
@@ -696,7 +776,10 @@
           for (const u of allUrls) {
             const rawEvents = res.eventsByUrl[u] || [];
             if (rawEvents.length > 0) {
-              this.parseYouTubeTimedText(rawEvents);
+              const matchedTrack = Array.isArray(res.tracks)
+                ? res.tracks.find((t) => t.baseUrl === u)
+                : null;
+              this.parseYouTubeTimedText(rawEvents, matchedTrack ? matchedTrack.languageCode : '');
               return;
             }
           }
@@ -706,25 +789,135 @@
       }
     }
 
-    parseYouTubeTimedText(rawEvents) {
-      const subs = [];
+    // kiss-translator style YouTube json3 word-flattening + sentence-packing
+    // Produces crisp, non-overlapping cues aligned to exact word timestamps (tStartMs + tOffsetMs).
+    parseYouTubeTimedText(rawEvents, trackLang = '') {
+      if (!Array.isArray(rawEvents) || rawEvents.length === 0) return;
+
+      const words = [];
+      const NOISE_RE = /^\[(?:music|applause|laughter|cheers|silence|inaudible)\]$|^♪+$|^[\s♪\[\]【】（）()]+$/i;
       for (const ev of rawEvents) {
-        const start = ev.tStartMs;
-        const duration = ev.dDurationMs || 0;
-        const end = start + duration;
-        let text = '';
-        if (Array.isArray(ev.segs)) {
-          text = ev.segs.map((s) => s.utf8 || '').join('');
+        const segs = Array.isArray(ev.segs) ? ev.segs : [];
+        if (ev.aAppend === 1 && segs.length === 1 && segs[0]?.utf8 === '\n') continue;
+
+        const eventStart = Number(ev.tStartMs) || 0;
+        const eventEnd = eventStart + Math.max(Number(ev.dDurationMs) || 0, 0);
+        const pieces = [];
+
+        for (const seg of segs) {
+          const raw = String(seg?.utf8 ?? '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\u200B/g, '')
+            .replace(/[\r\n]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (!raw || NOISE_RE.test(raw) || isIgnoredCaptionText(raw)) continue;
+          pieces.push({ text: raw, startMs: eventStart + (Number(seg?.tOffsetMs) || 0) });
         }
-        text = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
-        if (text && text !== '\n' && !isIgnoredCaptionText(text)) {
-          subs.push({ start, end, text, translation: null, isTranslating: false });
+
+        for (let i = 0; i < pieces.length; i++) {
+          const startMs = pieces[i].startMs;
+          const nextStart = pieces[i + 1]?.startMs;
+          const endMs = nextStart && nextStart > startMs
+            ? nextStart
+            : (i === pieces.length - 1 ? Math.max(eventEnd, startMs + 420) : startMs + 420);
+          words.push({ startMs, endMs, text: pieces[i].text });
         }
       }
-      subs.sort((a, b) => a.start - b.start);
+
+      if (words.length === 0) return;
+
+      // Sort by real word timestamp and close small inter-line gaps (<= 1.8s)
+      words.sort((a, b) => a.startMs - b.startMs);
+      for (let i = 0; i < words.length - 1; i++) {
+        const gap = words[i + 1].startMs - words[i].endMs;
+        if (gap > 0 && gap <= 1800) words[i].endMs = words[i + 1].startMs;
+        if (words[i].endMs > words[i + 1].startMs && words[i + 1].startMs > words[i].startMs) {
+          words[i].endMs = words[i + 1].startMs;
+        }
+      }
+
+      const sampleText = words.slice(0, 40).map((w) => w.text).join('');
+      const primaryLang = (trackLang || '').toLowerCase().split('-')[0];
+      const isCjk = ['zh', 'ja', 'ko', 'th'].includes(primaryLang)
+        || ((sampleText.match(/[\u3400-\u9fff]/g) || []).length > sampleText.length / 3);
+
+      const PAUSE_WORDS = new Set([
+        'actually', 'also', 'although', 'and', 'anyway', 'as', 'because', 'but',
+        'eventually', 'however', 'if', 'instead', 'meanwhile', 'now', 'okay',
+        'or', 'perhaps', 'right', 'since', 'so', 'then', 'therefore', 'though',
+        'unless', 'until', 'well', 'while',
+      ]);
+
+      const joinBucket = (bucket) => {
+        const parts = bucket.map((w) => w.text);
+        return isCjk
+          ? parts.join('').replace(/\s+/g, '').trim()
+          : parts.join(' ').replace(/\s+/g, ' ').trim();
+      };
+
+      const subs = [];
+      let bucket = [];
+      let wordCount = 0;
+
+      const flush = () => {
+        if (bucket.length === 0) return;
+        const text = joinBucket(bucket);
+        if (text && !isIgnoredCaptionText(text)) {
+          subs.push({
+            start: bucket[0].startMs,
+            end: Math.max(bucket[bucket.length - 1].endMs, bucket[0].startMs + 600),
+            text,
+            translation: null,
+            isTranslating: false,
+          });
+        }
+        bucket = [];
+        wordCount = 0;
+      };
+
+      for (const word of words) {
+        if (bucket.length === 0) {
+          bucket.push(word);
+          wordCount += word.text.split(/\s+/).filter(Boolean).length;
+          continue;
+        }
+        const prev = bucket[bucket.length - 1];
+        const gap = word.startMs - prev.endMs;
+        const duration = word.startMs - bucket[0].startMs;
+        const firstToken = word.text.toLowerCase().split(/\s+/)[0] || '';
+        const shouldBreak = isCjk
+          ? (gap > 1000
+            || /[。！？.!?…][”’"'」』】）》）\]]*$/.test(prev.text)
+            || joinBucket(bucket).length + word.text.length >= 28)
+          : (gap > 1000
+            || duration >= 7500
+            || /[.?!。！？…\])]$/.test(prev.text)
+            || (wordCount >= 14)
+            || (wordCount >= 8 && PAUSE_WORDS.has(firstToken))
+            || /^[[(♪]/.test(word.text));
+
+        if (shouldBreak) flush();
+        bucket.push(word);
+        wordCount += word.text.split(/\s+/).filter(Boolean).length;
+      }
+      flush();
+
+      // Ensure strictly non-overlapping cue intervals so binary search is exact
+      for (let i = 0; i < subs.length - 1; i++) {
+        if (subs[i].end > subs[i + 1].start) {
+          subs[i].end = subs[i + 1].start;
+        }
+      }
+
       this.formattedSubtitles = subs;
-      if (subs.length > 0 && isSubtitlesActive) {
-        this.onTimeUpdate();
+      this.currentIndex = -1;
+      if (subs.length > 0) {
+        const currentTimeMs = Math.round((this.videoEl?.currentTime || 0) * 1000);
+        if (isSubtitlesActive) {
+          this.pretranslateAround(currentTimeMs, 5);
+          this.onTimeUpdate();
+        }
       }
     }
 
@@ -733,6 +926,15 @@
         this.hideSubtitles();
         return;
       }
+      // Detect YouTube SPA video change even if yt-navigate-finish was missed
+      if (this.isYouTube && typeof window.__maoGetYouTubeVideoId === 'function') {
+        const activeId = window.__maoGetYouTubeVideoId() || '';
+        if (activeId && this.currentVideoId && activeId !== this.currentVideoId) {
+          this.resetForNewYouTubeVideo(activeId);
+          return;
+        }
+      }
+
       const currentTimeMs = Math.round(this.videoEl.currentTime * 1000);
 
       // 1. YouTube / WebVTT TimedText formatted subtitles match
@@ -756,9 +958,9 @@
           } else if (sub.translation) {
             this.lastTranslation = sub.translation;
           }
-          // Pre-translate next 3 upcoming subtitles for fast-paced videos
+          // Pre-translate next 5 upcoming subtitles for fast-paced videos (zero-latency sync)
           if (currentDisplayMode !== 'source_only') {
-            for (let n = 1; n <= 3; n++) {
+            for (let n = 1; n <= 5; n++) {
               const next = this.formattedSubtitles[idx + n];
               if (next && !next.translation && !next.isTranslating) {
                 next.isTranslating = true;
@@ -1064,6 +1266,10 @@
       this.videoEl.removeEventListener('seeked', this.onSeeked);
       this.videoEl.removeEventListener('pause', this.onVideoPause);
       this.videoEl.removeEventListener('play', this.onVideoPlay);
+      if (this.isYouTube) {
+        window.removeEventListener('mao-youtube-timedtext-ready', this.onYouTubeTimedTextReady);
+        window.removeEventListener('yt-navigate-finish', this.onYouTubeNavigate);
+      }
       this.containerEl?.remove();
     }
   }
@@ -1375,8 +1581,8 @@
       try {
         updateVisuals(group, active);
         const host = group.getRootNode()?.host;
-        if (host) {
-          host.style.setProperty('opacity', active ? '0.7' : '0', 'important');
+        if (host && typeof host.__maoReveal === 'function') {
+          host.__maoReveal();
         }
       } catch { /* ignore detached */ }
     }
@@ -1415,17 +1621,23 @@
     } catch { /* ignore invalidated extension context */ }
   }
 
+  function hasAnyNativeCaptions() {
+    for (const m of activeVideoManagers.values()) {
+      if ((m.formattedSubtitles && m.formattedSubtitles.length > 0) || m.hasActiveTextTracks()) {
+        return true;
+      }
+      if (m.isYouTube && typeof window.__maoHasYouTubeCaptionTracks === 'function' && window.__maoHasYouTubeCaptionTracks()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function toggleSubtitles() {
     const nextState = !isSubtitlesActive;
     setAllButtonsState(nextState);
 
-    let hasNative = false;
-    for (const m of activeVideoManagers.values()) {
-      if ((m.formattedSubtitles && m.formattedSubtitles.length > 0) || m.hasActiveTextTracks()) {
-        hasNative = true;
-        break;
-      }
-    }
+    const hasNative = hasAnyNativeCaptions();
 
     if (nextState) {
       ensureSokujiPort();
@@ -1508,13 +1720,7 @@
     updateAllPopoversUI();
 
     if (isSubtitlesActive) {
-      let hasNative = false;
-      for (const m of activeVideoManagers.values()) {
-        if ((m.formattedSubtitles && m.formattedSubtitles.length > 0) || m.hasActiveTextTracks()) {
-          hasNative = true;
-          break;
-        }
-      }
+      const hasNative = hasAnyNativeCaptions();
       if (!hasNative) {
         if (enabled) {
           ensureSokujiPort();
@@ -1899,35 +2105,33 @@
       });
     });
 
-    // Auto-fade timer
+    // Auto-fade timer: completely hide (opacity: 0, pointer-events: none) when idle
+    // or mouse leaves the player, and sync with YouTube's ytp-autohide control bar.
     let hideTimer = null;
+    const hideButton = () => {
+      if (isPopoverOpen) return;
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      host.style.setProperty('opacity', '0', 'important');
+      host.style.setProperty('pointer-events', 'none', 'important');
+    };
+
     const showButton = (autoHide = true) => {
-      if (hideTimer) clearTimeout(hideTimer);
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
       host.style.setProperty('opacity', '1', 'important');
+      host.style.setProperty('pointer-events', 'auto', 'important');
       host.style.setProperty('transform', 'translateY(0)', 'important');
       if (autoHide && !isPopoverOpen) {
-        hideTimer = setTimeout(() => {
-          if (isPopoverOpen) return;
-          if (!isSubtitlesActive) {
-            host.style.setProperty('opacity', '0.55', 'important');
-            host.style.setProperty('transform', 'translateY(0)', 'important');
-          } else {
-            host.style.setProperty('opacity', '0.75', 'important');
-          }
-        }, 3500);
+        hideTimer = setTimeout(hideButton, 2000);
       }
     };
 
-    const hideButton = () => {
-      if (isPopoverOpen) return;
-      if (hideTimer) clearTimeout(hideTimer);
-      if (!isSubtitlesActive) {
-        host.style.setProperty('opacity', '0.55', 'important');
-        host.style.setProperty('transform', 'translateY(0)', 'important');
-      } else {
-        host.style.setProperty('opacity', '0.75', 'important');
-      }
-    };
+    host.__maoReveal = () => showButton(true);
 
     container.addEventListener('mousemove', () => showButton(true), { passive: true });
     container.addEventListener('mouseenter', () => showButton(true), { passive: true });
@@ -1935,13 +2139,34 @@
     container.addEventListener('mouseleave', hideButton, { passive: true });
 
     host.addEventListener('mouseenter', () => {
-      if (hideTimer) clearTimeout(hideTimer);
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
       host.style.setProperty('opacity', '1', 'important');
+      host.style.setProperty('pointer-events', 'auto', 'important');
     });
+    host.addEventListener('mouseleave', () => {
+      if (!isPopoverOpen) showButton(true);
+    });
+
+    // On YouTube, hide in exact lockstep with the native player control bar (ytp-autohide)
+    const isYtPlayer = container.id === 'movie_player' || container.classList.contains('html5-video-player');
+    if (isYtPlayer) {
+      const ytAutoHideObs = new MutationObserver(() => {
+        if (isPopoverOpen) return;
+        if (container.classList.contains('ytp-autohide')) {
+          hideButton();
+        } else {
+          showButton(true);
+        }
+      });
+      ytAutoHideObs.observe(container, { attributes: true, attributeFilter: ['class'] });
+    }
 
     container.appendChild(host);
 
-    // Initial entrance animation so user notices the button
+    // Initial brief entrance animation so user sees the launcher, then auto-hide
     showButton(true);
   }
 

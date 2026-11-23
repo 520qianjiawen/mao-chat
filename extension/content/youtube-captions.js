@@ -9,7 +9,14 @@
   if (window.__maoYoutubeCaptionsLoaded__) return;
   window.__maoYoutubeCaptionsLoaded__ = true;
 
-  var intercepted = { potUrl: '', eventsByLang: {}, lastEvents: [] };
+  var intercepted = { videoId: '', potUrl: '', eventsByLang: {}, lastEvents: [] };
+
+  function resetIntercepted(newVideoId) {
+    intercepted.videoId = newVideoId || '';
+    intercepted.potUrl = '';
+    intercepted.eventsByLang = {};
+    intercepted.lastEvents = [];
+  }
 
   function extractJsonAssignment(source, name) {
     const key = name + ' = ';
@@ -123,14 +130,37 @@
     try { json = JSON.parse(responseText); } catch { return; }
     const events = json && Array.isArray(json.events) ? json.events : [];
     if (events.length === 0) return;
-    intercepted.potUrl = url;
-    intercepted.lastEvents = events;
+
+    let urlVideoId = '';
+    let lang = '';
+    let kind = '';
     try {
       const parsed = new URL(url, location.origin);
-      const lang = parsed.searchParams.get('lang') || '';
-      const kind = parsed.searchParams.get('kind') || '';
+      urlVideoId = parsed.searchParams.get('v') || '';
+      lang = parsed.searchParams.get('lang') || '';
+      kind = parsed.searchParams.get('kind') || '';
+    } catch { /* ignore */ }
+
+    const currentVideoId = urlVideoId || videoIdFromLocation() || '';
+    if (intercepted.videoId && currentVideoId && intercepted.videoId !== currentVideoId) {
+      resetIntercepted(currentVideoId);
+    } else if (currentVideoId) {
+      intercepted.videoId = currentVideoId;
+    }
+
+    intercepted.potUrl = url;
+    intercepted.lastEvents = events;
+    if (lang || kind) {
       intercepted.eventsByLang[lang + '|' + kind] = events;
-    } catch { /* keep lastEvents */ }
+    }
+
+    // Notify video-button-content.js immediately (same isolated world) so it can
+    // switch to zero-delay TimedText playback & pre-translation right away.
+    try {
+      window.dispatchEvent(new CustomEvent('mao-youtube-timedtext-ready', {
+        detail: { videoId: currentVideoId, lang, kind, events },
+      }));
+    } catch { /* ignore */ }
   }
 
   window.addEventListener('message', (event) => {
@@ -147,6 +177,20 @@
       return true;
     }
     return btn ? btn.getAttribute('aria-pressed') === 'true' : false;
+  }
+
+  function hasCaptionTracks() {
+    const currentVideoId = videoIdFromLocation() || '';
+    if (intercepted.videoId && intercepted.videoId === currentVideoId && intercepted.lastEvents.length > 0) {
+      return true;
+    }
+    const tracks = tracksFromPlayer(readPlayerResponse());
+    if (tracks.length > 0) return true;
+    const ccBtn = document.querySelector('.ytp-subtitles-button');
+    if (ccBtn && ccBtn.style.display !== 'none' && !ccBtn.hasAttribute('disabled')) {
+      return true;
+    }
+    return false;
   }
 
   function readOnscreenLines() {
@@ -171,6 +215,10 @@
   async function loadCaptions() {
     const videoId = videoIdFromLocation();
     if (!videoId) return { ok: false, reason: 'not-watch' };
+
+    if (intercepted.videoId && intercepted.videoId !== videoId) {
+      resetIntercepted(videoId);
+    }
 
     enableNativeCaptions();
 
@@ -270,4 +318,6 @@
   window.__maoLoadYouTubeCaptions = loadCaptions;
   window.__maoEnableNativeCaptions = enableNativeCaptions;
   window.__maoReadOnscreenLines = readOnscreenLines;
+  window.__maoHasYouTubeCaptionTracks = hasCaptionTracks;
+  window.__maoGetYouTubeVideoId = videoIdFromLocation;
 })();
